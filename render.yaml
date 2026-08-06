@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: eduportal
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GMAIL_USER
+        value: j77269801@gmail.com
+      - key: GMAIL_APP_PASSWORD
+        value: mnmqxfugjxiohqay
+      - key: ADMIN_ID
+        value: "192411184"
+      - key: ADMIN_PASSWORD
+        value: katam@123
+      - key: DATABASE_URL
+        fromDatabase:
+          name: eduportal-db
+          property: connectionString
+
+databases:
+  - name: eduportal-db
+    plan: free
+    databaseName: eduportal

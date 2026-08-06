@@ -1,0 +1,1889 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EduPortal | Management System</title>
+<meta name="description" content="EduPortal – Modern school management with OD attendance, geo-verification, events, and automated reports.">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900;1,9..40,400&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  darkMode:'class',
+  theme:{
+    extend:{
+      fontFamily:{sans:['DM Sans','sans-serif']},
+      colors:{
+        brand:{orange:'#f97316',pink:'#ec4899',indigo:'#6366f1',blue:'#3b82f6'}
+      }
+    }
+  }
+}
+</script>
+<style>
+  *{scrollbar-width:thin;scrollbar-color:#f97316 transparent}
+  ::-webkit-scrollbar{width:5px;height:5px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:linear-gradient(#f97316,#ec4899);border-radius:10px}
+  body{font-family:'DM Sans',sans-serif}
+  .glass{background:rgba(15,23,42,.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+  .glass-card{background:rgba(30,41,59,.55);backdrop-filter:blur(16px);border:1px solid rgba(148,163,184,.1)}
+  .login-bg{background:radial-gradient(ellipse at 20% 50%,rgba(249,115,22,.18) 0,transparent 55%),radial-gradient(ellipse at 80% 20%,rgba(236,72,153,.15) 0,transparent 55%),radial-gradient(ellipse at 60% 80%,rgba(99,102,241,.12) 0,transparent 55%),#0f172a}
+  .nav-fac{background:linear-gradient(135deg,#f97316,#ec4899);color:#fff;box-shadow:0 8px 24px rgba(249,115,22,.35)}
+  .nav-stu{background:linear-gradient(135deg,#6366f1,#3b82f6);color:#fff;box-shadow:0 8px 24px rgba(99,102,241,.35)}
+  .stat-card{transition:transform .25s ease,box-shadow .25s ease}
+  .stat-card:hover{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,.4)}
+  .card-hover{transition:border-color .2s,box-shadow .2s}
+  .card-hover:hover{border-color:rgba(249,115,22,.35);box-shadow:0 8px 32px rgba(0,0,0,.3)}
+  .btn-grad-fac{background:linear-gradient(135deg,#f97316,#ec4899);transition:all .2s}
+  .btn-grad-fac:hover{box-shadow:0 8px 24px rgba(249,115,22,.45);transform:translateY(-1px)}
+  .btn-grad-stu{background:linear-gradient(135deg,#6366f1,#3b82f6);transition:all .2s}
+  .btn-grad-stu:hover{box-shadow:0 8px 24px rgba(99,102,241,.45);transform:translateY(-1px)}
+  .input-dark{background:rgba(15,23,42,.6);border:1.5px solid rgba(100,116,139,.35);color:#f1f5f9;transition:border-color .2s}
+  .input-dark:focus{outline:none;border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.15)}
+  .input-dark::placeholder{color:#64748b}
+  .input-stu:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.15)}
+  @keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes scaleIn{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}
+  @keyframes countdownPulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,.5)}50%{box-shadow:0 0 0 20px rgba(249,115,22,0)}}
+  @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+  .anim-slideup{animation:slideUp .35s ease both}
+  .anim-scalein{animation:scaleIn .25s ease both}
+  .anim-fadein{animation:fadeIn .25s ease both}
+  .countdown-card{animation:countdownPulse 2s ease-in-out infinite}
+  .skeleton{background:linear-gradient(90deg,#1e293b 25%,#334155 50%,#1e293b 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
+  select option{background:#1e293b;color:#f1f5f9}
+  .modal-backdrop{transition:opacity .2s ease}
+  .modal-inner{transition:transform .2s ease,opacity .2s ease}
+</style>
+</head>
+<body class="min-h-screen text-slate-100 overflow-x-hidden" style="background:#0f172a">
+
+<!-- ════════════ LOGIN SCREEN ════════════ -->
+<div id="login-screen" class="fixed inset-0 z-50 login-bg flex items-center justify-center p-4">
+  <div class="w-full max-w-md anim-scalein">
+    <!-- Logo -->
+    <div class="text-center mb-8">
+      <div class="w-16 h-16 mx-auto rounded-2xl btn-grad-fac flex items-center justify-center text-white font-black text-3xl shadow-2xl mb-4" style="box-shadow:0 16px 40px rgba(249,115,22,.4)">E</div>
+      <h1 class="text-3xl font-black text-white">EduPortal</h1>
+      <p class="text-slate-400 text-sm mt-1">Management System v2.0</p>
+    </div>
+    <!-- Card -->
+    <div class="glass-card rounded-3xl p-8 shadow-2xl">
+      <!-- Tabs -->
+      <div class="flex gap-2 mb-7 p-1.5 rounded-2xl" style="background:rgba(15,23,42,.6)">
+        <button onclick="setLoginTab('faculty')" id="ltab-faculty" class="flex-1 py-2.5 text-sm font-bold rounded-xl transition-all duration-200" style="background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.3)">
+          🎓 Faculty Access
+        </button>
+        <button onclick="setLoginTab('student')" id="ltab-student" class="flex-1 py-2.5 text-sm font-bold rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-200">
+          👤 Student Access
+        </button>
+      </div>
+
+      <!-- Faculty Form -->
+      <div id="form-faculty" class="space-y-4">
+        <div>
+          <label class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-2">Admin ID</label>
+          <div class="relative">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><i data-lucide="shield" class="w-4 h-4"></i></span>
+            <input id="f-adminId" type="text" placeholder="Enter Admin ID" class="input-dark w-full rounded-xl py-3 pl-11 pr-4 text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-2">Password</label>
+          <div class="relative">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><i data-lucide="lock" class="w-4 h-4"></i></span>
+            <input id="f-pass" type="password" placeholder="Enter password" class="input-dark w-full rounded-xl py-3 pl-11 pr-4 text-sm" onkeydown="if(event.key==='Enter')doLogin()">
+          </div>
+        </div>
+        <button onclick="doLogin()" class="btn-grad-fac w-full py-3.5 rounded-xl font-bold text-white text-sm shadow-lg mt-2">Login as Administrator</button>
+      </div>
+
+      <!-- Student Form -->
+      <div id="form-student" class="space-y-4 hidden">
+        <div>
+          <label class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-2">Student Email</label>
+          <div class="relative">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><i data-lucide="mail" class="w-4 h-4"></i></span>
+            <input id="s-email" type="email" placeholder="student@school.edu" class="input-dark input-stu w-full rounded-xl py-3 pl-11 pr-4 text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-2">Password</label>
+          <div class="relative">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><i data-lucide="lock" class="w-4 h-4"></i></span>
+            <input id="s-pass" type="password" placeholder="Enter password" class="input-dark input-stu w-full rounded-xl py-3 pl-11 pr-4 text-sm" onkeydown="if(event.key==='Enter')doLogin()">
+          </div>
+        </div>
+        <button onclick="doLogin()" class="btn-grad-stu w-full py-3.5 rounded-xl font-bold text-white text-sm shadow-lg mt-2">Login to Student Portal</button>
+      </div>
+
+      <p class="text-center text-xs text-slate-500 mt-5">Default student password: <code class="text-slate-300">welcome</code></p>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ MAIN APP ════════════ -->
+<div id="app" class="hidden min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 glass border-b border-slate-700/30 shadow-xl">
+    <div class="max-w-screen-xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div id="hdr-logo" class="w-10 h-10 rounded-xl btn-grad-fac flex items-center justify-center font-black text-white text-lg shadow-lg transition-transform hover:scale-110">E</div>
+        <div>
+          <div id="hdr-title" class="font-black text-base" style="background:linear-gradient(135deg,#f97316,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent">EduPortal</div>
+          <div id="hdr-sub" class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Management System</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg" style="background:rgba(30,41,59,.6)">
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-500"></i>
+          <span id="hdr-clock" class="text-xs font-mono text-slate-400"></span>
+        </div>
+        <button onclick="toggleTheme()" class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-white transition-colors" style="background:rgba(30,41,59,.6)">
+          <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+          <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
+        </button>
+        <button onclick="doLogout()" title="Logout" class="w-9 h-9 rounded-xl btn-grad-fac flex items-center justify-center font-black text-white text-xs shadow-lg hover:scale-105 transition-transform" id="hdr-avatar">AD</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex flex-1 max-w-screen-xl mx-auto w-full px-3 sm:px-6 py-5 gap-5">
+
+    <!-- Sidebar -->
+    <aside class="hidden md:block w-56 shrink-0">
+      <div class="sticky top-24">
+        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest px-3 mb-3">Menu</p>
+        <nav id="sidebar" class="space-y-1"></nav>
+      </div>
+    </aside>
+
+    <!-- Content -->
+    <main id="main" class="flex-1 min-w-0 space-y-5 anim-slideup"></main>
+  </div>
+</div>
+
+<!-- ════════════ GEO-CAM MODAL ════════════ -->
+<div id="geo-modal" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4" style="background:rgba(0,0,0,.85);backdrop-filter:blur(8px)">
+  <div class="glass-card rounded-3xl p-6 w-full max-w-md anim-scalein shadow-2xl">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="font-black text-lg text-white">📍 Geo-Tag Camera</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Live camera with GPS location stamp</p>
+      </div>
+      <button onclick="closeGeoModal()" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-950/30 transition-colors">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+    <!-- Camera view -->
+    <div class="relative rounded-2xl overflow-hidden bg-slate-900 mb-4" style="aspect-ratio:4/3">
+      <video id="geo-video" autoplay playsinline class="w-full h-full object-cover"></video>
+      <canvas id="geo-canvas" class="hidden w-full h-full object-cover absolute inset-0"></canvas>
+      <div id="geo-overlay" class="absolute bottom-0 left-0 right-0 p-3" style="background:linear-gradient(transparent,rgba(0,0,0,.8))">
+        <p id="geo-coords" class="text-[10px] font-mono text-emerald-400">📡 Acquiring GPS...</p>
+        <p id="geo-time" class="text-[10px] font-mono text-slate-400"></p>
+      </div>
+      <div id="geo-loading" class="absolute inset-0 flex items-center justify-center bg-slate-900">
+        <div class="text-center">
+          <div class="w-10 h-10 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          <p class="text-sm text-slate-400">Starting camera...</p>
+        </div>
+      </div>
+    </div>
+    <!-- GPS Status -->
+    <div id="geo-gps-status" class="mb-4 p-3 rounded-xl text-xs" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2)">
+      <p class="text-emerald-400 font-bold flex items-center gap-1"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i> <span id="geo-status-text">Waiting for GPS...</span></p>
+    </div>
+    <div class="flex gap-3">
+      <button onclick="captureGeoPhoto()" id="geo-capture-btn" class="btn-grad-fac flex-1 py-3 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+        <i data-lucide="camera" class="w-4 h-4"></i> Capture & Submit
+      </button>
+      <button onclick="closeGeoModal()" class="px-5 py-3 rounded-xl font-bold text-slate-400 hover:text-white transition-colors text-sm" style="background:rgba(30,41,59,.6)">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ IMAGE VIEWER ════════════ -->
+<div id="img-viewer" class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4" style="background:rgba(0,0,0,.9)" onclick="document.getElementById('img-viewer').classList.add('hidden')">
+  <img id="img-viewer-src" src="" class="max-w-full max-h-full rounded-2xl shadow-2xl">
+</div>
+
+<!-- ════════════ GENERIC MODAL ════════════ -->
+<div id="modal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 modal-backdrop" style="background:rgba(0,0,0,.7);backdrop-filter:blur(8px)">
+  <div id="modal-inner" class="glass-card rounded-3xl p-6 w-full max-w-lg shadow-2xl modal-inner max-h-[90vh] overflow-y-auto" style="scrollbar-width:thin">
+    <div class="flex items-center justify-between mb-5">
+      <h3 id="modal-title" class="font-black text-lg text-white"></h3>
+      <button onclick="closeModal()" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-400 transition-colors" style="background:rgba(30,41,59,.6)">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+    <div id="modal-body"></div>
+    <div id="modal-footer" class="flex gap-3 justify-end mt-5"></div>
+  </div>
+</div>
+
+<!-- ════════════ LOADING OVERLAY ════════════ -->
+<div id="loading-overlay" class="fixed inset-0 z-[90] hidden flex items-center justify-center" style="background:rgba(0,0,0,.85);backdrop-filter:blur(12px)">
+  <div class="text-center anim-scalein">
+    <div class="relative w-20 h-20 mx-auto mb-6">
+      <div class="w-20 h-20 rounded-full border-4 border-slate-700"></div>
+      <div class="w-20 h-20 rounded-full border-4 border-orange-500 border-t-transparent animate-spin absolute inset-0"></div>
+      <i data-lucide="file-bar-chart" class="w-8 h-8 text-white absolute inset-0 m-auto"></i>
+    </div>
+    <p id="loading-title" class="text-xl font-black text-white mb-1">Processing...</p>
+    <p id="loading-desc" class="text-slate-400 text-sm">Please wait</p>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toasts" class="fixed bottom-6 right-4 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+<!-- ════════════ JAVASCRIPT ════════════ -->
+<script>
+// ──────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────
+const S = {
+  user: JSON.parse(localStorage.getItem('ep_user') || 'null'),
+  token: localStorage.getItem('ep_token') || null,
+  tab: 'dashboard',
+  d: {
+    students:[], classes:[], subjects:[],
+    grades:[], attendance:[], events:[],
+    odRequests:[], enrollmentRequests:[]
+  },
+  odTimerId: null,
+  geoCamOdId: null,
+  geoStream: null,
+  geoLat: null, geoLng: null,
+  photoCaptured: false
+};
+
+// ──────────────────────────────────────────
+// API HELPER
+// ──────────────────────────────────────────
+async function api(method, path, body, raw=false) {
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(S.token ? { Authorization: 'Bearer ' + S.token } : {})
+    }
+  };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const res = await fetch('/api' + path, opts);
+  if (raw) return res;
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+// ──────────────────────────────────────────
+// CLOCK
+// ──────────────────────────────────────────
+setInterval(() => {
+  const el = document.getElementById('hdr-clock');
+  if (el) el.textContent = new Date().toLocaleTimeString();
+}, 1000);
+
+// ──────────────────────────────────────────
+// THEME
+// ──────────────────────────────────────────
+function toggleTheme() {
+  document.documentElement.classList.toggle('dark');
+  lucide.createIcons();
+}
+
+// ──────────────────────────────────────────
+// TOAST
+// ──────────────────────────────────────────
+function toast(msg, type='info', dur=4500) {
+  const colors = {
+    success:'from-emerald-600 to-emerald-700',
+    error:'from-rose-600 to-rose-700',
+    warning:'from-amber-500 to-amber-600',
+    info:'from-slate-700 to-slate-800'
+  };
+  const icons = { success:'check-circle-2', error:'x-circle', warning:'alert-triangle', info:'info' };
+  const t = document.createElement('div');
+  t.className = `pointer-events-auto flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-2xl text-white text-sm font-semibold bg-gradient-to-r ${colors[type]} border border-white/10 min-w-[260px] max-w-xs`;
+  t.style.cssText = 'transform:translateY(20px);opacity:0;transition:all .3s ease';
+  t.innerHTML = `<i data-lucide="${icons[type]}" class="w-4 h-4 shrink-0"></i><span>${msg}</span>`;
+  document.getElementById('toasts').appendChild(t);
+  lucide.createIcons();
+  requestAnimationFrame(() => { t.style.transform='translateY(0)'; t.style.opacity='1'; });
+  setTimeout(() => { t.style.transform='translateY(20px)'; t.style.opacity='0'; setTimeout(()=>t.remove(), 300); }, dur);
+}
+
+// ──────────────────────────────────────────
+// MODAL
+// ──────────────────────────────────────────
+function openModal(title, bodyHtml, footerHtml='') {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  document.getElementById('modal-footer').innerHTML = footerHtml;
+  const m = document.getElementById('modal');
+  m.classList.remove('hidden');
+  requestAnimationFrame(() => {
+    m.style.opacity = '1';
+    document.getElementById('modal-inner').style.transform = 'scale(1)';
+  });
+  lucide.createIcons();
+}
+function closeModal() {
+  document.getElementById('modal').classList.add('hidden');
+}
+function showLoading(title='Processing...', desc='Please wait') {
+  document.getElementById('loading-title').textContent = title;
+  document.getElementById('loading-desc').textContent = desc;
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  lucide.createIcons();
+}
+function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
+function viewImg(src) {
+  document.getElementById('img-viewer-src').src = src;
+  document.getElementById('img-viewer').classList.remove('hidden');
+}
+
+// ──────────────────────────────────────────
+// AUTH
+// ──────────────────────────────────────────
+function setLoginTab(t) {
+  const fac = t === 'faculty';
+  document.getElementById('form-faculty').classList.toggle('hidden', !fac);
+  document.getElementById('form-student').classList.toggle('hidden', fac);
+  const tf = document.getElementById('ltab-faculty');
+  const ts = document.getElementById('ltab-student');
+  if (fac) {
+    tf.style.cssText = 'background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.3)';
+    ts.style.cssText = 'color:#94a3b8';
+  } else {
+    ts.style.cssText = 'background:rgba(99,102,241,.15);color:#6366f1;border:1px solid rgba(99,102,241,.3)';
+    tf.style.cssText = 'color:#94a3b8';
+  }
+}
+
+async function doLogin() {
+  const isFac = !document.getElementById('form-faculty').classList.contains('hidden');
+  try {
+    let payload;
+    if (isFac) {
+      payload = { role:'faculty', adminId: document.getElementById('f-adminId').value.trim(), password: document.getElementById('f-pass').value };
+    } else {
+      payload = { role:'student', email: document.getElementById('s-email').value.trim(), password: document.getElementById('s-pass').value };
+    }
+    if (!payload.password) { toast('Enter your password','warning'); return; }
+    const data = await api('POST', '/auth/login', payload);
+    S.token = data.token;
+    S.user = data.user;
+    localStorage.setItem('ep_token', data.token);
+    localStorage.setItem('ep_user', JSON.stringify(data.user));
+    toast(`Welcome back, ${data.user.name}!`, 'success');
+    initApp();
+  } catch(e) {
+    toast(e.message || 'Login failed', 'error');
+  }
+}
+
+function doLogout() {
+  S.token = null; S.user = null;
+  localStorage.removeItem('ep_token');
+  localStorage.removeItem('ep_user');
+  clearODTimer();
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  toast('Logged out successfully','info');
+}
+
+// ──────────────────────────────────────────
+// NAV ITEMS
+// ──────────────────────────────────────────
+const FAC_NAV = [
+  { id:'dashboard',  label:'Dashboard',   icon:'layout-dashboard' },
+  { id:'students',   label:'Students',     icon:'users' },
+  { id:'curriculum', label:'Curriculum',   icon:'graduation-cap' },
+  { id:'gradebook',  label:'Gradebook',    icon:'book-open' },
+  { id:'attendance', label:'Attendance',   icon:'calendar-check' },
+  { id:'events',     label:'Events',       icon:'calendar-days' },
+  { id:'evaluation', label:'Evaluation',   icon:'clipboard-list' },
+  { id:'reports',    label:'Reports',      icon:'bar-chart-3' },
+];
+const STU_NAV = [
+  { id:'s_overview',    label:'My Overview',      icon:'layout-dashboard' },
+  { id:'s_enrollment',  label:'Enrollment',        icon:'graduation-cap' },
+  { id:'s_attendance',  label:'My Attendance',     icon:'calendar-check' },
+  { id:'s_events',      label:'Events',            icon:'calendar-days' },
+  { id:'s_od',          label:'OD / On Duty',      icon:'file-check' },
+];
+
+function renderNav() {
+  if (!S.user) return;
+  const isFac = S.user.role === 'faculty';
+  const items = isFac ? FAC_NAV : STU_NAV;
+  const activeClass = isFac ? 'nav-fac' : 'nav-stu';
+  document.getElementById('sidebar').innerHTML = items.map(it => `
+    <button onclick="switchTab('${it.id}')"
+      class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200
+             ${S.tab===it.id ? activeClass : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}">
+      <i data-lucide="${it.icon}" class="w-4 h-4 shrink-0"></i>${it.label}
+    </button>
+  `).join('');
+  lucide.createIcons();
+}
+
+async function switchTab(id) {
+  S.tab = id;
+  renderNav();
+  await loadAndRender();
+}
+
+// ──────────────────────────────────────────
+// DATA LOADERS
+// ──────────────────────────────────────────
+async function loadAll() {
+  if (!S.token) return;
+  const isFac = S.user.role === 'faculty';
+  try {
+    const reqs = [
+      api('GET','/classes'),
+      api('GET','/subjects'),
+      api('GET','/grades'),
+      api('GET','/attendance'),
+      api('GET','/events'),
+      api('GET','/od'),
+      api('GET','/enrollment'),
+    ];
+    if (isFac) reqs.unshift(api('GET','/students'));
+    const results = await Promise.allSettled(reqs);
+    let i = 0;
+    if (isFac) S.d.students = results[i++].value || [];
+    S.d.classes             = results[i++].value || [];
+    S.d.subjects            = results[i++].value || [];
+    S.d.grades              = results[i++].value || [];
+    S.d.attendance          = results[i++].value || [];
+    S.d.events              = results[i++].value || [];
+    S.d.odRequests          = results[i++].value || [];
+    S.d.enrollmentRequests  = results[i++].value || [];
+  } catch(e) { console.error('Load error:', e); }
+}
+
+async function loadAndRender() {
+  await loadAll();
+  renderContent();
+}
+
+// ──────────────────────────────────────────
+// INIT APP
+// ──────────────────────────────────────────
+async function initApp() {
+  if (!S.user || !S.token) {
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+
+  const isFac = S.user.role === 'faculty';
+  const logo = document.getElementById('hdr-logo');
+  const title = document.getElementById('hdr-title');
+  const sub = document.getElementById('hdr-sub');
+  const avatar = document.getElementById('hdr-avatar');
+
+  if (isFac) {
+    logo.className = 'w-10 h-10 rounded-xl btn-grad-fac flex items-center justify-center font-black text-white text-lg shadow-lg';
+    title.style.background = 'linear-gradient(135deg,#f97316,#ec4899)';
+    sub.textContent = 'Management System';
+    avatar.textContent = 'AD';
+    S.tab = 'dashboard';
+  } else {
+    logo.className = 'w-10 h-10 rounded-xl btn-grad-stu flex items-center justify-center font-black text-white text-lg shadow-lg';
+    title.style.background = 'linear-gradient(135deg,#6366f1,#3b82f6)';
+    sub.textContent = 'Student Portal';
+    avatar.textContent = (S.user.name || 'ST').substring(0,2).toUpperCase();
+    S.tab = 's_overview';
+  }
+  title.style['-webkit-background-clip'] = 'text';
+  title.style['-webkit-text-fill-color'] = 'transparent';
+
+  renderNav();
+  await loadAndRender();
+  lucide.createIcons();
+}
+
+// ──────────────────────────────────────────
+// CONTENT ROUTER
+// ──────────────────────────────────────────
+function renderContent() {
+  const m = document.getElementById('main');
+  let html = '';
+  switch(S.tab) {
+    case 'dashboard':    html = renderFacDashboard(); break;
+    case 'students':     html = renderStudents(); break;
+    case 'curriculum':   html = renderCurriculum(); break;
+    case 'gradebook':    html = renderGradebook(); break;
+    case 'evaluation':   html = renderEvaluation(); break;
+    case 'attendance':   html = renderAttendance(); break;
+    case 'events':       html = renderFacEvents(); break;
+    case 'reports':      html = renderReports(); break;
+    case 's_overview':   html = renderStuOverview(); break;
+    case 's_enrollment': html = renderStuEnrollment(); break;
+    case 's_attendance': html = renderStuAttendance(); break;
+    case 's_events':     html = renderStuEvents(); break;
+    case 's_od':         html = renderStuOD(); break;
+  }
+  m.innerHTML = `<div class="anim-slideup">${html}</div>`;
+  lucide.createIcons();
+  if (S.tab === 's_od') startODTimers();
+}
+
+// ──────────────────────────────────────────
+// UI COMPONENTS
+// ──────────────────────────────────────────
+const Card = (content, extra='') =>
+  `<div class="glass-card rounded-2xl overflow-hidden shadow-xl card-hover ${extra}">${content}</div>`;
+
+const CardHead = (title, sub='', icon='', grad='from-orange-500 to-pink-600') => `
+  <div class="px-6 py-4 border-b border-slate-700/30 flex items-center gap-4" style="background:rgba(15,23,42,.3)">
+    ${icon ? `<div class="w-9 h-9 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center text-white shadow-lg shrink-0"><i data-lucide="${icon}" class="w-4 h-4"></i></div>` : ''}
+    <div>
+      <h3 class="font-black text-white text-sm">${title}</h3>
+      ${sub ? `<p class="text-[11px] text-slate-500 mt-0.5">${sub}</p>` : ''}
+    </div>
+  </div>`;
+
+const StatCard = (label, value, icon, grad, sub='') => `
+  <div class="glass-card rounded-2xl p-5 stat-card cursor-default">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">${label}</p>
+        <p class="text-3xl font-black text-white">${value}</p>
+        ${sub ? `<p class="text-xs text-slate-500 mt-1">${sub}</p>` : ''}
+      </div>
+      <div class="w-14 h-14 rounded-2xl bg-gradient-to-br ${grad} flex items-center justify-center text-white shadow-xl shrink-0">
+        <i data-lucide="${icon}" class="w-6 h-6"></i>
+      </div>
+    </div>
+  </div>`;
+
+const Badge = (text, type='gray') => {
+  const c = {
+    green:'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    red:'bg-rose-500/20 text-rose-400 border-rose-500/30',
+    amber:'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    blue:'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    indigo:'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+    gray:'bg-slate-700/50 text-slate-400 border-slate-600/30',
+    orange:'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  }[type] || 'bg-slate-700/50 text-slate-400';
+  return `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold border ${c} uppercase tracking-wide">${text}</span>`;
+};
+
+const Empty = (msg='No data yet') => `
+  <div class="py-16 text-center">
+    <i data-lucide="inbox" class="w-10 h-10 text-slate-600 mx-auto mb-3"></i>
+    <p class="text-slate-500 text-sm">${msg}</p>
+  </div>`;
+
+// ──────────────────────────────────────────
+// ░░ FACULTY: DASHBOARD ░░
+// ──────────────────────────────────────────
+function renderFacDashboard() {
+  const today = new Date().toISOString().split('T')[0];
+  const todayAtt = S.d.attendance.filter(a => a.date === today);
+  const present = todayAtt.filter(a=>a.status==='Present').length;
+  const absent  = todayAtt.filter(a=>a.status==='Absent').length;
+  const od      = todayAtt.filter(a=>a.status==='OD').length;
+  const attRate = S.d.students.length ? Math.round((present/S.d.students.length)*100) : 0;
+
+  const pendingOD = S.d.odRequests.filter(r=>r.status==='pending').length;
+
+  const recent = [...S.d.grades, ...S.d.attendance]
+    .sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,8);
+
+  const actHtml = recent.length ? recent.map(a=>`
+    <div class="flex items-center gap-3 p-3 rounded-xl transition-colors hover:bg-slate-800/30">
+      <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${a.score ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}">
+        <i data-lucide="${a.score?'award':'calendar-check'}" class="w-4 h-4"></i>
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-bold text-slate-200 truncate">${a.student_name || a.studentname || 'Student'}</p>
+        <p class="text-[10px] text-slate-500">${a.score ? `${a.subject_name||''} · W${a.week}: ${a.score}` : `Attendance: ${a.status}`}</p>
+      </div>
+      <span class="text-[10px] text-slate-600 font-mono shrink-0">${String(a.date||'').substring(0,10)}</span>
+    </div>`).join('') : Empty('No recent activity');
+
+  const distHtml = S.d.classes.map(c=>{
+    const cnt = S.d.students.filter(s=>s.class_id==c.id).length;
+    const pct = S.d.students.length ? (cnt/S.d.students.length*100) : 0;
+    return `<div class="mb-4">
+      <div class="flex justify-between items-center mb-1.5">
+        <span class="text-sm font-bold text-slate-200">${c.name}</span>
+        <span class="text-xs text-slate-400">${cnt} students</span>
+      </div>
+      <div class="h-2 rounded-full bg-slate-800 overflow-hidden">
+        <div class="h-full rounded-full btn-grad-fac transition-all duration-700" style="width:${pct}%"></div>
+      </div>
+    </div>`;
+  }).join('') || Empty('No classes yet');
+
+  return `
+    ${pendingOD>0 ? `<div class="glass-card rounded-2xl p-4 border border-amber-500/30 flex items-center gap-4" style="background:rgba(245,158,11,.08)">
+      <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0"><i data-lucide="bell" class="w-5 h-5"></i></div>
+      <div class="flex-1"><p class="font-bold text-amber-400 text-sm">${pendingOD} Pending OD Request${pendingOD>1?'s':''}</p><p class="text-xs text-slate-400">Review in the Attendance tab</p></div>
+      <button onclick="switchTab('attendance')" class="px-4 py-2 rounded-xl text-xs font-bold text-amber-400 border border-amber-500/30 hover:bg-amber-500/10 transition-colors">View</button>
+    </div>` : ''}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      ${StatCard('Total Students', S.d.students.length, 'users', 'from-blue-500 to-cyan-500')}
+      ${StatCard('Active Classes', S.d.classes.length, 'graduation-cap', 'from-emerald-500 to-teal-500')}
+      ${StatCard("Today's Attendance", attRate+'%', 'activity', 'from-orange-500 to-pink-500', `${present} present, ${absent} absent, ${od} OD`)}
+      ${StatCard('Events', S.d.events.length, 'calendar-days', 'from-indigo-500 to-purple-500')}
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      ${Card(`${CardHead('Recent Activity','Latest records','info','from-slate-600 to-slate-700')}<div class="p-4 space-y-1 max-h-72 overflow-y-auto">${actHtml}</div>`)}
+      ${Card(`${CardHead('Class Distribution','Students per class','graduation-cap')}<div class="p-6">${distHtml}</div>`)}
+    </div>`;
+}
+
+// ──────────────────────────────────────────
+// ░░ FACULTY: STUDENTS ░░
+// ──────────────────────────────────────────
+function renderStudents() {
+  const cardsHtml = S.d.students.map(s=>`
+    <div class="glass-card rounded-2xl p-4 card-hover flex flex-col sm:flex-row sm:items-center gap-4">
+      <div class="w-12 h-12 rounded-2xl btn-grad-fac flex items-center justify-center font-black text-white text-lg shrink-0">${(s.name||'?')[0]}</div>
+      <div class="flex-1 min-w-0">
+        <p class="font-bold text-white">${s.name}</p>
+        <p class="text-xs text-slate-400 flex items-center gap-1 mt-0.5"><i data-lucide="mail" class="w-3 h-3"></i>${s.email||'—'}</p>
+        <div class="flex flex-wrap gap-2 mt-2">
+          ${s.parent_phone ? `<span class="text-[10px] px-2 py-0.5 rounded-lg bg-slate-800 text-slate-400"><i data-lucide="phone" class="w-2.5 h-2.5 inline mr-1"></i>${s.parent_phone}</span>` : ''}
+          ${s.class_name ? Badge(s.class_name,'indigo') : Badge('No Class','gray')}
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2 items-center">
+        <select onchange="updateStudentClass('${s.id}',this.value)" class="input-dark rounded-lg px-2 py-1.5 text-xs font-semibold">
+          <option value="">No Class</option>
+          ${S.d.classes.map(c=>`<option value="${c.id}" ${s.class_id==c.id?'selected':''}>${c.name}</option>`).join('')}
+        </select>
+        <button onclick="openGeneratePPT('${s.id}','${s.name}','${s.parent_email||''}')" class="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/10 transition-colors" title="Generate PPT Report">
+          <i data-lucide="file-bar-chart" class="w-3.5 h-3.5"></i>PPT
+        </button>
+        <button onclick="openEditStudent('${s.id}')" class="w-8 h-8 rounded-lg flex items-center justify-center text-blue-400 hover:bg-blue-500/10 transition-colors border border-blue-500/20">
+          <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+        </button>
+        <button onclick="deleteStudent('${s.id}','${s.name}')" class="w-8 h-8 rounded-lg flex items-center justify-center text-rose-400 hover:bg-rose-500/10 transition-colors border border-rose-500/20">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </div>`).join('') || Empty('No students registered yet');
+
+  return `
+    ${Card(`
+      ${CardHead('Register New Student','Enroll a student into the system','user-plus')}
+      <div class="p-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+          <div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><i data-lucide="user" class="w-4 h-4"></i></span><input id="ns-name" placeholder="Full Name *" class="input-dark w-full rounded-xl py-2.5 pl-10 pr-3 text-sm"></div>
+          <div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><i data-lucide="mail" class="w-4 h-4"></i></span><input id="ns-email" type="email" placeholder="Student Email *" class="input-dark w-full rounded-xl py-2.5 pl-10 pr-3 text-sm"></div>
+          <div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><i data-lucide="mail" class="w-4 h-4"></i></span><input id="ns-pemail" type="email" placeholder="Parent Email *" class="input-dark w-full rounded-xl py-2.5 pl-10 pr-3 text-sm"></div>
+          <div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><i data-lucide="phone" class="w-4 h-4"></i></span><input id="ns-pphone" placeholder="Parent Phone *" class="input-dark w-full rounded-xl py-2.5 pl-10 pr-3 text-sm"></div>
+          <div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><i data-lucide="calendar" class="w-4 h-4"></i></span><input id="ns-dob" type="date" placeholder="Date of Birth *" class="input-dark w-full rounded-xl py-2.5 pl-10 pr-3 text-sm text-slate-400"></div>
+          <div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><i data-lucide="credit-card" class="w-4 h-4"></i></span><input id="ns-aadhar" placeholder="Aadhar Number *" class="input-dark w-full rounded-xl py-2.5 pl-10 pr-3 text-sm"></div>
+        </div>
+        <div class="flex justify-end">
+          <button onclick="addStudent()" class="btn-grad-fac px-8 py-2.5 rounded-xl font-bold text-white text-sm shadow-lg">Enroll Student</button>
+        </div>
+      </div>
+    `,'border-orange-500/20')}
+    <div>
+      <h3 class="font-black text-slate-200 mb-3">${S.d.students.length} Students Enrolled</h3>
+      <div class="space-y-3">${cardsHtml}</div>
+    </div>`;
+}
+
+// ──────────────────────────────────────────
+// ░░ FACULTY: CURRICULUM ░░
+// ──────────────────────────────────────────
+function renderCurriculum() {
+  const classHtml = S.d.classes.map(c=>`
+    <div class="flex items-center justify-between p-3 rounded-xl hover:bg-slate-800/40 transition-colors group">
+      <span class="font-semibold text-slate-200 text-sm">${c.name}</span>
+      <button onclick="deleteClass('${c.id}','${c.name}')" class="opacity-0 group-hover:opacity-100 w-7 h-7 rounded-lg flex items-center justify-center text-rose-400 hover:bg-rose-500/10 transition-all">
+        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+      </button>
+    </div>`).join('') || Empty('No classes yet');
+
+  const designerHtml = S.d.classes.map(c=>{
+    const subs = S.d.subjects.filter(s=>s.class_id==c.id);
+    return `<div class="p-4 rounded-2xl border border-slate-700/30 bg-slate-900/30">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-black text-slate-200 uppercase tracking-wide">${c.name}</span>
+        ${Badge(subs.length+' Subjects','blue')}
+      </div>
+      <div class="flex flex-wrap gap-2">
+        ${subs.map(s=>`<span class="flex items-center gap-1.5 px-3 py-1 rounded-lg btn-grad-fac text-white text-xs font-bold shadow-sm">
+          ${s.name}
+          <button onclick="deleteSubject('${s.id}')" class="hover:text-rose-200 transition-colors"><i data-lucide="x" class="w-3 h-3"></i></button>
+        </span>`).join('') || '<p class="text-xs text-slate-600 italic">No subjects assigned</p>'}
+      </div>
+    </div>`;
+  }).join('') || '';
+
+  return `
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      ${Card(`
+        ${CardHead('Manage Classes','Create and delete classes','graduation-cap')}
+        <div class="p-6 space-y-4">
+          <div class="flex gap-2">
+            <input id="nc-name" placeholder="Class Name (e.g. Grade 10-A)" class="input-dark flex-1 rounded-xl py-2.5 px-4 text-sm">
+            <button onclick="addClass()" class="btn-grad-fac px-5 py-2.5 rounded-xl font-bold text-white text-sm">Add</button>
+          </div>
+          <div class="space-y-1">${classHtml}</div>
+        </div>
+      `)}
+      ${Card(`
+        ${CardHead('Assign Subjects','Map subjects to classes','book-open')}
+        <div class="p-6 space-y-4">
+          <div class="space-y-2">
+            <input id="ns-sname" placeholder="Subject Name" class="input-dark w-full rounded-xl py-2.5 px-4 text-sm">
+            <div class="flex gap-2">
+              <select id="ns-sclass" class="input-dark flex-1 rounded-xl py-2.5 px-4 text-sm">
+                <option value="">Select Class</option>
+                ${S.d.classes.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
+              </select>
+              <button onclick="addSubject()" class="px-5 py-2.5 rounded-xl font-bold text-sm text-slate-200 border border-slate-700 hover:border-orange-500/50 hover:text-orange-400 transition-colors">Add</button>
+            </div>
+          </div>
+          <div class="space-y-3 mt-4">${designerHtml || Empty('Add classes first')}</div>
+        </div>
+      `)}
+    </div>`;
+}
+
+// ──────────────────────────────────────────
+// ░░ FACULTY: GRADEBOOK ░░
+// ──────────────────────────────────────────
+function renderGradebook() {
+  const blocks = S.d.classes.map(cls => {
+    const students = S.d.students.filter(s=>s.class_id==cls.id);
+    const subjects = S.d.subjects.filter(s=>s.class_id==cls.id);
+    const rows = students.map(stu=>{
+      const grades = S.d.grades.filter(g=>g.student_id==stu.id);
+      return `<div class="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 border-b border-slate-700/20 hover:bg-slate-800/20 transition-colors">
+        <div class="flex items-center gap-3 flex-1 min-w-0">
+          <div class="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center font-bold text-slate-300">${(stu.name||'?')[0]}</div>
+          <div class="min-w-0">
+            <p class="font-bold text-white text-sm truncate">${stu.name}</p>
+            <div class="flex flex-wrap gap-1 mt-1">
+              ${grades.sort((a,b)=>a.week-b.week).map(g=>`<span class="text-[10px] px-2 py-0.5 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/20 font-bold">W${g.week}: ${g.subject_name?.substring(0,3)||'?'} ${g.score}</span>`).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          ${subjects.map(sub=>`<button onclick="openGradeModal('${stu.id}','${stu.name.replace(/'/g,'')}','${sub.id}','${sub.name.replace(/'/g,'')}')"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 border border-slate-700/50 hover:border-orange-500/50 hover:text-orange-400 transition-colors">+ ${sub.name}</button>`).join('')}
+        </div>
+      </div>`;
+    }).join('') || `<div class="py-8 text-center text-slate-600 text-sm">No students in this class</div>`;
+    return Card(`${CardHead(cls.name,'Enter weekly grades per student','book-open')}<div>${rows}</div>`,'mb-4');
+  }).join('');
+
+  return `<div>
+    <div class="flex items-center gap-3 mb-5 glass-card rounded-2xl p-4">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-lg"><i data-lucide="book-open" class="w-5 h-5"></i></div>
+      <div><h2 class="font-black text-white">Gradebook Management</h2><p class="text-xs text-slate-500">Track weekly academic performance per subject</p></div>
+    </div>
+    ${blocks || Empty('Create classes and enroll students first')}
+  </div>`;
+}
+
+// ──────────────────────────────────────────
+// ░░ FACULTY: ATTENDANCE ░░
+// ──────────────────────────────────────────
+function renderAttendance() {
+  const today = new Date().toISOString().split('T')[0];
+  const todayAtt = S.d.attendance.filter(a=>a.date===today);
+  const present = todayAtt.filter(a=>a.status==='Present').length;
+  const absent  = todayAtt.filter(a=>a.status==='Absent').length;
+  const od      = todayAtt.filter(a=>a.status==='OD').length;
+
+  const studentCards = S.d.students.map(s=>{
+    const att = todayAtt.find(a=>a.student_id==s.id);
+    const st = att?.status;
+    const cls = S.d.classes.find(c=>c.id==s.class_id);
+    return `<div class="glass-card rounded-2xl p-4 flex items-center justify-between gap-4 card-hover border-l-4 ${st==='Present'?'border-emerald-500':st==='Absent'?'border-rose-500':st==='OD'?'border-amber-500':'border-slate-700'}">
+      <div>
+        <p class="font-bold text-white text-sm">${s.name}</p>
+        <p class="text-[10px] text-slate-500 uppercase tracking-wide font-bold mt-0.5">${cls?.name||'No Class'}</p>
+        ${st ? `<span class="mt-1 inline-block">${Badge(st, st==='Present'?'green':st==='Absent'?'red':'amber')}</span>` : ''}
+      </div>
+      <div class="flex gap-2">
+        <button onclick="markAtt('${s.id}','${s.name.replace(/'/g,'')}','Present','${s.parent_email||''}')"
+          title="Present"
+          class="w-10 h-10 rounded-xl flex items-center justify-center transition-all ${st==='Present'?'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30':'bg-slate-800 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10'}">
+          <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+        </button>
+        <button onclick="markAtt('${s.id}','${s.name.replace(/'/g,'')}','Absent','${s.parent_email||''}')"
+          title="Absent"
+          class="w-10 h-10 rounded-xl flex items-center justify-center transition-all ${st==='Absent'?'bg-rose-500 text-white shadow-lg shadow-rose-500/30':'bg-slate-800 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10'}">
+          <i data-lucide="x-circle" class="w-5 h-5"></i>
+        </button>
+        <button onclick="markAtt('${s.id}','${s.name.replace(/'/g,'')}','OD','')"
+          title="On Duty"
+          class="w-10 h-10 rounded-xl flex items-center justify-center transition-all ${st==='OD'?'bg-amber-500 text-white shadow-lg shadow-amber-500/30':'bg-slate-800 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10'}">
+          <i data-lucide="file-check" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>`;
+  }).join('') || Empty('No students registered');
+
+  const pendingODs = S.d.odRequests.filter(r=>r.status==='pending');
+  const approvedODs = S.d.odRequests.filter(r=>r.status==='approved');
+  const completedODs = S.d.odRequests.filter(r=>['completed','expired'].includes(r.status)).slice(0,10);
+
+  const pendingHtml = pendingODs.map(od=>`
+    <div class="glass-card rounded-2xl p-4 border border-amber-500/25 card-hover" style="background:rgba(245,158,11,.05)">
+      <div class="flex flex-col sm:flex-row gap-4 items-start">
+        <img src="${od.letter_b64||''}" alt="Letter" class="w-24 h-18 rounded-xl object-cover cursor-pointer border border-slate-700 shrink-0" onclick="viewImg('${od.letter_b64||''}')">
+        <div class="flex-1">
+          <p class="font-bold text-white">${od.student_name}</p>
+          <p class="text-xs text-slate-400 mt-0.5">Event: <span class="text-amber-400 font-semibold">${od.event_name||'—'}</span></p>
+          <p class="text-[10px] text-slate-500 mt-1 font-mono">${od.date} · Submitted ${timeAgo(od.created_at)}</p>
+        </div>
+        <div class="flex gap-2 shrink-0">
+          <button onclick="approveOD('${od.id}')" class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>Approve
+          </button>
+          <button onclick="rejectOD('${od.id}')" class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30 transition-colors">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>Reject
+          </button>
+        </div>
+      </div>
+    </div>`).join('') || '<p class="text-slate-500 text-sm text-center py-4">No pending OD requests</p>';
+
+  const approvedHtml = approvedODs.map(od=>{
+    const deadline = new Date(new Date(od.approved_at).getTime()+30*60*1000);
+    const remaining = Math.max(0, deadline - Date.now());
+    const mins = Math.floor(remaining/60000);
+    const secs = Math.floor((remaining%60000)/1000);
+    return `<div class="glass-card rounded-2xl p-4 border border-blue-500/20" style="background:rgba(99,102,241,.05)">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center"><i data-lucide="clock" class="w-5 h-5"></i></div>
+        <div class="flex-1">
+          <p class="font-bold text-white text-sm">${od.student_name}</p>
+          <p class="text-xs text-slate-400">Geo-photo window: <span class="text-blue-400 font-mono">${remaining>0?`${mins}m ${secs}s`:'Expired'}</span></p>
+        </div>
+        ${od.geo_b64 ? `<img src="${od.geo_b64}" class="w-16 h-12 rounded-lg object-cover cursor-pointer border border-emerald-500/30" onclick="viewImg('${od.geo_b64}')">` : Badge('Awaiting geo-photo','amber')}
+      </div>
+    </div>`;
+  }).join('') || '';
+
+  const histHtml = S.d.attendance.sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,20).map(a=>`
+    <tr class="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
+      <td class="py-3 px-4 font-semibold text-sm text-slate-200">${a.student_name}</td>
+      <td class="py-3 px-4">${Badge(a.status, a.status==='Present'?'green':a.status==='Absent'?'red':'amber')}</td>
+      <td class="py-3 px-4 text-right text-xs text-slate-500 font-mono">${a.date}</td>
+    </tr>`).join('');
+
+  return `
+    <div class="flex items-center justify-between glass-card rounded-2xl p-4 mb-1">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg"><i data-lucide="calendar-check" class="w-5 h-5"></i></div>
+        <div>
+          <h2 class="font-black text-white">Daily Attendance</h2>
+          <p class="text-xs text-slate-500">${new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'})}</p>
+        </div>
+      </div>
+      <div class="flex gap-4 text-center">
+        ${[['Present',present,'emerald'],['Absent',absent,'rose'],['OD',od,'amber']].map(([l,v,c])=>
+          `<div><p class="text-xl font-black text-${c}-400">${v}</p><p class="text-[10px] text-slate-500 uppercase">${l}</p></div>`
+        ).join('')}
+      </div>
+    </div>
+
+    ${pendingODs.length>0 ? Card(`
+      ${CardHead(`Pending OD Requests (${pendingODs.length})`,'Approve or reject student OD applications','bell','from-amber-400 to-orange-500')}
+      <div class="p-5 space-y-3">${pendingHtml}</div>
+    `,'border-amber-500/20 mb-1') : ''}
+
+    ${approvedODs.length>0 ? Card(`
+      ${CardHead(`Approved ODs (${approvedODs.length})`,'Awaiting geo-photo submission','clock','from-blue-500 to-indigo-600')}
+      <div class="p-4 space-y-3">${approvedHtml}</div>
+    `,'border-blue-500/20 mb-1') : ''}
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      ${studentCards}
+    </div>
+
+    ${Card(`
+      ${CardHead('Attendance History','Last 20 records','clipboard-list','from-slate-600 to-slate-700')}
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead class="border-b border-slate-700/50" style="background:rgba(15,23,42,.5)">
+            <tr>
+              <th class="py-3 px-4 text-xs font-black text-slate-500 uppercase">Student</th>
+              <th class="py-3 px-4 text-xs font-black text-slate-500 uppercase">Status</th>
+              <th class="py-3 px-4 text-right text-xs font-black text-slate-500 uppercase">Date</th>
+            </tr>
+          </thead>
+          <tbody>${histHtml || '<tr><td colspan="3" class="py-8 text-center text-slate-600 text-sm">No records</td></tr>'}</tbody>
+        </table>
+      </div>
+    `,'mt-1')}`;
+}
+
+// ──────────────────────────────────────────
+// ░░ FACULTY: EVENTS ░░
+// ──────────────────────────────────────────
+function renderFacEvents() {
+  const evHtml = S.d.events.map(ev=>`
+    <div class="glass-card rounded-2xl p-5 card-hover">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl btn-grad-fac flex items-center justify-center text-white shadow-lg shrink-0"><i data-lucide="calendar-days" class="w-5 h-5"></i></div>
+          <div>
+            <p class="font-black text-white">${ev.title}</p>
+            <p class="text-xs text-slate-400 mt-0.5">${ev.event_date||'Date TBD'} ${ev.venue?'· '+ev.venue:''}</p>
+            ${ev.description ? `<p class="text-xs text-slate-500 mt-1 line-clamp-2">${ev.description}</p>` : ''}
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          ${Badge((ev.reg_count||0)+' Registered','indigo')}
+          <button onclick="deleteEvent('${ev.id}','${ev.title.replace(/'/g,'')}') " class="w-8 h-8 rounded-lg flex items-center justify-center text-rose-400 hover:bg-rose-500/10 transition-colors">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+    </div>`).join('') || Empty('No events created yet');
+
+  return `
+    ${Card(`
+      ${CardHead('Create New Event','Schedule events for students to participate','plus-circle')}
+      <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="sm:col-span-2"><input id="ev-title" placeholder="Event Title *" class="input-dark w-full rounded-xl py-2.5 px-4 text-sm"></div>
+        <input id="ev-date" type="date" class="input-dark rounded-xl py-2.5 px-4 text-sm text-slate-400">
+        <input id="ev-venue" placeholder="Venue / Location" class="input-dark rounded-xl py-2.5 px-4 text-sm">
+        <div class="sm:col-span-2"><textarea id="ev-desc" placeholder="Description (optional)" rows="2" class="input-dark w-full rounded-xl py-2.5 px-4 text-sm resize-none"></textarea></div>
+        <div class="sm:col-span-2 flex justify-end">
+          <button onclick="addEvent()" class="btn-grad-fac px-8 py-2.5 rounded-xl font-bold text-white text-sm shadow-lg">Create Event</button>
+        </div>
+      </div>
+    `,'border-orange-500/20 mb-1')}
+    <h3 class="font-black text-slate-200 mb-3">${S.d.events.length} Events</h3>
+    <div class="space-y-3">${evHtml}</div>`;
+}
+
+// ──────────────────────────────────────────
+// ░░ FACULTY: REPORTS ░░
+// ──────────────────────────────────────────
+function renderReports() {
+  const rows = S.d.students.map(s=>`
+    <div class="flex items-center justify-between p-4 rounded-xl hover:bg-slate-800/30 transition-colors border-b border-slate-700/20">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl btn-grad-fac flex items-center justify-center font-black text-white">${(s.name||'?')[0]}</div>
+        <div>
+          <p class="font-bold text-white text-sm">${s.name}</p>
+          <p class="text-xs text-slate-400">${s.parent_email ? '📧 '+s.parent_email : 'No parent email'}</p>
+        </div>
+      </div>
+      <button onclick="openGeneratePPT('${s.id}','${s.name.replace(/'/g,'')}','${s.parent_email||''}')"
+        class="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm btn-grad-fac text-white shadow-lg">
+        <i data-lucide="file-bar-chart" class="w-4 h-4"></i>Generate & Email PPT
+      </button>
+    </div>`).join('') || Empty('No students registered');
+
+  return `
+    ${Card(`
+      ${CardHead('PPT Report Generator','Generate & auto-email reports to parents','bar-chart-3')}
+      <div class="px-5 py-3 flex items-start gap-3 border-b border-slate-700/20" style="background:rgba(99,102,241,.08)">
+        <i data-lucide="info" class="w-4 h-4 text-indigo-400 mt-0.5 shrink-0"></i>
+        <p class="text-xs text-slate-400">Clicking <strong class="text-white">Generate & Email PPT</strong> will create a professional 4-slide PowerPoint report and automatically send it to the student's parent email address.</p>
+      </div>
+      <div>${rows}</div>
+    `)}`;
+}
+
+// ──────────────────────────────────────────
+// ░░ STUDENT: OVERVIEW ░░
+// ──────────────────────────────────────────
+function renderStuOverview() {
+  const myAtt = S.d.attendance;
+  const present = myAtt.filter(a=>a.status==='Present').length;
+  const total   = myAtt.length || 1;
+  const attRate = Math.round(present/total*100);
+  const myGrades = S.d.grades;
+  const nums = myGrades.map(g=>parseFloat(g.score)).filter(n=>!isNaN(n));
+  const avg = nums.length ? Math.round(nums.reduce((a,b)=>a+b,0)/nums.length) : null;
+  const myClass = S.d.classes.find(c=>c.id==S.user.classId);
+  const pendingOD = S.d.odRequests.find(r=>r.status==='approved');
+
+  return `
+    ${pendingOD ? `<div class="glass-card rounded-2xl p-5 countdown-card border border-orange-500/40" style="background:rgba(249,115,22,.08)">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl btn-grad-fac flex items-center justify-center text-white shadow-xl shrink-0 text-2xl font-black">⏱</div>
+        <div class="flex-1">
+          <p class="font-black text-orange-400 text-lg">OD Approved!</p>
+          <p class="text-sm text-slate-300">Submit your geo-tagged photo within <span class="text-orange-400 font-bold" id="ov-countdown">calculating...</span></p>
+        </div>
+        <button onclick="switchTab('s_od')" class="btn-grad-fac px-5 py-2.5 rounded-xl font-bold text-white text-sm shadow-lg">
+          Open Geo-Camera →
+        </button>
+      </div>
+    </div>` : ''}
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      ${StatCard('Attendance Rate', attRate+'%', 'calendar-check', 'from-indigo-500 to-blue-500', `${present} of ${myAtt.length} days`)}
+      ${(()=>{ const gI=getGrade(avg); return StatCard('Average Score', avg!==null ? `${avg}% &nbsp;<span class="text-2xl ${gI.cls}">${gI.grade}</span>` : '—', 'award', 'from-emerald-500 to-teal-500', avg!==null?`${gI.label} · ${myGrades.length} grades`:`${myGrades.length} grades`); })()}
+      ${StatCard('Class', myClass?.name||'Not Enrolled', 'graduation-cap', 'from-amber-500 to-orange-500')}
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      ${Card(`
+        ${CardHead('My Profile','Your registered information','user','from-indigo-500 to-blue-600')}
+        <div class="p-6 space-y-3">
+          ${[['Full Name',S.user.name],['Email',S.user.email||'—'],['Class',myClass?.name||'Not enrolled']].map(([l,v])=>`
+            <div class="flex justify-between items-center py-2.5 border-b border-slate-700/20">
+              <span class="text-sm text-slate-400 font-semibold">${l}</span>
+              <span class="text-sm text-white font-bold">${v}</span>
+            </div>`).join('')}
+          <button onclick="openChangePass()" class="mt-2 flex items-center gap-2 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors">
+            <i data-lucide="key" class="w-3.5 h-3.5"></i>Change Password
+          </button>
+        </div>
+      `)}
+      ${Card(`
+        ${CardHead('Recent Grades','Latest academic results','star','from-emerald-500 to-teal-600')}
+        <div class="p-6">
+          ${myGrades.sort((a,b)=>b.week-a.week).slice(0,6).map(g=>`
+            <div class="flex justify-between items-center py-2.5 border-b border-slate-700/20">
+              <div>
+                <p class="font-bold text-white text-sm">${g.subject_name}</p>
+                <p class="text-[10px] text-slate-500">Week ${g.week}</p>
+              </div>
+              <span class="px-3 py-1 rounded-lg text-sm font-black ${parseFloat(g.score)>=75?'text-emerald-400 bg-emerald-500/15':parseFloat(g.score)>=50?'text-amber-400 bg-amber-500/15':'text-rose-400 bg-rose-500/15'}">${g.score}</span>
+            </div>`).join('') || Empty('No grades yet')}
+        </div>
+      `)}
+    </div>`;
+}
+
+// ──────────────────────────────────────────
+// ░░ STUDENT: ENROLLMENT ░░
+// ──────────────────────────────────────────
+function renderStuEnrollment() {
+  const myClass = S.d.classes.find(c=>c.id==S.user.classId);
+  if (myClass) {
+    const subs = S.d.subjects.filter(s=>s.class_id==myClass.id);
+    return `
+      <div class="glass-card rounded-2xl p-5 border border-indigo-500/30 flex items-center gap-4 mb-5" style="background:rgba(99,102,241,.08)">
+        <div class="w-10 h-10 rounded-xl btn-grad-stu flex items-center justify-center text-white shadow-lg"><i data-lucide="graduation-cap" class="w-5 h-5"></i></div>
+        <div>
+          <p class="font-black text-white">Enrolled in: ${myClass.name}</p>
+          <p class="text-xs text-slate-400 mt-0.5">${subs.length} subjects assigned</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        ${subs.map(s=>`<div class="glass-card rounded-2xl p-5 card-hover border border-indigo-500/15">
+          <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-3"><i data-lucide="book-open" class="w-5 h-5"></i></div>
+          <p class="font-bold text-white">${s.name}</p>
+          <p class="text-xs text-slate-500 mt-1">Active subject</p>
+        </div>`).join('') || '<p class="text-slate-500 col-span-full text-sm">No subjects in this class yet</p>'}
+      </div>`;
+  }
+
+  const pending = S.d.enrollmentRequests.find(r=>r.status==='pending');
+  if (pending) {
+    const rc = S.d.classes.find(c=>c.id==pending.class_id);
+    return `<div class="max-w-md mx-auto mt-10 text-center glass-card rounded-3xl p-10 border border-amber-500/20" style="background:rgba(245,158,11,.05)">
+      <div class="w-20 h-20 mx-auto rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 mb-5"><i data-lucide="clock" class="w-10 h-10"></i></div>
+      <h2 class="font-black text-white text-xl mb-2">Enrollment Pending</h2>
+      <p class="text-slate-400">Your request for <strong class="text-amber-400">${rc?.name||'Unknown Class'}</strong> is awaiting faculty approval.</p>
+    </div>`;
+  }
+
+  return `
+    <div class="mb-5">
+      <h2 class="font-black text-white text-xl mb-1">Course Enrollment</h2>
+      <p class="text-slate-400 text-sm">Select a class to request enrollment</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      ${S.d.classes.map(c=>`
+        <div class="glass-card rounded-2xl p-6 card-hover group border border-indigo-500/10">
+          <div class="w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><i data-lucide="graduation-cap" class="w-6 h-6"></i></div>
+          <p class="font-black text-white text-lg">${c.name}</p>
+          <p class="text-xs text-slate-500 mt-1 mb-5">Available for enrollment</p>
+          <button onclick="requestEnrollment('${c.id}')" class="btn-grad-stu w-full py-2.5 rounded-xl font-bold text-white text-sm shadow-lg">Request Enrollment</button>
+        </div>`).join('') || Empty('No classes available')}
+    </div>`;
+}
+
+// ──────────────────────────────────────────
+// ░░ STUDENT: ATTENDANCE ░░
+// ──────────────────────────────────────────
+function renderStuAttendance() {
+  const att = S.d.attendance.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const present = att.filter(a=>a.status==='Present').length;
+  const absent  = att.filter(a=>a.status==='Absent').length;
+  const od      = att.filter(a=>a.status==='OD').length;
+  const rate    = att.length ? Math.round(present/att.length*100) : 0;
+
+  return `
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+      ${StatCard('Attendance Rate',rate+'%','activity','from-indigo-500 to-blue-500')}
+      ${StatCard('Present',present,'check-circle-2','from-emerald-500 to-teal-500')}
+      ${StatCard('Absent',absent,'x-circle','from-rose-500 to-pink-500')}
+      ${StatCard('OD Days',od,'file-check','from-amber-500 to-orange-500')}
+    </div>
+    ${Card(`
+      ${CardHead('Attendance Log','Your complete attendance history','calendar-check','from-indigo-500 to-blue-600')}
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead class="border-b border-slate-700/50" style="background:rgba(15,23,42,.5)">
+            <tr>
+              <th class="py-3 px-5 text-xs font-black text-slate-500 uppercase">Date</th>
+              <th class="py-3 px-5 text-xs font-black text-slate-500 uppercase">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${att.map(a=>`<tr class="border-b border-slate-700/20 hover:bg-slate-800/20 transition-colors">
+              <td class="py-3.5 px-5 font-mono text-sm text-slate-300">${a.date}</td>
+              <td class="py-3.5 px-5">${Badge(a.status, a.status==='Present'?'green':a.status==='Absent'?'red':'amber')}</td>
+            </tr>`).join('') || '<tr><td colspan="2" class="py-10 text-center text-slate-600 text-sm">No records yet</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    `)}`;
+}
+
+// ──────────────────────────────────────────
+// ░░ STUDENT: EVENTS ░░
+// ──────────────────────────────────────────
+function renderStuEvents() {
+  const evHtml = S.d.events.map(ev=>`
+    <div class="glass-card rounded-2xl p-5 card-hover ${ev.is_registered?'border border-indigo-500/30':''}">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-xl btn-grad-stu flex items-center justify-center text-white shadow-lg shrink-0"><i data-lucide="calendar-days" class="w-5 h-5"></i></div>
+        <div class="flex-1 min-w-0">
+          <p class="font-black text-white">${ev.title}</p>
+          <p class="text-xs text-slate-400 mt-1">${ev.event_date||'TBD'} ${ev.venue?'· 📍'+ev.venue:''}</p>
+          ${ev.description ? `<p class="text-xs text-slate-500 mt-2">${ev.description}</p>` : ''}
+          <div class="mt-3 flex items-center gap-3">
+            ${ev.is_registered ? `
+              <span class="flex items-center gap-1 text-xs font-bold text-emerald-400"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>Registered</span>
+              <button onclick="unregisterEvent('${ev.id}')" class="text-xs font-bold text-slate-400 hover:text-rose-400 transition-colors">Unregister</button>
+            ` : `<button onclick="registerEvent('${ev.id}')" class="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold btn-grad-stu text-white shadow-lg">Register →</button>`}
+          </div>
+        </div>
+      </div>
+    </div>`).join('') || Empty('No events scheduled yet');
+
+  return `
+    <div class="mb-4">
+      <h2 class="font-black text-white text-xl mb-1">Events & Activities</h2>
+      <p class="text-slate-400 text-sm">Register for events to apply for OD attendance</p>
+    </div>
+    <div class="space-y-4">${evHtml}</div>`;
+}
+
+// ──────────────────────────────────────────
+// ░░ STUDENT: OD / ON-DUTY ░░
+// ──────────────────────────────────────────
+function renderStuOD() {
+  const myODs = S.d.odRequests;
+  const today = new Date().toISOString().split('T')[0];
+  const todayOD = myODs.find(o=>o.date===today && ['pending','approved','completed'].includes(o.status));
+  const approvedOD = myODs.find(o=>o.status==='approved');
+
+  const myEvents = S.d.events.filter(e=>e.is_registered);
+  const todayAtt = S.d.attendance.find(a=>a.date===today);
+
+  let applyHtml = '';
+  if (!todayOD && todayAtt?.status !== 'Present') {
+    applyHtml = `
+    ${Card(`
+      ${CardHead('Apply for On Duty (OD)','Submit your OD request with letter photo','file-check','from-amber-500 to-orange-500')}
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-2">Event (if applicable)</label>
+          <select id="od-event" class="input-dark w-full rounded-xl py-2.5 px-4 text-sm">
+            <option value="">Other / No Event</option>
+            ${myEvents.map(e=>`<option value="${e.id}">${e.title} (${e.event_date||'TBD'})</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-2">OD Letter Photo *</label>
+          <div id="letter-preview-wrap" class="mb-3 hidden">
+            <img id="letter-preview" src="" class="w-40 h-28 object-cover rounded-xl border border-slate-700">
+          </div>
+          <label for="od-letter" class="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-slate-600 hover:border-orange-500/50 cursor-pointer transition-colors">
+            <i data-lucide="camera" class="w-5 h-5 text-slate-400"></i>
+            <span class="text-sm text-slate-400">Take photo / select letter</span>
+          </label>
+          <input id="od-letter" type="file" accept="image/*" capture="environment" class="hidden" onchange="previewLetter(this)">
+        </div>
+        <button onclick="submitOD()" class="btn-grad-fac w-full py-3 rounded-xl font-bold text-white text-sm shadow-lg">Submit OD Request</button>
+      </div>
+    `,'border-amber-500/20')}`;
+  }
+
+  const countdownHtml = approvedOD ? `
+    <div class="glass-card rounded-3xl p-6 countdown-card border border-orange-500/40 text-center" style="background:rgba(249,115,22,.08)">
+      <div class="text-5xl font-black text-orange-400 mb-2" id="od-countdown-display">30:00</div>
+      <p class="text-slate-300 font-bold mb-1">Geo-verification window</p>
+      <p class="text-xs text-slate-500 mb-6">You must submit a live geo-tagged photo before the timer expires. After that you'll be marked <strong class="text-rose-400">Absent</strong>.</p>
+      <button onclick="openGeoCam('${approvedOD.id}')" class="btn-grad-fac px-8 py-3.5 rounded-2xl font-black text-white text-base shadow-xl mx-auto flex items-center gap-2 justify-center">
+        <i data-lucide="map-pin" class="w-5 h-5"></i> Open Geo-Camera
+      </button>
+    </div>` : '';
+
+  const histHtml = myODs.map(od=>`
+    <div class="glass-card rounded-2xl p-4 card-hover">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl ${
+          od.status==='completed'?'bg-emerald-500/20 text-emerald-400':
+          od.status==='approved'?'bg-blue-500/20 text-blue-400':
+          od.status==='rejected'?'bg-rose-500/20 text-rose-400':
+          od.status==='expired'?'bg-red-900/40 text-red-400':
+          'bg-amber-500/20 text-amber-400'
+        } flex items-center justify-center shrink-0">
+          <i data-lucide="${od.status==='completed'?'check-circle-2':od.status==='approved'?'clock':od.status==='rejected'?'x-circle':'file-check'}" class="w-5 h-5"></i>
+        </div>
+        <div class="flex-1">
+          <p class="font-bold text-white text-sm">${od.event_name||'OD Request'} · ${od.date}</p>
+          <p class="text-xs text-slate-500 mt-0.5">${od.status==='expired'?'⚠️ Time expired — marked Absent':''}</p>
+        </div>
+        <div class="flex items-center gap-2">
+          ${Badge(od.status, od.status==='completed'?'green':od.status==='approved'?'blue':od.status==='rejected'?'red':od.status==='expired'?'red':'amber')}
+          ${od.geo_b64 ? `<img src="${od.geo_b64}" class="w-12 h-9 rounded-lg object-cover cursor-pointer border border-emerald-500/30" onclick="viewImg('${od.geo_b64}')">` : ''}
+        </div>
+      </div>
+    </div>`).join('') || Empty('No OD requests submitted');
+
+  return `
+    ${countdownHtml}
+    ${applyHtml}
+    ${todayOD && todayOD.status==='pending' ? `
+    <div class="glass-card rounded-2xl p-5 border border-amber-500/30" style="background:rgba(245,158,11,.07)">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center"><i data-lucide="clock" class="w-5 h-5"></i></div>
+        <div><p class="font-bold text-amber-400">OD Submitted — Awaiting Approval</p><p class="text-xs text-slate-400 mt-0.5">Your faculty will review your request</p></div>
+      </div>
+    </div>` : ''}
+    ${todayOD?.status==='completed' ? `
+    <div class="glass-card rounded-2xl p-5 border border-emerald-500/30" style="background:rgba(16,185,129,.07)">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center"><i data-lucide="check-circle-2" class="w-5 h-5"></i></div>
+        <div><p class="font-bold text-emerald-400">OD Completed ✓</p><p class="text-xs text-slate-400">Geo-photo verified. You're all set!</p></div>
+        ${todayOD.geo_b64 ? `<img src="${todayOD.geo_b64}" class="w-20 h-14 rounded-xl object-cover ml-auto border border-emerald-500/30 cursor-pointer" onclick="viewImg('${todayOD.geo_b64}')">` : ''}
+      </div>
+    </div>` : ''}
+    <div>
+      <h3 class="font-black text-slate-200 mb-3">OD History</h3>
+      <div class="space-y-3">${histHtml}</div>
+    </div>`;
+}
+
+// ──────────────────────────────────────────
+// OD COUNTDOWN TIMER
+// ──────────────────────────────────────────
+function clearODTimer() {
+  if (S.odTimerId) { clearInterval(S.odTimerId); S.odTimerId = null; }
+}
+
+function startODTimers() {
+  clearODTimer();
+  const approvedOD = S.d.odRequests.find(o=>o.status==='approved');
+  if (!approvedOD) return;
+
+  const deadline = new Date(approvedOD.approved_at).getTime() + 30*60*1000;
+
+  const updateTimer = () => {
+    const rem = deadline - Date.now();
+    const el = document.getElementById('od-countdown-display');
+    const ovEl = document.getElementById('ov-countdown');
+    if (rem <= 0) {
+      clearODTimer();
+      if (el) el.textContent = '00:00';
+      if (ovEl) ovEl.textContent = '0:00';
+      toast('OD window expired. You may be marked absent.','error',7000);
+      setTimeout(()=>loadAndRender(), 5000);
+      return;
+    }
+    const mins = Math.floor(rem/60000);
+    const secs = Math.floor((rem%60000)/1000);
+    const str = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+    if (el) el.textContent = str;
+    if (ovEl) ovEl.textContent = str;
+  };
+  updateTimer();
+  S.odTimerId = setInterval(updateTimer, 1000);
+}
+
+// ──────────────────────────────────────────
+// GEO-TAG CAMERA
+// ──────────────────────────────────────────
+function openGeoCam(odId) {
+  S.geoCamOdId = odId;
+  S.geoLat = null; S.geoLng = null; S.photoCaptured = false;
+  const modal = document.getElementById('geo-modal');
+  modal.classList.remove('hidden');
+  document.getElementById('geo-loading').classList.remove('hidden');
+  document.getElementById('geo-video').classList.add('hidden');
+  document.getElementById('geo-canvas').classList.add('hidden');
+  document.getElementById('geo-capture-btn').disabled = true;
+
+  // Start camera
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: {ideal:1280}, height:{ideal:720} }, audio: false })
+    .then(stream => {
+      S.geoStream = stream;
+      const vid = document.getElementById('geo-video');
+      vid.srcObject = stream;
+      vid.onloadedmetadata = () => {
+        vid.play();
+        document.getElementById('geo-loading').classList.add('hidden');
+        vid.classList.remove('hidden');
+        startGeoLocation();
+      };
+    })
+    .catch(err => {
+      closeGeoModal();
+      toast('Camera access denied: '+err.message, 'error');
+    });
+
+  // Update time overlay
+  setInterval(() => {
+    const tel = document.getElementById('geo-time');
+    if (tel) tel.textContent = '🕐 '+new Date().toLocaleString();
+  }, 1000);
+}
+
+function startGeoLocation() {
+  document.getElementById('geo-status-text').textContent = 'Acquiring GPS...';
+  navigator.geolocation.watchPosition(pos => {
+    S.geoLat = pos.coords.latitude;
+    S.geoLng = pos.coords.longitude;
+    const acc = pos.coords.accuracy ? ` ±${Math.round(pos.coords.accuracy)}m` : '';
+    document.getElementById('geo-coords').textContent = `📍 ${S.geoLat.toFixed(6)}, ${S.geoLng.toFixed(6)}${acc}`;
+    document.getElementById('geo-status-text').textContent = `GPS acquired: ${S.geoLat.toFixed(5)}, ${S.geoLng.toFixed(5)}`;
+    document.getElementById('geo-capture-btn').disabled = false;
+    document.getElementById('geo-gps-status').style.borderColor = 'rgba(16,185,129,.4)';
+  }, err => {
+    document.getElementById('geo-status-text').textContent = 'GPS unavailable — '+err.message;
+    document.getElementById('geo-coords').textContent = '⚠️ GPS unavailable';
+    // Still allow capture without GPS
+    document.getElementById('geo-capture-btn').disabled = false;
+  }, { enableHighAccuracy: true });
+}
+
+async function captureGeoPhoto() {
+  const vid = document.getElementById('geo-video');
+  const canvas = document.getElementById('geo-canvas');
+  const W = vid.videoWidth || 640;
+  const H = vid.videoHeight || 480;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Draw video frame
+  ctx.drawImage(vid, 0, 0, W, H);
+
+  // Draw overlay
+  const overlayH = 70;
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(0, H-overlayH, W, overlayH);
+
+  // EduPortal watermark
+  ctx.fillStyle = '#f97316';
+  ctx.font = `bold ${Math.round(W*0.018)}px DM Sans, sans-serif`;
+  ctx.fillText('EduPortal OD Verification', 16, H-overlayH+20);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `${Math.round(W*0.016)}px monospace`;
+  const locText = S.geoLat ? `📍 ${S.geoLat.toFixed(6)}, ${S.geoLng.toFixed(6)}` : '📍 GPS unavailable';
+  ctx.fillText(locText, 16, H-overlayH+40);
+  ctx.fillText('🕐 '+new Date().toLocaleString(), 16, H-overlayH+60);
+
+  const b64 = canvas.toDataURL('image/jpeg', 0.88);
+
+  // Stop camera
+  if (S.geoStream) { S.geoStream.getTracks().forEach(t=>t.stop()); S.geoStream = null; }
+  vid.classList.add('hidden');
+  canvas.classList.remove('hidden');
+
+  // Submit
+  document.getElementById('geo-capture-btn').textContent = 'Submitting...';
+  document.getElementById('geo-capture-btn').disabled = true;
+
+  try {
+    await api('POST', `/od/${S.geoCamOdId}/geo-photo`, {
+      geoB64: b64, lat: S.geoLat, lng: S.geoLng
+    });
+    closeGeoModal();
+    clearODTimer();
+    toast('✅ Geo-photo submitted! OD verified.', 'success', 6000);
+    await loadAndRender();
+  } catch(e) {
+    closeGeoModal();
+    toast(e.message||'Geo-photo submission failed', 'error');
+    await loadAndRender();
+  }
+}
+
+function closeGeoModal() {
+  if (S.geoStream) { S.geoStream.getTracks().forEach(t=>t.stop()); S.geoStream = null; }
+  document.getElementById('geo-modal').classList.add('hidden');
+}
+
+// ──────────────────────────────────────────
+// FACULTY ACTIONS
+// ──────────────────────────────────────────
+async function addStudent() {
+  const get = id => document.getElementById(id).value.trim();
+  const body = { name:get('ns-name'), email:get('ns-email'), parentEmail:get('ns-pemail'),
+    parentPhone:get('ns-pphone'), dob:get('ns-dob'), aadhar:get('ns-aadhar') };
+  if (!body.name||!body.email||!body.parentEmail||!body.parentPhone||!body.dob||!body.aadhar) {
+    toast('Fill in all required fields','warning'); return;
+  }
+  try {
+    await api('POST','/students',body);
+    toast('Student enrolled successfully','success');
+    ['ns-name','ns-email','ns-pemail','ns-pphone','ns-dob','ns-aadhar'].forEach(id=>document.getElementById(id).value='');
+    await loadAndRender();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function openEditStudent(id) {
+  const s = S.d.students.find(x=>x.id==id);
+  if (!s) return;
+  openModal('Edit Student',`
+    <div class="space-y-3">
+      <input id="e-name" value="${s.name||''}" placeholder="Full Name" class="input-dark w-full rounded-xl py-2.5 px-4 text-sm">
+      <input id="e-email" value="${s.email||''}" placeholder="Email" class="input-dark w-full rounded-xl py-2.5 px-4 text-sm">
+      <input id="e-pemail" value="${s.parent_email||''}" placeholder="Parent Email" class="input-dark w-full rounded-xl py-2.5 px-4 text-sm">
+      <input id="e-pphone" value="${s.parent_phone||''}" placeholder="Parent Phone" class="input-dark w-full rounded-xl py-2.5 px-4 text-sm">
+      <input id="e-dob" value="${s.dob||''}" type="date" class="input-dark w-full rounded-xl py-2.5 px-4 text-sm text-slate-400">
+      <input id="e-aadhar" value="${s.aadhar||''}" placeholder="Aadhar" class="input-dark w-full rounded-xl py-2.5 px-4 text-sm">
+    </div>`,
+    `<button onclick="closeModal()" class="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-400 hover:text-white">Cancel</button>
+     <button onclick="saveEditStudent('${id}')" class="btn-grad-fac px-6 py-2.5 rounded-xl text-sm font-bold text-white">Save</button>`
+  );
+}
+
+async function saveEditStudent(id) {
+  const get = i => document.getElementById(i).value.trim();
+  try {
+    await api('PUT',`/students/${id}`,{
+      name:get('e-name'), email:get('e-email'), parentEmail:get('e-pemail'),
+      parentPhone:get('e-pphone'), dob:get('e-dob'), aadhar:get('e-aadhar')
+    });
+    toast('Student updated','success');
+    closeModal();
+    await loadAndRender();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function deleteStudent(id, name) {
+  if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+  try {
+    await api('DELETE',`/students/${id}`);
+    toast('Student deleted','info');
+    await loadAndRender();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function updateStudentClass(sId, cId) {
+  try {
+    await api('PUT',`/students/${sId}/class`,{ classId: cId||null });
+    toast('Class updated','info');
+    await loadAll();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function addClass() {
+  const name = document.getElementById('nc-name').value.trim();
+  if (!name) { toast('Enter class name','warning'); return; }
+  try {
+    await api('POST','/classes',{name});
+    toast('Class created','success');
+    document.getElementById('nc-name').value='';
+    await loadAndRender();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function deleteClass(id, name) {
+  if (!confirm(`Delete class "${name}"?`)) return;
+  try {
+    await api('DELETE',`/classes/${id}`);
+    toast('Class deleted','info');
+    await loadAndRender();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function addSubject() {
+  const name = document.getElementById('ns-sname').value.trim();
+  const classId = document.getElementById('ns-sclass').value;
+  if (!name||!classId) { toast('Enter subject name and select class','warning'); return; }
+  try {
+    await api('POST','/subjects',{name,classId});
+    toast('Subject added','success');
+    document.getElementById('ns-sname').value='';
+    await loadAndRender();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function deleteSubject(id) {
+  try {
+    await api('DELETE',`/subjects/${id}`);
+    toast('Subject deleted','info');
+    await loadAndRender();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function openGradeModal(sId, sName, subId, subName) {
+  openModal(`Add Grade — ${sName}`,`
+    <p class="text-sm text-slate-400 mb-4">Subject: <strong class="text-white">${subName}</strong></p>
+    <div class="space-y-3">
+      <div>
+        <label class="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Week Number</label>
+        <input id="gw" type="number" min="1" max="52" placeholder="e.g. 1" class="input-dark w-full rounded-xl py-2.5 px-4 text-sm">
+      </div>
+      <div>
+        <label class="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Score / Grade</label>
+        <input id="gs" type="text" placeholder="e.g. 85 or A+" class="input-dark w-full rounded-xl py-2.5 px-4 text-sm">
+      </div>
+    </div>`,
+    `<button onclick="closeModal()" class="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-400 hover:text-white">Cancel</button>
+     <button onclick="saveGrade('${sId}','${sName}','${subId}','${subName}')" class="btn-grad-fac px-6 py-2.5 rounded-xl text-sm font-bold text-white">Save Grade</button>`
+  );
+}
+
+async function saveGrade(sId, sName, subId, subName) {
+  const week = document.getElementById('gw').value;
+  const score = document.getElementById('gs').value.trim();
+  if (!week||!score) { toast('Enter week and score','warning'); return; }
+  try {
+    await api('POST','/grades',{studentId:sId, studentName:sName, subjectId:subId, subjectName:subName, week:parseInt(week), score});
+    toast('Grade saved','success');
+    closeModal();
+    await loadAndRender();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function markAtt(sId, sName, status, parentEmail) {
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    await api('POST','/attendance',{studentId:sId, studentName:sName, status, date:today});
+    if (status==='Absent') toast(`${sName} marked Absent`, 'warning');
+    else if (status==='Present') toast(`${sName} marked Present`, 'success');
+    else toast(`${sName} marked OD`, 'info');
+    await loadAndRender();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function approveOD(id) {
+  try {
+    await api('PUT',`/od/${id}/approve`);
+    toast('OD Approved! Student has 30 minutes to submit geo-photo.','success',6000);
+    await loadAndRender();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function rejectOD(id) {
+  try {
+    await api('PUT',`/od/${id}/reject`);
+    toast('OD Rejected','info');
+    await loadAndRender();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function addEvent() {
+  const get = id => document.getElementById(id)?.value?.trim()||'';
+  const title = get('ev-title');
+  if (!title) { toast('Enter event title','warning'); return; }
+  try {
+    await api('POST','/events',{
+      title, description:get('ev-desc'), eventDate:get('ev-date'), venue:get('ev-venue')
+    });
+    toast('Event created','success');
+    ['ev-title','ev-desc','ev-date','ev-venue'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    await loadAndRender();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function deleteEvent(id, name) {
+  if (!confirm(`Delete event "${name}"?`)) return;
+  try {
+    await api('DELETE',`/events/${id}`);
+    toast('Event deleted','info');
+    await loadAndRender();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function openGeneratePPT(studentId, studentName, parentEmail) {
+  showLoading('Generating Report...', `Creating PowerPoint for ${studentName} and emailing parent`);
+  try {
+    const res = await api('POST', `/reports/ppt/${studentId}`, undefined, true);
+    const emailSent = res.headers.get('X-Email-Sent') === 'true';
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${studentName.replace(/\s+/g,'_')}_Weekly_Report.pptx`;
+    a.click(); URL.revokeObjectURL(url);
+    hideLoading();
+    if (emailSent) {
+      toast(`✅ PPT generated & emailed to ${parentEmail}`, 'success', 7000);
+    } else {
+      toast(`✅ PPT downloaded. Email to parent failed (check Gmail config)`, 'warning', 7000);
+    }
+  } catch(e) {
+    hideLoading();
+    toast('PPT generation failed: '+e.message,'error');
+  }
+}
+
+// ──────────────────────────────────────────
+// STUDENT ACTIONS
+// ──────────────────────────────────────────
+function previewLetter(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('letter-preview').src = e.target.result;
+    document.getElementById('letter-preview-wrap').classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitOD() {
+  const file = document.getElementById('od-letter').files[0];
+  if (!file) { toast('Take a photo of your OD letter first','warning'); return; }
+  const evSel = document.getElementById('od-event');
+  const eventId = evSel?.value || null;
+  const eventName = evSel?.options[evSel.selectedIndex]?.text || 'Other';
+
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      await api('POST','/od',{
+        eventId: eventId||undefined, eventName,
+        letterB64: e.target.result
+      });
+      toast('OD request submitted! Wait for faculty approval.','success',6000);
+      await loadAndRender();
+    } catch(err) { toast(err.message||'Failed to submit OD','error'); }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function registerEvent(id) {
+  try {
+    await api('POST',`/events/${id}/register`);
+    toast('Registered for event!','success');
+    await loadAndRender();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function unregisterEvent(id) {
+  try {
+    await api('DELETE',`/events/${id}/register`);
+    toast('Unregistered from event','info');
+    await loadAndRender();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function requestEnrollment(classId) {
+  try {
+    await api('POST','/enrollment',{classId});
+    toast('Enrollment request sent!','success',5000);
+    await loadAndRender();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function openChangePass() {
+  openModal('Change Password',`
+    <div class="space-y-3">
+      <input id="np1" type="password" placeholder="New password" class="input-dark w-full rounded-xl py-2.5 px-4 text-sm">
+      <input id="np2" type="password" placeholder="Confirm new password" class="input-dark w-full rounded-xl py-2.5 px-4 text-sm">
+    </div>`,
+    `<button onclick="closeModal()" class="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-400">Cancel</button>
+     <button onclick="changePass()" class="btn-grad-stu px-6 py-2.5 rounded-xl text-sm font-bold text-white">Update</button>`
+  );
+}
+
+async function changePass() {
+  const p1 = document.getElementById('np1').value;
+  const p2 = document.getElementById('np2').value;
+  if (!p1) { toast('Enter new password','warning'); return; }
+  if (p1!==p2) { toast('Passwords do not match','error'); return; }
+  try {
+    await api('PUT','/students/me/password',{password:p1});
+    toast('Password updated','success');
+    closeModal();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+// ──────────────────────────────────────────
+// GRADE HELPER
+// ──────────────────────────────────────────
+function getGrade(pct) {
+  if (pct === null || pct === undefined || isNaN(pct))
+    return { grade:'—', label:'No Data',  cls:'text-slate-500',  bg:'bg-slate-700/20',    border:'border-slate-600/30' };
+  if (pct >= 90) return { grade:'S', label:'Superior',  cls:'text-purple-400', bg:'bg-purple-500/15',  border:'border-purple-500/30' };
+  if (pct >= 80) return { grade:'A', label:'Very Good', cls:'text-emerald-400',bg:'bg-emerald-500/15', border:'border-emerald-500/30' };
+  if (pct >= 70) return { grade:'B', label:'Good',      cls:'text-teal-400',   bg:'bg-teal-500/15',   border:'border-teal-500/30' };
+  if (pct >= 60) return { grade:'C', label:'Average',   cls:'text-blue-400',   bg:'bg-blue-500/15',   border:'border-blue-500/30' };
+  if (pct >= 50) return { grade:'D', label:'Pass',      cls:'text-amber-400',  bg:'bg-amber-500/15',  border:'border-amber-500/30' };
+  return           { grade:'F', label:'Fail',       cls:'text-rose-400',   bg:'bg-rose-500/15',   border:'border-rose-500/30' };
+}
+
+// ──────────────────────────────────────────
+// ░░ FACULTY: EVALUATION ░░
+// ──────────────────────────────────────────
+function renderEvaluation() {
+  const SCALE = [
+    { g:'S', r:'90–100%', label:'Superior',  cls:'text-purple-400',  bg:'bg-purple-500/10 border-purple-500/30' },
+    { g:'A', r:'80–89%',  label:'Very Good', cls:'text-emerald-400', bg:'bg-emerald-500/10 border-emerald-500/30' },
+    { g:'B', r:'70–79%',  label:'Good',      cls:'text-teal-400',    bg:'bg-teal-500/10 border-teal-500/30' },
+    { g:'C', r:'60–69%',  label:'Average',   cls:'text-blue-400',    bg:'bg-blue-500/10 border-blue-500/30' },
+    { g:'D', r:'50–59%',  label:'Pass',      cls:'text-amber-400',   bg:'bg-amber-500/10 border-amber-500/30' },
+    { g:'F', r:'< 50%',   label:'Fail',      cls:'text-rose-400',    bg:'bg-rose-500/10 border-rose-500/30' },
+  ];
+
+  const scaleHtml = `
+    <div class="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-6">
+      ${SCALE.map(x => `
+        <div class="rounded-2xl p-4 border text-center stat-card ${x.bg}">
+          <p class="text-4xl font-black ${x.cls}">${x.g}</p>
+          <p class="text-[11px] font-bold mt-2 ${x.cls}">${x.r}</p>
+          <p class="text-[9px] text-slate-500 uppercase tracking-widest mt-1">${x.label}</p>
+        </div>`).join('')}
+    </div>`;
+
+  const blocks = S.d.classes.map(cls => {
+    const students = S.d.students.filter(s => s.class_id == cls.id);
+    const subjects  = S.d.subjects.filter(s  => s.class_id == cls.id);
+    if (!students.length) return '';
+
+    const header = `
+      <thead style="background:rgba(15,23,42,.6)" class="border-b border-slate-700/50">
+        <tr>
+          <th class="py-3 px-4 text-xs font-black text-slate-500 uppercase text-left sticky left-0" style="min-width:140px">Student</th>
+          ${subjects.map(s => `<th class="py-3 px-3 text-xs font-black text-slate-500 uppercase text-center whitespace-nowrap">${s.name}<br><span class="text-[9px] normal-case font-normal text-slate-600">out of 100</span></th>`).join('')}
+          <th class="py-3 px-4 text-xs font-black text-slate-500 uppercase text-center">Total</th>
+          <th class="py-3 px-4 text-xs font-black text-purple-400 uppercase text-center">%</th>
+          <th class="py-3 px-4 text-xs font-black text-purple-400 uppercase text-center">Grade</th>
+          <th class="py-3 px-4 text-xs font-black text-slate-500 uppercase text-center">Status</th>
+        </tr>
+      </thead>`;
+
+    const bodyRows = students.map(stu => {
+      const sg = S.d.grades.filter(g => g.student_id == stu.id);
+      let totalScore = 0, subjectCount = 0;
+
+      const subCells = subjects.map(sub => {
+        const subGrades = sg.filter(g => g.subject_id == sub.id)
+                           .sort((a, b) => b.week - a.week);
+        const latest   = subGrades[0];
+        const num      = latest ? parseFloat(latest.score) : NaN;
+        const hasNum   = !isNaN(num);
+        if (hasNum) { totalScore += num; subjectCount++; }
+        const cc = !hasNum
+          ? 'text-slate-600'
+          : num >= 90 ? 'text-purple-400'
+          : num >= 75 ? 'text-emerald-400'
+          : num >= 50 ? 'text-amber-400'
+          : 'text-rose-400';
+        return `<td class="py-3 px-3 text-center text-sm font-bold ${cc}">${latest ? latest.score : '—'}</td>`;
+      }).join('');
+
+      const pct   = subjectCount > 0 ? Math.round(totalScore / subjectCount) : null;
+      const gInfo = getGrade(pct);
+      const maxT  = subjectCount * 100;
+
+      return `
+        <tr class="border-b border-slate-700/20 hover:bg-slate-800/20 transition-colors">
+          <td class="py-3 px-4 font-bold text-white text-sm">${stu.name}</td>
+          ${subCells}
+          <td class="py-3 px-4 text-center text-sm font-bold text-slate-300">${subjectCount > 0 ? Math.round(totalScore)+'/'+maxT : '—'}</td>
+          <td class="py-3 px-4 text-center text-sm font-black ${gInfo.cls}">${pct !== null ? pct+'%' : '—'}</td>
+          <td class="py-3 px-4 text-center">
+            <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl text-lg font-black border ${gInfo.cls} ${gInfo.bg} ${gInfo.border}">${gInfo.grade}</span>
+          </td>
+          <td class="py-3 px-4 text-center">${pct !== null ? Badge(pct >= 50 ? 'Pass' : 'Fail', pct >= 50 ? 'green' : 'red') : Badge('N/A','gray')}</td>
+        </tr>`;
+    }).join('');
+
+    // Class-level stats
+    const allPcts = students.map(stu => {
+      const sg2 = S.d.grades.filter(g => g.student_id == stu.id);
+      let t=0, c=0;
+      subjects.forEach(sub => {
+        const latest = sg2.filter(g=>g.subject_id==sub.id).sort((a,b)=>b.week-a.week)[0];
+        const n = latest ? parseFloat(latest.score) : NaN;
+        if (!isNaN(n)) { t+=n; c++; }
+      });
+      return c>0 ? Math.round(t/c) : null;
+    }).filter(p => p !== null);
+
+    const classAvg  = allPcts.length ? Math.round(allPcts.reduce((a,b)=>a+b,0)/allPcts.length) : null;
+    const passCount = allPcts.filter(p=>p>=50).length;
+    const failCount = allPcts.filter(p=>p<50).length;
+    const cg = getGrade(classAvg);
+
+    return Card(`
+      ${CardHead(cls.name, 'Subject-wise marks · Percentage · Grade', 'clipboard-list', 'from-purple-500 to-indigo-600')}
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">${header}<tbody>${bodyRows}</tbody></table>
+      </div>
+      <div class="px-5 py-3.5 border-t border-slate-700/30 flex flex-wrap gap-6 items-center text-xs" style="background:rgba(15,23,42,.35)">
+        <span class="text-slate-500 font-semibold">Class Average:</span>
+        <span class="font-black ${cg.cls}">${classAvg !== null ? classAvg+'% — Grade '+cg.grade : '—'}</span>
+        <span class="text-slate-600">|</span>
+        <span class="text-emerald-400 font-bold">✅ Pass: ${passCount}</span>
+        <span class="text-rose-400 font-bold">❌ Fail: ${failCount}</span>
+        <span class="text-slate-600">|</span>
+        <span class="text-slate-500">S≥90 · A≥80 · B≥70 · C≥60 · D≥50 · F&lt;50</span>
+      </div>
+    `, 'mb-5');
+  }).join('');
+
+  return `
+    <div class="flex items-center gap-3 mb-5 glass-card rounded-2xl p-4">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shrink-0"><i data-lucide="clipboard-list" class="w-5 h-5"></i></div>
+      <div><h2 class="font-black text-white">Student Evaluation System</h2><p class="text-xs text-slate-500">Subject-wise marks · Auto percentage · Letter grade (S / A / B / C / D / F)</p></div>
+    </div>
+    ${scaleHtml}
+    ${blocks || Empty('Create classes, assign subjects and enter marks in the Gradebook first')}`;
+}
+
+// ──────────────────────────────────────────
+// HELPERS
+// ──────────────────────────────────────────
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const diff = Date.now() - d;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return Math.floor(diff/60000)+'m ago';
+  if (diff < 86400000) return Math.floor(diff/3600000)+'h ago';
+  return Math.floor(diff/86400000)+'d ago';
+}
+
+// ──────────────────────────────────────────
+// BOOT
+// ──────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  setLoginTab('faculty');
+  if (S.user && S.token) {
+    initApp();
+  }
+});
+</script>
+</body>
+</html>
