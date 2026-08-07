@@ -1218,20 +1218,38 @@ async function addEvent(){ const t=document.getElementById('ev-title')?.value?.t
 
 async function deleteEvent(id,name){ if(!confirm(`Delete "${name}"?`)) return; try{ await api('DELETE',`/events/${id}`); toast('Deleted','info'); invalidate('events'); await loadFor(S.tab); renderContent(); }catch(e){toast(e.message,'error');} }
 
-async function openGeneratePPT(studentId,studentName,parentEmail){
-  showLoading('Generating Report...','Building 4-slide PPT for '+studentName);
-  try{
-    const res=await api('POST',`/reports/ppt/${studentId}`,undefined,true);
-    if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.error||'Generation failed'); }
-    const emailSent=res.headers.get('X-Email-Sent')==='true';
-    const blob=await res.blob();
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url; a.download=`${studentName.replace(/\s+/g,'_')}_Report.pptx`;
+async function openGeneratePPT(studentId, studentName, parentEmail) {
+  showLoading('Generating Report...', 'Building 4-slide PPT for ' + studentName);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 45000); // 45s timeout
+  try {
+    const opts = {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', ...(S.token ? { Authorization: 'Bearer ' + S.token } : {}) }
+    };
+    const res = await fetch('/api/reports/ppt/' + studentId, opts);
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      throw new Error(e.error || 'Server error ' + res.status);
+    }
+    const emailSent = res.headers.get('X-Email-Sent') === 'true';
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = studentName.replace(/\s+/g, '_') + '_Report.pptx';
     a.click(); URL.revokeObjectURL(url);
     hideLoading();
-    toast(emailSent?`✅ PPT generated & emailed to ${parentEmail}`:`✅ PPT downloaded. Email failed — check Gmail config`,'success',7000);
-  }catch(e){ hideLoading(); toast('PPT failed: '+e.message,'error'); }
+    toast(emailSent
+      ? '✅ PPT downloaded & emailed to parent!'
+      : '✅ PPT downloaded! (Email not configured)', 'success', 7000);
+  } catch (e) {
+    clearTimeout(timeoutId);
+    hideLoading();
+    const msg = e.name === 'AbortError' ? 'Request timed out (45s). Server may be waking up — try again.' : (e.message || 'PPT generation failed');
+    toast('❌ ' + msg, 'error', 8000);
+  }
 }
 
 // ─────────────────────────────────────────
