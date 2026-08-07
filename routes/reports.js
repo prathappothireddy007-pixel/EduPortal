@@ -7,10 +7,10 @@ const { sendPPTReport } = require('../services/email');
 // POST /api/reports/ppt/:studentId
 router.post('/ppt/:studentId', authenticate, requireFaculty, async (req, res) => {
   const { studentId } = req.params;
-  console.log(`[PPT] Starting report generation for student ${studentId}`);
+  console.log(`[PPT] Generating report for student ${studentId}...`);
 
   try {
-    // Fetch student
+    // 1. Fetch student
     const sRes = await pool.query(
       `SELECT u.*, c.name as class_name
        FROM users u
@@ -19,52 +19,40 @@ router.post('/ppt/:studentId', authenticate, requireFaculty, async (req, res) =>
     );
     const student = sRes.rows[0];
     if (!student) {
-      console.log('[PPT] Student not found:', studentId);
       return res.status(404).json({ error: 'Student not found' });
     }
-    console.log(`[PPT] Found student: ${student.name}`);
 
-    // Fetch grades and attendance
+    // 2. Fetch grades and attendance
     const grades = (await pool.query(
       'SELECT * FROM grades WHERE student_id=$1 ORDER BY week', [studentId]
     )).rows;
     const attendance = (await pool.query(
       'SELECT * FROM attendance WHERE student_id=$1 ORDER BY date', [studentId]
     )).rows;
-    console.log(`[PPT] Grades: ${grades.length}, Attendance: ${attendance.length}`);
 
-    // Generate PPT
-    console.log('[PPT] Generating slides...');
+    // 3. Generate PPT synchronously (Fast: ~1-2 seconds)
     const buffer = await generateStudentReport(student, grades, attendance, student.class_name);
-    console.log(`[PPT] Generated! Buffer: ${buffer.length} bytes`);
-
-    // Send email to parent
     const fileName = `${student.name.replace(/\s+/g, '_')}_Weekly_Report.pptx`;
-    let emailSent = false;
-    if (student.parent_email) {
-      try {
-        console.log(`[PPT] Sending email to ${student.parent_email}...`);
-        await sendPPTReport(student.parent_email, student.name, buffer, fileName);
-        emailSent = true;
-        console.log('[PPT] Email sent successfully');
-      } catch (emailErr) {
-        console.error('[PPT] Email failed:', emailErr.message);
-      }
-    } else {
-      console.log('[PPT] No parent email configured');
-    }
 
-    // Return the file as download
-    res.setHeader('Content-Type',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+    // 4. Return the PPT file to client IMMEDIATELY so request doesn't hang
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('X-Email-Sent', emailSent ? 'true' : 'false');
-    console.log('[PPT] Sending file to client...');
     res.send(Buffer.from(buffer));
+
+    // 5. Send Email in Background asynchronously (Non-blocking with 5s timeout)
+    if (student.parent_email) {
+      Promise.race([
+        sendPPTReport(student.parent_email, student.name, buffer, fileName),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Email send timeout (5s)')), 5000))
+      ])
+      .then(() => console.log(`[PPT] Email sent to ${student.parent_email}`))
+      .catch(err => console.error(`[PPT] Email failed/timed out: ${err.message}`));
+    }
   } catch (err) {
-    console.error('[PPT] FATAL ERROR:', err.message);
-    console.error(err.stack);
-    res.status(500).json({ error: 'Failed to generate report: ' + err.message });
+    console.error('[PPT] Generation error:', err.message);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to generate report: ' + err.message });
+    }
   }
 });
 
