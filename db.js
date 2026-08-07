@@ -86,8 +86,7 @@ const initDB = async () => {
         event_id INTEGER REFERENCES events(id),
         event_name VARCHAR(255),
         letter_b64 TEXT,
-        status VARCHAR(20) DEFAULT 'pending'
-          CHECK(status IN ('pending','approved','rejected','completed','expired')),
+        status VARCHAR(20) DEFAULT 'pending',
         approved_at TIMESTAMP,
         geo_b64 TEXT,
         geo_lat DOUBLE PRECISION,
@@ -104,6 +103,11 @@ const initDB = async () => {
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
+
+    // Migration: drop old OD status constraint and allow new status values
+    try {
+      await client.query(`ALTER TABLE od_requests DROP CONSTRAINT IF EXISTS od_requests_status_check`);
+    } catch(e) { /* ignore */ }
 
     // Seed default faculty admin
     const adminCheck = await client.query(

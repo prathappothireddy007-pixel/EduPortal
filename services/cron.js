@@ -2,48 +2,39 @@ const cron = require('node-cron');
 const { pool } = require('../db');
 
 /**
- * Runs every 2 minutes.
- * Finds approved OD requests older than 30 minutes with no geo photo,
- * marks them expired, and marks the student absent for that day.
+ * Runs every 10 minutes.
+ * Auto-rejects OD requests that are still 'pending' for more than 24 hours (cleanup).
+ * NOTE: Geo-photo verification is now done MANUALLY by faculty.
  */
 const startODExpiryJob = () => {
-  cron.schedule('*/2 * * * *', async () => {
+  cron.schedule('*/10 * * * *', async () => {
     try {
-      const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-
+      // Auto-reject OD letters pending for more than 24 hours with no action
+      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const expired = await pool.query(
         `SELECT * FROM od_requests
-         WHERE status='approved'
-           AND approved_at < $1
-           AND geo_b64 IS NULL`,
+         WHERE status='pending' AND created_at < $1`,
         [cutoff]
       );
 
       for (const od of expired.rows) {
-        // Mark OD expired
         await pool.query(
-          "UPDATE od_requests SET status='expired' WHERE id=$1", [od.id]
+          "UPDATE od_requests SET status='rejected' WHERE id=$1", [od.id]
         );
-
-        // Mark student absent
         await pool.query(
           `INSERT INTO attendance (student_id, student_name, status, date)
            VALUES ($1, $2, 'Absent', $3)
-           ON CONFLICT (student_id, date)
-           DO UPDATE SET status='Absent'`,
+           ON CONFLICT (student_id, date) DO UPDATE SET status='Absent'`,
           [od.student_id, od.student_name, od.date]
         );
-
-        console.log(
-          `⏰ OD expired for ${od.student_name} (${od.date}) — marked Absent`
-        );
+        console.log(`⏰ Auto-rejected stale OD for ${od.student_name} (${od.date})`);
       }
     } catch (err) {
-      console.error('Cron job error:', err.message);
+      console.error('Cron error:', err.message);
     }
   });
 
-  console.log('⏰ OD expiry cron job started (runs every 2 minutes)');
+  console.log('⏰ OD cleanup cron started (runs every 10 minutes)');
 };
 
 module.exports = { startODExpiryJob };

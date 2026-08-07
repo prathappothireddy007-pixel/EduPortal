@@ -7,9 +7,7 @@ router.get('/', authenticate, async (req, res) => {
   try {
     let r;
     if (req.user.role === 'faculty') {
-      r = await pool.query(
-        'SELECT * FROM od_requests ORDER BY created_at DESC'
-      );
+      r = await pool.query('SELECT * FROM od_requests ORDER BY created_at DESC');
     } else {
       r = await pool.query(
         'SELECT * FROM od_requests WHERE student_id=$1 ORDER BY created_at DESC',
@@ -25,11 +23,10 @@ router.post('/', authenticate, requireStudent, async (req, res) => {
   const { eventId, eventName, letterB64 } = req.body;
   if (!letterB64) return res.status(400).json({ error: 'Letter photo required' });
   try {
-    // Check no pending/approved OD for today
     const today = new Date().toISOString().split('T')[0];
     const existing = await pool.query(
       `SELECT id FROM od_requests
-       WHERE student_id=$1 AND date=$2 AND status IN ('pending','approved')`,
+       WHERE student_id=$1 AND date=$2 AND status IN ('pending','approved','geo_submitted','completed')`,
       [req.user.id, today]
     );
     if (existing.rows.length > 0)
@@ -44,7 +41,7 @@ router.post('/', authenticate, requireStudent, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
-// PUT approve OD (faculty)
+// PUT approve OD (faculty) — marks attendance as OD
 router.put('/:id/approve', authenticate, requireFaculty, async (req, res) => {
   try {
     const r = await pool.query(
@@ -53,8 +50,8 @@ router.put('/:id/approve', authenticate, requireFaculty, async (req, res) => {
       [req.params.id]
     );
     if (!r.rows[0]) return res.status(404).json({ error: 'Not found' });
-
     const od = r.rows[0];
+
     // Mark attendance as OD
     await pool.query(
       `INSERT INTO attendance (student_id,student_name,status,date,od_request_id)
@@ -62,23 +59,32 @@ router.put('/:id/approve', authenticate, requireFaculty, async (req, res) => {
        ON CONFLICT (student_id,date) DO UPDATE SET status='OD', od_request_id=$4`,
       [od.student_id, od.student_name, od.date, od.id]
     );
-
-    res.json(r.rows[0]);
+    res.json(od);
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-// PUT reject OD (faculty)
+// PUT reject OD (faculty) — marks attendance as Absent
 router.put('/:id/reject', authenticate, requireFaculty, async (req, res) => {
   try {
     const r = await pool.query(
       "UPDATE od_requests SET status='rejected' WHERE id=$1 RETURNING *",
       [req.params.id]
     );
-    res.json(r.rows[0]);
+    const od = r.rows[0];
+    if (od) {
+      // Mark absent since OD was rejected
+      await pool.query(
+        `INSERT INTO attendance (student_id,student_name,status,date)
+         VALUES ($1,$2,'Absent',$3)
+         ON CONFLICT (student_id,date) DO UPDATE SET status='Absent'`,
+        [od.student_id, od.student_name, od.date]
+      );
+    }
+    res.json(od);
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-// POST submit geo photo (student) - must be within 30 min of approval
+// POST student submits geo-tagged photo — sets status to 'geo_submitted' (awaits faculty verification)
 router.post('/:id/geo-photo', authenticate, requireStudent, async (req, res) => {
   const { geoB64, lat, lng } = req.body;
   if (!geoB64 || lat == null || lng == null)
@@ -92,16 +98,44 @@ router.post('/:id/geo-photo', authenticate, requireStudent, async (req, res) => 
     const od = r.rows[0];
     if (!od) return res.status(404).json({ error: 'OD request not found' });
     if (od.status !== 'approved')
-      return res.status(400).json({ error: 'OD is not in approved state' });
+      return res.status(400).json({ error: 'OD must be in approved state to submit geo-photo' });
 
-    // Check 30-minute window
-    const approvedAt = new Date(od.approved_at);
-    const now = new Date();
-    const diffMs = now - approvedAt;
-    if (diffMs > 30 * 60 * 1000) {
-      // Expired — mark absent
-      await pool.query(
-        "UPDATE od_requests SET status='expired' WHERE id=$1", [od.id]
+    // Set to geo_submitted — awaiting faculty manual verification
+    const updated = await pool.query(
+      `UPDATE od_requests
+       SET geo_b64=$1, geo_lat=$2, geo_lng=$3, status='geo_submitted'
+       WHERE id=$4 RETURNING *`,
+      [geoB64, lat, lng, od.id]
+    );
+    res.json(updated.rows[0]);
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+// PUT faculty verifies geo-photo — action: 'accept' or 'reject'
+router.put('/:id/verify-geo', authenticate, requireFaculty, async (req, res) => {
+  const { action } = req.body;
+  if (!['accept','reject'].includes(action))
+    return res.status(400).json({ error: 'action must be accept or reject' });
+
+  try {
+    const odRes = await pool.query('SELECT * FROM od_requests WHERE id=$1', [req.params.id]);
+    const od = odRes.rows[0];
+    if (!od) return res.status(404).json({ error: 'OD request not found' });
+    if (od.status !== 'geo_submitted')
+      return res.status(400).json({ error: 'OD is not in geo_submitted state' });
+
+    if (action === 'accept') {
+      // Mark completed — keep attendance as OD
+      const r = await pool.query(
+        "UPDATE od_requests SET status='completed' WHERE id=$1 RETURNING *",
+        [od.id]
+      );
+      res.json(r.rows[0]);
+    } else {
+      // Reject geo — mark absent
+      const r = await pool.query(
+        "UPDATE od_requests SET status='geo_rejected' WHERE id=$1 RETURNING *",
+        [od.id]
       );
       await pool.query(
         `INSERT INTO attendance (student_id,student_name,status,date)
@@ -109,19 +143,8 @@ router.post('/:id/geo-photo', authenticate, requireStudent, async (req, res) => 
          ON CONFLICT (student_id,date) DO UPDATE SET status='Absent'`,
         [od.student_id, od.student_name, od.date]
       );
-      return res.status(400).json({
-        error: 'Time window expired (30 minutes). Marked as Absent.'
-      });
+      res.json(r.rows[0]);
     }
-
-    // Save geo photo and complete
-    const updated = await pool.query(
-      `UPDATE od_requests
-       SET geo_b64=$1, geo_lat=$2, geo_lng=$3, status='completed'
-       WHERE id=$4 RETURNING *`,
-      [geoB64, lat, lng, od.id]
-    );
-    res.json(updated.rows[0]);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 

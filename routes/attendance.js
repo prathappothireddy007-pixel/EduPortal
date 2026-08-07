@@ -18,22 +18,44 @@ router.get('/', authenticate, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-// POST mark attendance (faculty: Present/Absent/OD)
+// POST mark attendance (faculty)
+// KEY LOGIC: If marking OD but student has NO valid approved OD for today → auto-mark Absent
 router.post('/', authenticate, requireFaculty, async (req, res) => {
   const { studentId, studentName, status, date } = req.body;
   if (!studentId || !status || !date)
     return res.status(400).json({ error: 'Missing fields' });
+
   try {
+    let actualStatus = status;
+    let autoAbsent = false;
+
+    if (status === 'OD') {
+      // Check if student has a valid approved/submitted/completed OD for this date
+      const odCheck = await pool.query(
+        `SELECT id FROM od_requests
+         WHERE student_id=$1 AND date=$2
+           AND status IN ('approved','geo_submitted','completed')`,
+        [studentId, date]
+      );
+
+      if (odCheck.rows.length === 0) {
+        // No valid OD — auto-mark Absent
+        actualStatus = 'Absent';
+        autoAbsent = true;
+      }
+    }
+
     const r = await pool.query(
       `INSERT INTO attendance (student_id,student_name,status,date)
        VALUES ($1,$2,$3,$4)
        ON CONFLICT (student_id,date)
        DO UPDATE SET status=$3
        RETURNING *`,
-      [studentId, studentName, status, date]
+      [studentId, studentName, actualStatus, date]
     );
-    res.json(r.rows[0]);
-  } catch (err) { res.status(500).json({ error: 'Server error' }); }
+
+    res.json({ ...r.rows[0], autoAbsent });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
 // GET today's stats
