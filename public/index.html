@@ -4,11 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EduPortal Academic & Campus Operations Platform</title>
-  <!-- Tailwind CSS & Lucide Icons -->
+  <!-- Tailwind CSS, Lucide Icons, Chart.js -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -49,7 +48,7 @@
 
     /* Glassmorphism */
     .glass-panel {
-      background: rgba(15, 23, 42, 0.7);
+      background: rgba(15, 23, 42, 0.75);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.08);
@@ -81,6 +80,7 @@
       background: rgba(59, 130, 246, 0.08);
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
     }
+    select.glass-input option { background: #0F172A; color: #F8FAFC; }
 
     /* Buttons */
     .btn-primary {
@@ -91,6 +91,10 @@
       padding: 10px 20px;
       transition: all 0.2s;
       box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
     .btn-primary:hover {
       opacity: 0.92;
@@ -106,10 +110,38 @@
       border-radius: 10px;
       padding: 10px 20px;
       transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
     .btn-secondary:hover {
       background: rgba(255, 255, 255, 0.12);
       color: #F8FAFC;
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+      color: #FFFFFF;
+      font-weight: 600;
+      border-radius: 10px;
+      padding: 8px 16px;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: #FFFFFF;
+      font-weight: 600;
+      border-radius: 10px;
+      padding: 8px 16px;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
     /* Metric Cards Accent Line */
@@ -167,7 +199,7 @@
       <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
         <div>
           <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2" id="login-id-label">Admin / Faculty ID</label>
-          <input type="text" id="login-id" required class="glass-input w-full" placeholder="e.g. 192411184">
+          <input type="text" id="login-id" required class="glass-input w-full" placeholder="Enter User ID">
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Password</label>
@@ -178,9 +210,6 @@
           <i data-lucide="arrow-right" class="w-4 h-4"></i>
         </button>
       </form>
-      <div class="mt-6 text-center text-xs text-slate-500">
-        Default Faculty: <span class="text-slate-400 font-mono">192411184 / katam@123</span>
-      </div>
     </div>
   </div>
 
@@ -213,11 +242,11 @@
       <div class="p-4 border-t border-white/10 flex items-center justify-between glass-panel">
         <div class="flex items-center gap-3 overflow-hidden">
           <div id="user-avatar" class="w-9 h-9 rounded-full bg-blue-600/30 border border-blue-500/40 flex items-center justify-center font-bold text-blue-400 shrink-0">
-            F
+            U
           </div>
           <div class="truncate">
-            <p id="user-display-name" class="text-sm font-semibold text-white truncate">Administrator</p>
-            <p id="user-display-role" class="text-xs text-slate-400 capitalize">Faculty</p>
+            <p id="user-display-name" class="text-sm font-semibold text-white truncate">User</p>
+            <p id="user-display-role" class="text-xs text-slate-400 capitalize">Role</p>
           </div>
         </div>
         <button onclick="handleLogout()" title="Logout" class="text-slate-400 hover:text-rose-400 p-2 rounded-lg hover:bg-white/5 transition-colors">
@@ -323,6 +352,7 @@
 
     function toast(msg, type = 'info') {
       const container = document.getElementById('toast-container');
+      if (!container) return;
       const item = document.createElement('div');
       item.className = 'toast-item';
       
@@ -402,25 +432,25 @@
       { section: 'ACADEMICS', items: [
         { tab: 'students', label: 'Students Directory', icon: 'users' },
         { tab: 'faculty-users', label: 'Faculty Management', icon: 'shield-check' },
-        { tab: 'classes', label: 'Classes', icon: 'layout-grid' },
-        { tab: 'subjects', label: 'Subjects', icon: 'book' },
-        { tab: 'gradebook', label: 'Gradebook', icon: 'award' },
-        { tab: 'evaluation', label: 'Evaluation & Reports', icon: 'bar-chart-2' }
+        { tab: 'classes', label: 'Classes & Batches', icon: 'layout-grid' },
+        { tab: 'subjects', label: 'Subjects Catalog', icon: 'book' },
+        { tab: 'gradebook', label: 'Academic Gradebook', icon: 'award' },
+        { tab: 'evaluation', label: 'PPT Report Generator', icon: 'bar-chart-2' }
       ]},
       { section: 'ATTENDANCE & OD', items: [
         { tab: 'attendance', label: 'Attendance Entry', icon: 'calendar-check' },
-        { tab: 'od-requests', label: 'OD Requests', icon: 'clipboard-check' }
+        { tab: 'od-requests', label: 'OD Verification Engine', icon: 'clipboard-check' }
       ]},
       { section: 'CAMPUS OPERATIONS', items: [
-        { tab: 'classrooms', label: 'Classroom Overview', icon: 'building-2' },
+        { tab: 'classrooms', label: 'Classrooms Status', icon: 'building-2' },
         { tab: 'timetable', label: 'Timetable Allocations', icon: 'clock' },
         { tab: 'events', label: 'Events & Registration', icon: 'star' }
       ]},
       { section: 'INSIGHTS & SUPPORT', items: [
         { tab: 'academic-risk', label: 'Academic Risk Engine', icon: 'alert-triangle' },
-        { tab: 'issues', label: 'Issue Tracking', icon: 'message-square' },
+        { tab: 'issues', label: 'Student Support Desk', icon: 'message-square' },
         { tab: 'documents', label: 'Digital Vault', icon: 'file-text' },
-        { tab: 'achievements', label: 'Achievements', icon: 'trophy' },
+        { tab: 'achievements', label: 'Achievements Review', icon: 'trophy' },
         { tab: 'certificates', label: 'Certificate Generator', icon: 'medal' },
         { tab: 'audit-logs', label: 'System Audit Logs', icon: 'activity' },
         { tab: 'settings', label: 'Global Settings', icon: 'settings' }
@@ -430,7 +460,7 @@
     const STUDENT_NAV = [
       { section: 'MY ACADEMICS', items: [
         { tab: 'dashboard', label: 'Overview', icon: 'home' },
-        { tab: 'grades', label: 'My Grades & Performance', icon: 'award' },
+        { tab: 'grades', label: 'My Grades & Scores', icon: 'award' },
         { tab: 'what-if', label: 'What-If Simulator', icon: 'zap' },
         { tab: 'attendance-calc', label: 'Attendance Shortage', icon: 'calculator' }
       ]},
@@ -444,7 +474,7 @@
         { tab: 'certificates', label: 'My Certificates', icon: 'medal' },
         { tab: 'achievements', label: 'My Portfolio', icon: 'trophy' },
         { tab: 'documents', label: 'Digital Vault', icon: 'file-text' },
-        { tab: 'issues', label: 'Student Support', icon: 'help-circle' }
+        { tab: 'issues', label: 'Support Tickets', icon: 'help-circle' }
       ]}
     ];
 
@@ -593,12 +623,11 @@
 
     // --- FACULTY VIEWS ---
     async function renderFacultyDashboard(container) {
-      const [students, classes, odReqs, issues, events] = await Promise.all([
+      const [students, classes, odReqs, issues] = await Promise.all([
         api('GET', '/students'),
         api('GET', '/classes'),
         api('GET', '/od'),
-        api('GET', '/issues'),
-        api('GET', '/events')
+        api('GET', '/issues')
       ]);
 
       const pendingOD = odReqs.filter(o => o.status === 'pending' || o.status === 'geo_submitted').length;
@@ -612,7 +641,7 @@
               <h3 class="text-2xl font-extrabold text-white">Good Morning, ${S.user.name} 👋</h3>
               <p class="text-sm text-slate-400 mt-1">Here is what's happening across campus today.</p>
             </div>
-            <button onclick="switchTab('academic-risk')" class="btn-primary flex items-center gap-2">
+            <button onclick="switchTab('academic-risk')" class="btn-primary">
               <i data-lucide="shield-alert" class="w-4 h-4"></i>
               <span>Run Risk Check</span>
             </button>
@@ -681,13 +710,12 @@
 
     async function renderStudentsDirectory(container) {
       const students = await api('GET', '/students');
-      const classes = await api('GET', '/classes');
 
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-bold text-white">All Enrolled Students</h3>
-            <button onclick="openAddStudentModal()" class="btn-primary flex items-center gap-2">
+            <button onclick="openAddStudentModal()" class="btn-primary">
               <i data-lucide="user-plus" class="w-4 h-4"></i>
               <span>Add New Student</span>
             </button>
@@ -726,6 +754,15 @@
           </div>
         </div>
       `;
+    }
+
+    function filterStudentTable() {
+      const query = document.getElementById('search-student').value.toLowerCase();
+      const rows = document.querySelectorAll('#student-table-body tr');
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(query) ? '' : 'none';
+      });
     }
 
     function openAddStudentModal() {
@@ -772,7 +809,7 @@
         <div class="space-y-6 animate-fade-in">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-bold text-white">Faculty Accounts</h3>
-            <button onclick="openAddFacultyModal()" class="btn-primary flex items-center gap-2">
+            <button onclick="openAddFacultyModal()" class="btn-primary">
               <i data-lucide="user-plus" class="w-4 h-4"></i>
               <span>Add Faculty User</span>
             </button>
@@ -839,9 +876,12 @@
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
             ${classes.map(c => `
-              <div class="glass-card p-6 rounded-2xl">
-                <h4 class="text-lg font-extrabold text-white">${c.name}</h4>
-                <p class="text-xs text-slate-400 mt-1">Class ID: #${c.id}</p>
+              <div class="glass-card p-6 rounded-2xl flex items-center justify-between">
+                <div>
+                  <h4 class="text-lg font-extrabold text-white">${c.name}</h4>
+                  <p class="text-xs text-slate-400 mt-1">Class ID: #${c.id}</p>
+                </div>
+                <button onclick="deleteClass(${c.id})" class="text-slate-400 hover:text-rose-400 p-2 rounded-lg hover:bg-white/5"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
               </div>
             `).join('')}
           </div>
@@ -850,7 +890,7 @@
     }
 
     function openAddClassModal() {
-      openModal('Add Class', `<div><label class="block text-xs font-semibold text-slate-400 mb-1">Class Name</label><input type="text" id="m-c-name" class="glass-input w-full"></div>`, `<button onclick="saveClass()" class="btn-primary w-full">Add Class</button>`);
+      openModal('Add Class', `<div><label class="block text-xs font-semibold text-slate-400 mb-1">Class Name</label><input type="text" id="m-c-name" class="glass-input w-full" placeholder="e.g. CSE-A"></div>`, `<button onclick="saveClass()" class="btn-primary w-full">Add Class</button>`);
     }
 
     async function saveClass() {
@@ -859,6 +899,15 @@
         await api('POST', '/classes', { name });
         toast('Class added', 'success');
         closeModal();
+        renderPage();
+      } catch(e) {}
+    }
+
+    async function deleteClass(id) {
+      if (!confirm('Delete class?')) return;
+      try {
+        await api('DELETE', `/classes/${id}`);
+        toast('Class deleted', 'success');
         renderPage();
       } catch(e) {}
     }
@@ -913,15 +962,150 @@
     }
 
     async function renderGradebook(container) {
-      container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">Gradebook & Marks</h3><p class="text-slate-400 text-sm">Select class to view and enter weekly marks.</p></div>`;
+      const students = await api('GET', '/students');
+      const subjects = await api('GET', '/subjects');
+
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-white">Academic Gradebook Entry</h3>
+          </div>
+          <div class="glass-panel p-6 rounded-2xl space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Select Student</label>
+                <select id="gb-student" class="glass-input w-full">
+                  ${students.map(s => `<option value="${s.id}">${s.name} (${s.admin_id || ''})</option>`).join('')}
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Select Subject</label>
+                <select id="gb-subject" class="glass-input w-full">
+                  ${subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Week Number (1-16)</label>
+                <input type="number" id="gb-week" value="1" min="1" max="16" class="glass-input w-full">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Score / Grade (0 - 100)</label>
+              <input type="number" id="gb-score" placeholder="85" class="glass-input w-full">
+            </div>
+            <button onclick="saveGrade()" class="btn-primary w-full">Save Grade Entry</button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function saveGrade() {
+      const studentId = document.getElementById('gb-student').value;
+      const subjectId = document.getElementById('gb-subject').value;
+      const week = document.getElementById('gb-week').value;
+      const score = document.getElementById('gb-score').value;
+
+      try {
+        await api('POST', '/grades', { studentId, subjectId, week, score });
+        toast('Grade recorded successfully', 'success');
+        document.getElementById('gb-score').value = '';
+      } catch(e) {}
     }
 
     async function renderEvaluation(container) {
-      container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">Student Evaluation</h3><p class="text-slate-400 text-sm">Generate PowerPoint performance reports per student.</p></div>`;
+      const students = await api('GET', '/students');
+
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <h3 class="text-lg font-bold text-white">PowerPoint Performance Reports</h3>
+          <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
+                <tr>
+                  <th class="p-4">Student Name</th>
+                  <th class="p-4">Register ID</th>
+                  <th class="p-4">Class Batch</th>
+                  <th class="p-4 text-right">Generate & Dispatch</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5">
+                ${students.map(s => `
+                  <tr class="hover:bg-white/[0.02]">
+                    <td class="p-4 font-semibold text-white">${s.name}</td>
+                    <td class="p-4 font-mono text-xs text-blue-400">${s.admin_id || 'N/A'}</td>
+                    <td class="p-4"><span class="badge badge-purple">${s.class_name || 'Unassigned'}</span></td>
+                    <td class="p-4 text-right">
+                      <button onclick="generatePPTReport(${s.id})" class="btn-primary text-xs py-1.5 px-3">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                        <span>Generate PPT</span>
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    async function generatePPTReport(studentId) {
+      toast('Generating PPT Report...', 'info');
+      try {
+        await api('POST', `/reports/generate-ppt/${studentId}`);
+        toast('PPT Presentation Report Generated & Dispatched!', 'success');
+      } catch(e) {}
     }
 
     async function renderAttendance(container) {
-      container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">Daily Attendance Entry</h3><p class="text-slate-400 text-sm">Select date and class to record attendance (Present / Absent / OD).</p></div>`;
+      const students = await api('GET', '/students');
+
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-white">Daily Attendance Marking</h3>
+            <input type="date" id="att-date" value="${new Date().toISOString().split('T')[0]}" class="glass-input text-xs">
+          </div>
+          <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
+                <tr>
+                  <th class="p-4">Student Name</th>
+                  <th class="p-4">Register ID</th>
+                  <th class="p-4 text-right">Attendance Status</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5">
+                ${students.map(s => `
+                  <tr class="hover:bg-white/[0.02]">
+                    <td class="p-4 font-semibold text-white">${s.name}</td>
+                    <td class="p-4 font-mono text-xs text-slate-400">${s.admin_id || 'N/A'}</td>
+                    <td class="p-4 text-right">
+                      <div class="inline-flex items-center gap-3">
+                        <button onclick="markAttendance(${s.id}, '${s.name}', 'Present')" class="btn-success text-xs py-1 px-3">Present</button>
+                        <button onclick="markAttendance(${s.id}, '${s.name}', 'Absent')" class="btn-danger text-xs py-1 px-3">Absent</button>
+                        <button onclick="markAttendance(${s.id}, '${s.name}', 'OD')" class="btn-secondary text-xs py-1 px-3">OD</button>
+                      </div>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    async function markAttendance(studentId, studentName, status) {
+      const date = document.getElementById('att-date').value;
+      try {
+        const res = await api('POST', '/attendance', { studentId, studentName, status, date });
+        if (res.autoAbsent) {
+          toast(`Student marked Absent (No approved OD request found)`, 'warning');
+        } else {
+          toast(`Marked ${status} for ${studentName}`, 'success');
+        }
+      } catch(e) {}
     }
 
     async function renderODRequests(container) {
@@ -1020,7 +1204,52 @@
     }
 
     async function renderTimetable(container) {
-      container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">Timetable Allocations</h3><p class="text-slate-400 text-sm">Visual schedule grid with conflict detection.</p></div>`;
+      const entries = await api('GET', '/timetable');
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-white">Timetable Schedule Allocations</h3>
+            <button onclick="openAutoGenerateTimetableModal()" class="btn-primary">Auto-Generate Timetable</button>
+          </div>
+          <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden p-6">
+            ${entries.length === 0 ? '<p class="text-slate-400 text-sm">No timetable entries allocated yet.</p>' : `
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                ${entries.map(t => `
+                  <div class="glass-card p-4 rounded-xl space-y-1">
+                    <span class="badge badge-blue text-[10px]">${t.day_of_week}</span>
+                    <h5 class="font-bold text-white">${t.subject_name || 'Subject'}</h5>
+                    <p class="text-xs text-slate-400">Class: ${t.class_name || ''}</p>
+                    <p class="text-xs text-emerald-400 font-semibold">Room: ${t.room_name || ''}</p>
+                    <p class="text-[11px] text-slate-500 font-mono">${t.start_time} - ${t.end_time}</p>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    function openAutoGenerateTimetableModal() {
+      openModal('Auto-Generate Timetable', `
+        <p class="text-xs text-slate-400">Automatically allocate available classrooms and subjects to schedule slots.</p>
+        <button onclick="runAutoGenerateTimetable()" class="btn-primary w-full mt-4">Run Auto-Generator</button>
+      `);
+    }
+
+    async function runAutoGenerateTimetable() {
+      const classes = await api('GET', '/classes');
+      const classIds = classes.map(c => c.id);
+      try {
+        const res = await api('POST', '/timetable/generate', {
+          classIds,
+          days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+          slots: [['09:00:00', '10:00:00'], ['10:00:00', '11:00:00'], ['11:15:00', '12:15:00'], ['13:15:00', '14:15:00']]
+        });
+        toast(`Allocated ${res.allocated.length} entries!`, 'success');
+        closeModal();
+        renderPage();
+      } catch(e) {}
     }
 
     async function renderEvents(container) {
@@ -1118,12 +1347,213 @@
       `;
     }
 
-    async function renderIssues(container) { container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">Issue Tracking</h3><p class="text-slate-400 text-sm">Student queries and support tickets.</p></div>`; }
-    async function renderDocuments(container) { container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">Institutional Digital Vault</h3><p class="text-slate-400 text-sm">Secure storage for academic documents.</p></div>`; }
-    async function renderAchievements(container) { container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">Student Achievements</h3><p class="text-slate-400 text-sm">Portfolio verification and reviews.</p></div>`; }
-    async function renderCertificates(container) { container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">Certificate Generator</h3><p class="text-slate-400 text-sm">Issue digital verifiable certificates.</p></div>`; }
-    async function renderAuditLogs(container) { container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">System Audit Logs</h3><p class="text-slate-400 text-sm">Security and action audit trail.</p></div>`; }
-    async function renderSettings(container) { container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">System Configuration</h3><p class="text-slate-400 text-sm">Set attendance thresholds and risk rules.</p></div>`; }
+    async function renderIssues(container) {
+      const issues = await api('GET', '/issues');
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <h3 class="text-lg font-bold text-white">Student Support Tickets</h3>
+          <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
+                <tr>
+                  <th class="p-4">Issue Title</th>
+                  <th class="p-4">Category</th>
+                  <th class="p-4">Priority</th>
+                  <th class="p-4">Status</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5">
+                ${issues.map(i => `
+                  <tr class="hover:bg-white/[0.02]">
+                    <td class="p-4 font-semibold text-white">${i.title}</td>
+                    <td class="p-4"><span class="badge badge-purple">${i.category}</span></td>
+                    <td class="p-4"><span class="badge badge-amber">${i.priority}</span></td>
+                    <td class="p-4"><span class="badge ${i.status === 'resolved' ? 'badge-emerald' : 'badge-blue'}">${i.status}</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    async function renderDocuments(container) {
+      const docs = await api('GET', '/documents');
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <h3 class="text-lg font-bold text-white">Institutional Digital Vault</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            ${docs.map(d => `
+              <div class="glass-card p-6 rounded-2xl">
+                <span class="badge badge-blue mb-2">${d.category}</span>
+                <h4 class="font-bold text-white text-base">${d.title}</h4>
+                <p class="text-xs text-slate-400 mt-1">Filename: ${d.filename}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    async function renderAchievements(container) {
+      const achs = await api('GET', '/achievements');
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <h3 class="text-lg font-bold text-white">Student Achievements Review</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            ${achs.map(a => `
+              <div class="glass-card p-6 rounded-2xl">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="badge badge-purple">${a.category}</span>
+                  <span class="badge ${a.is_verified ? 'badge-emerald' : 'badge-amber'}">${a.is_verified ? 'Verified' : 'Pending'}</span>
+                </div>
+                <h4 class="font-bold text-white text-base">${a.title}</h4>
+                <p class="text-xs text-slate-400 mt-1">${a.org || 'Organization'}</p>
+                ${!a.is_verified ? `
+                  <button onclick="verifyAchievement(${a.id})" class="btn-primary text-xs w-full mt-4">Verify Achievement</button>
+                ` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    async function verifyAchievement(id) {
+      try {
+        await api('PUT', `/achievements/${id}/verify`);
+        toast('Achievement verified', 'success');
+        renderPage();
+      } catch(e) {}
+    }
+
+    async function renderCertificates(container) {
+      const certs = await api('GET', '/certificates');
+      const students = await api('GET', '/students');
+      const events = await api('GET', '/events');
+
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-white">Issued Certificates</h3>
+            <button onclick="openGenerateCertModal()" class="btn-primary">Generate Certificate</button>
+          </div>
+          <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
+                <tr>
+                  <th class="p-4">Student</th>
+                  <th class="p-4">Event</th>
+                  <th class="p-4">Cert UUID</th>
+                  <th class="p-4">Verify Link</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5">
+                ${certs.map(c => `
+                  <tr class="hover:bg-white/[0.02]">
+                    <td class="p-4 font-semibold text-white">${c.student_name}</td>
+                    <td class="p-4">${c.event_name}</td>
+                    <td class="p-4 font-mono text-xs text-blue-400">${c.cert_id}</td>
+                    <td class="p-4">
+                      <a href="/api/certificates/verify/${c.cert_id}" target="_blank" class="text-xs text-emerald-400 underline">Verify Certificate</a>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    async function openGenerateCertModal() {
+      const students = await api('GET', '/students');
+      const events = await api('GET', '/events');
+      openModal('Generate Certificate', `
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Student</label>
+            <select id="m-cert-stu" class="glass-input w-full">
+              ${students.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Event</label>
+            <select id="m-cert-evt" class="glass-input w-full">
+              ${events.map(e => `<option value="${e.id}">${e.title}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+      `, `<button onclick="saveCert()" class="btn-primary w-full">Generate Certificate</button>`);
+    }
+
+    async function saveCert() {
+      const studentId = document.getElementById('m-cert-stu').value;
+      const eventId = document.getElementById('m-cert-evt').value;
+      try {
+        await api('POST', '/certificates/generate', { studentId, eventId });
+        toast('Certificate generated', 'success');
+        closeModal();
+        renderPage();
+      } catch(e) {}
+    }
+
+    async function renderAuditLogs(container) {
+      const data = await api('GET', '/audit');
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <h3 class="text-lg font-bold text-white">System Security Audit Logs</h3>
+          <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
+                <tr>
+                  <th class="p-4">Action</th>
+                  <th class="p-4">User</th>
+                  <th class="p-4">Role</th>
+                  <th class="p-4">Entity</th>
+                  <th class="p-4">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5">
+                ${data.logs.map(l => `
+                  <tr class="hover:bg-white/[0.02]">
+                    <td class="p-4 font-semibold text-white">${l.action}</td>
+                    <td class="p-4">${l.user_name || 'System'}</td>
+                    <td class="p-4"><span class="badge badge-purple">${l.role}</span></td>
+                    <td class="p-4 text-xs font-mono">${l.entity_type} #${l.entity_id}</td>
+                    <td class="p-4 text-xs text-slate-400">${new Date(l.created_at).toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    async function renderSettings(container) {
+      const settings = await api('GET', '/settings');
+      container.innerHTML = `
+        <div class="space-y-6 max-w-xl mx-auto animate-fade-in">
+          <div class="glass-panel p-8 rounded-2xl space-y-4">
+            <h3 class="text-lg font-bold text-white">System Threshold Configuration</h3>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Minimum Attendance Threshold %</label>
+              <input type="number" id="set-att" value="${settings.attendance_threshold || '75'}" class="glass-input w-full">
+            </div>
+            <button onclick="saveSetting('attendance_threshold', document.getElementById('set-att').value)" class="btn-primary w-full">Save Configuration</button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function saveSetting(key, value) {
+      try {
+        await api('PUT', `/settings/${key}`, { value });
+        toast('Setting saved', 'success');
+      } catch(e) {}
+    }
 
     // --- STUDENT VIEWS ---
     async function renderStudentDashboard(container) {
@@ -1192,7 +1622,34 @@
       `;
     }
 
-    async function renderStudentGrades(container) { container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">My Grades</h3><p class="text-slate-400 text-sm">Subject-wise marks and weekly progress.</p></div>`; }
+    async function renderStudentGrades(container) {
+      const grades = await api('GET', '/grades');
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <h3 class="text-lg font-bold text-white">My Academic Marks & Scores</h3>
+          <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
+                <tr>
+                  <th class="p-4">Subject</th>
+                  <th class="p-4">Week</th>
+                  <th class="p-4">Score</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5">
+                ${grades.map(g => `
+                  <tr class="hover:bg-white/[0.02]">
+                    <td class="p-4 font-semibold text-white">${g.subject_name}</td>
+                    <td class="p-4 text-xs font-mono text-slate-400">Week ${g.week}</td>
+                    <td class="p-4 font-mono font-bold text-blue-400">${g.score}%</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
 
     async function renderWhatIfSimulator(container) {
       container.innerHTML = `
@@ -1265,7 +1722,7 @@
               <div class="p-6 rounded-xl bg-blue-600/10 border border-blue-500/30 space-y-4">
                 <span class="badge badge-blue">OCCUPIED NOW</span>
                 <h4 class="text-3xl font-extrabold text-white">${res.current.subject_name}</h4>
-                <p class="text-sm text-slate-300">Room: <span class="font-extrabold text-emerald-400 text-lg">${res.current.room_name}</span> (${res.current.building || 'Block A'})</p>
+                <p class="text-sm text-slate-300">Room: <span class="font-extrabold text-emerald-400 text-lg">${res.current.room_name}</span> (${res.current.building || 'Main Block'})</p>
                 <p class="text-sm text-slate-400">Time Window: ${res.current.start_time} - ${res.current.end_time}</p>
               </div>
             ` : `
@@ -1278,8 +1735,53 @@
       `;
     }
 
-    async function renderStudentTimetable(container) { container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">Class Schedule</h3><p class="text-slate-400 text-sm">Weekly schedule timeline.</p></div>`; }
-    async function renderStudentEvents(container) { container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">Campus Events</h3><p class="text-slate-400 text-sm">Register for upcoming college workshops and seminars.</p></div>`; }
+    async function renderStudentTimetable(container) {
+      const entries = await api('GET', '/timetable');
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <h3 class="text-lg font-bold text-white">My Weekly Class Schedule</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            ${entries.map(t => `
+              <div class="glass-card p-4 rounded-xl space-y-1">
+                <span class="badge badge-blue text-[10px]">${t.day_of_week}</span>
+                <h5 class="font-bold text-white">${t.subject_name || 'Subject'}</h5>
+                <p class="text-xs text-emerald-400 font-semibold">Room: ${t.room_name || ''}</p>
+                <p class="text-[11px] text-slate-500 font-mono">${t.start_time} - ${t.end_time}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    async function renderStudentEvents(container) {
+      const events = await api('GET', '/events');
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <h3 class="text-lg font-bold text-white">Campus Events & Workshops</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            ${events.map(e => `
+              <div class="glass-card p-6 rounded-2xl">
+                <span class="badge badge-blue mb-2">${e.event_type || 'General'}</span>
+                <h4 class="text-lg font-extrabold text-white">${e.title}</h4>
+                <p class="text-xs text-slate-400 mt-2">${e.description || ''}</p>
+                <div class="mt-4 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
+                  <span>📍 ${e.venue || 'Campus'}</span>
+                  <button onclick="registerEvent(${e.id})" class="btn-primary text-xs py-1 px-3">Register</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    async function registerEvent(id) {
+      try {
+        await api('POST', `/events/${id}/register`);
+        toast('Registered for event!', 'success');
+      } catch(e) {}
+    }
 
     async function renderStudentOD(container) {
       const odList = await api('GET', '/od');
@@ -1366,10 +1868,158 @@
       }, (err) => toast('GPS position required for OD verification', 'error'));
     }
 
-    async function renderStudentCertificates(container) { container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">My Certificates</h3><p class="text-slate-400 text-sm">Download verified certificates.</p></div>`; }
-    async function renderStudentAchievements(container) { container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">Achievement Portfolio</h3><p class="text-slate-400 text-sm">Add extracurricular activities and certifications.</p></div>`; }
-    async function renderStudentDocuments(container) { container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">Digital Vault</h3><p class="text-slate-400 text-sm">Store marksheets and personal ID proofs.</p></div>`; }
-    async function renderStudentIssues(container) { container.innerHTML = `<div class="glass-panel p-6 rounded-2xl"><h3 class="text-lg font-bold text-white mb-2">Support Tickets</h3><p class="text-slate-400 text-sm">Submit support requests to faculty.</p></div>`; }
+    async function renderStudentCertificates(container) {
+      const certs = await api('GET', '/certificates');
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <h3 class="text-lg font-bold text-white">My Earned Certificates</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            ${certs.map(c => `
+              <div class="glass-card p-6 rounded-2xl space-y-2">
+                <span class="badge badge-emerald">Verified Certificate</span>
+                <h4 class="font-extrabold text-white text-base">${c.event_name}</h4>
+                <p class="text-xs text-slate-400">UUID: ${c.cert_id}</p>
+                <a href="/api/certificates/verify/${c.cert_id}" target="_blank" class="inline-block text-xs text-blue-400 underline pt-2">View Certificate Verification</a>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    async function renderStudentAchievements(container) {
+      const achs = await api('GET', '/achievements');
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-white">My Achievement Portfolio</h3>
+            <button onclick="openAddAchievementModal()" class="btn-primary">Add Achievement</button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            ${achs.map(a => `
+              <div class="glass-card p-6 rounded-2xl">
+                <span class="badge badge-purple mb-2">${a.category}</span>
+                <h4 class="font-bold text-white text-base">${a.title}</h4>
+                <p class="text-xs text-slate-400 mt-1">${a.org || 'Organization'}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function openAddAchievementModal() {
+      openModal('Add Achievement', `
+        <div class="space-y-4">
+          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Title</label><input type="text" id="m-ach-title" class="glass-input w-full"></div>
+          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Organization / Event</label><input type="text" id="m-ach-org" class="glass-input w-full"></div>
+        </div>
+      `, `<button onclick="saveAchievement()" class="btn-primary w-full">Submit Achievement</button>`);
+    }
+
+    async function saveAchievement() {
+      const title = document.getElementById('m-ach-title').value;
+      const org = document.getElementById('m-ach-org').value;
+      try {
+        await api('POST', '/achievements', { title, org });
+        toast('Achievement added for verification', 'success');
+        closeModal();
+        renderPage();
+      } catch(e) {}
+    }
+
+    async function renderStudentDocuments(container) {
+      const docs = await api('GET', '/documents');
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-white">Digital Document Vault</h3>
+            <button onclick="openUploadDocModal()" class="btn-primary">Upload Document</button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            ${docs.map(d => `
+              <div class="glass-card p-6 rounded-2xl">
+                <span class="badge badge-blue mb-2">${d.category}</span>
+                <h4 class="font-bold text-white text-base">${d.title}</h4>
+                <p class="text-xs text-slate-400 mt-1">${d.filename}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function openUploadDocModal() {
+      openModal('Upload Document', `
+        <div class="space-y-4">
+          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Title</label><input type="text" id="m-doc-title" class="glass-input w-full"></div>
+          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Filename</label><input type="text" id="m-doc-fn" class="glass-input w-full"></div>
+        </div>
+      `, `<button onclick="saveDoc()" class="btn-primary w-full">Upload Document</button>`);
+    }
+
+    async function saveDoc() {
+      const title = document.getElementById('m-doc-title').value;
+      const filename = document.getElementById('m-doc-fn').value;
+      try {
+        await api('POST', '/documents', { title, filename, fileB64: 'sample' });
+        toast('Document stored in vault', 'success');
+        closeModal();
+        renderPage();
+      } catch(e) {}
+    }
+
+    async function renderStudentIssues(container) {
+      const issues = await api('GET', '/issues');
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-white">Support Tickets</h3>
+            <button onclick="openCreateIssueModal()" class="btn-primary">Create Ticket</button>
+          </div>
+          <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
+                <tr>
+                  <th class="p-4">Ticket Title</th>
+                  <th class="p-4">Category</th>
+                  <th class="p-4">Status</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5">
+                ${issues.map(i => `
+                  <tr class="hover:bg-white/[0.02]">
+                    <td class="p-4 font-semibold text-white">${i.title}</td>
+                    <td class="p-4"><span class="badge badge-purple">${i.category}</span></td>
+                    <td class="p-4"><span class="badge ${i.status === 'resolved' ? 'badge-emerald' : 'badge-blue'}">${i.status}</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function openCreateIssueModal() {
+      openModal('Create Support Ticket', `
+        <div class="space-y-4">
+          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Issue Title</label><input type="text" id="m-iss-title" class="glass-input w-full"></div>
+          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Description</label><textarea id="m-iss-desc" class="glass-input w-full h-20"></textarea></div>
+        </div>
+      `, `<button onclick="saveIssue()" class="btn-primary w-full">Submit Ticket</button>`);
+    }
+
+    async function saveIssue() {
+      const title = document.getElementById('m-iss-title').value;
+      const description = document.getElementById('m-iss-desc').value;
+      try {
+        await api('POST', '/issues', { title, description });
+        toast('Support ticket submitted', 'success');
+        closeModal();
+        renderPage();
+      } catch(e) {}
+    }
 
     // --- MODAL UTILITIES ---
     function openModal(title, bodyHtml, footerHtml = '') {
