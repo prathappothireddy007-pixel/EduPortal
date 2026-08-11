@@ -4,8 +4,7 @@ const { authenticate, requireFaculty } = require('../middleware/auth');
 const { generateStudentReport } = require('../services/ppt');
 const { sendPPTReport } = require('../services/email');
 
-// POST /api/reports/ppt/:studentId
-router.post('/ppt/:studentId', authenticate, requireFaculty, async (req, res) => {
+const handlePPTGeneration = async (req, res) => {
   const { studentId } = req.params;
   console.log(`[PPT] Generating report for student ${studentId}...`);
 
@@ -30,16 +29,16 @@ router.post('/ppt/:studentId', authenticate, requireFaculty, async (req, res) =>
       'SELECT * FROM attendance WHERE student_id=$1 ORDER BY date', [studentId]
     )).rows;
 
-    // 3. Generate PPT synchronously (Fast: ~1-2 seconds)
+    // 3. Generate PPT synchronously (~1-2 seconds)
     const buffer = await generateStudentReport(student, grades, attendance, student.class_name);
     const fileName = `${student.name.replace(/\s+/g, '_')}_Weekly_Report.pptx`;
 
-    // 4. Return the PPT file to client IMMEDIATELY so request doesn't hang
+    // 4. Send PPT binary file to client
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     res.send(Buffer.from(buffer));
 
-    // 5. Send Email in Background asynchronously (Non-blocking with 5s timeout)
+    // 5. Send Email in Background (Non-blocking with 5s timeout)
     if (student.parent_email) {
       Promise.race([
         sendPPTReport(student.parent_email, student.name, buffer, fileName),
@@ -54,6 +53,10 @@ router.post('/ppt/:studentId', authenticate, requireFaculty, async (req, res) =>
       res.status(500).json({ error: 'Failed to generate report: ' + err.message });
     }
   }
-});
+};
+
+// Support both endpoint URLs
+router.post('/ppt/:studentId', authenticate, requireFaculty, handlePPTGeneration);
+router.post('/generate-ppt/:studentId', authenticate, requireFaculty, handlePPTGeneration);
 
 module.exports = router;

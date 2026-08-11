@@ -1050,11 +1050,29 @@
     }
 
     async function generatePPTReport(studentId) {
-      toast('Generating PPT Report...', 'info');
+      toast('Generating PPT Presentation Report...', 'info');
       try {
-        await api('POST', `/reports/generate-ppt/${studentId}`);
-        toast('PPT Presentation Report Generated & Dispatched!', 'success');
-      } catch(e) {}
+        const res = await fetch(`/api/reports/generate-ppt/${studentId}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${S.token}` }
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Failed to generate PPT');
+        }
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Student_Weekly_Report_${studentId}.pptx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        toast('PPT Report Generated & Downloaded!', 'success');
+      } catch(e) {
+        toast(e.message || 'PPT generation failed', 'error');
+      }
     }
 
     async function renderAttendance(container) {
