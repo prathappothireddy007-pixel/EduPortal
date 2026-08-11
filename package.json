@@ -8,18 +8,20 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "pg": "^8.11.3",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
-    "nodemailer": "^6.9.7",
-    "pptxgenjs": "^3.12.0",
-    "node-cron": "^3.0.3",
-    "dotenv": "^16.3.1",
     "cors": "^2.8.5",
-    "helmet": "^7.1.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
-    "multer": "^1.4.5-lts.1"
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.7",
+    "pg": "^8.11.3",
+    "pptxgenjs": "^3.12.0",
+    "qrcode": "^1.5.4",
+    "uuid": "^14.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

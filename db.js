@@ -12,6 +12,7 @@ const pool = new Pool({
 const initDB = async () => {
   const client = await pool.connect();
   try {
+    // ── Core Tables ──────────────────────────────────────────────────────────
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -25,19 +26,22 @@ const initDB = async () => {
         dob VARCHAR(30),
         aadhar VARCHAR(30),
         class_id INTEGER,
+        deleted_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW()
       );
 
       CREATE TABLE IF NOT EXISTS classes (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
+        deleted_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW()
       );
 
       CREATE TABLE IF NOT EXISTS subjects (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
-        class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE
+        class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+        subject_type VARCHAR(30) DEFAULT 'classroom'
       );
 
       CREATE TABLE IF NOT EXISTS grades (
@@ -67,7 +71,18 @@ const initDB = async () => {
         description TEXT,
         event_date DATE,
         venue VARCHAR(255),
+        host_institution VARCHAR(255),
+        lat DOUBLE PRECISION,
+        lng DOUBLE PRECISION,
+        radius_meters INTEGER DEFAULT 200,
+        start_time TIME,
+        end_time TIME,
+        event_type VARCHAR(50) DEFAULT 'general',
+        event_status VARCHAR(20) DEFAULT 'active',
+        qr_token VARCHAR(255),
+        qr_expires_at TIMESTAMP,
         created_by INTEGER REFERENCES users(id),
+        deleted_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW()
       );
 
@@ -87,10 +102,20 @@ const initDB = async () => {
         event_name VARCHAR(255),
         letter_b64 TEXT,
         status VARCHAR(20) DEFAULT 'pending',
+        rejection_reason TEXT,
         approved_at TIMESTAMP,
         geo_b64 TEXT,
         geo_lat DOUBLE PRECISION,
         geo_lng DOUBLE PRECISION,
+        distance_meters DOUBLE PRECISION,
+        checkin_time TIMESTAMP,
+        checkin_lat DOUBLE PRECISION,
+        checkin_lng DOUBLE PRECISION,
+        checkin_b64 TEXT,
+        checkout_time TIMESTAMP,
+        checkout_lat DOUBLE PRECISION,
+        checkout_lng DOUBLE PRECISION,
+        checkout_b64 TEXT,
         date DATE DEFAULT CURRENT_DATE,
         created_at TIMESTAMP DEFAULT NOW()
       );
@@ -102,31 +127,235 @@ const initDB = async () => {
         status VARCHAR(20) DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT NOW()
       );
+
+      -- ── New: Classrooms ────────────────────────────────────────────────────
+      CREATE TABLE IF NOT EXISTS classrooms (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL UNIQUE,
+        capacity INTEGER NOT NULL DEFAULT 40,
+        room_type VARCHAR(30) DEFAULT 'classroom'
+          CHECK(room_type IN ('classroom','computer_lab','laboratory','seminar_hall','auditorium','other')),
+        building VARCHAR(100),
+        floor INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- ── New: Timetable ────────────────────────────────────────────────────
+      CREATE TABLE IF NOT EXISTS timetable_entries (
+        id SERIAL PRIMARY KEY,
+        class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+        subject_id INTEGER REFERENCES subjects(id) ON DELETE CASCADE,
+        faculty_id INTEGER REFERENCES users(id),
+        classroom_id INTEGER REFERENCES classrooms(id),
+        day_of_week VARCHAR(10) CHECK(day_of_week IN ('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')),
+        start_time TIME NOT NULL,
+        end_time TIME NOT NULL,
+        is_locked BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS room_change_log (
+        id SERIAL PRIMARY KEY,
+        timetable_entry_id INTEGER REFERENCES timetable_entries(id) ON DELETE CASCADE,
+        old_classroom_id INTEGER REFERENCES classrooms(id),
+        new_classroom_id INTEGER REFERENCES classrooms(id),
+        changed_by INTEGER REFERENCES users(id),
+        reason TEXT,
+        changed_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- ── New: Notifications ────────────────────────────────────────────────
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        type VARCHAR(50),
+        title VARCHAR(255),
+        message TEXT,
+        related_id INTEGER,
+        is_read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- ── New: Issues ───────────────────────────────────────────────────────
+      CREATE TABLE IF NOT EXISTS issues (
+        id SERIAL PRIMARY KEY,
+        student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        assigned_to INTEGER REFERENCES users(id),
+        category VARCHAR(30) DEFAULT 'general'
+          CHECK(category IN ('academic','attendance','od','technical','general')),
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        priority VARCHAR(10) DEFAULT 'medium'
+          CHECK(priority IN ('low','medium','high')),
+        status VARCHAR(20) DEFAULT 'open'
+          CHECK(status IN ('open','in_progress','resolved','closed')),
+        created_at TIMESTAMP DEFAULT NOW(),
+        resolved_at TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS issue_responses (
+        id SERIAL PRIMARY KEY,
+        issue_id INTEGER REFERENCES issues(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id),
+        user_name VARCHAR(255),
+        message TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- ── New: Documents ────────────────────────────────────────────────────
+      CREATE TABLE IF NOT EXISTS documents (
+        id SERIAL PRIMARY KEY,
+        owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        uploaded_by INTEGER REFERENCES users(id),
+        category VARCHAR(50) DEFAULT 'other',
+        title VARCHAR(255) NOT NULL,
+        filename VARCHAR(255),
+        file_b64 TEXT,
+        is_archived BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- ── New: Achievements ─────────────────────────────────────────────────
+      CREATE TABLE IF NOT EXISTS achievements (
+        id SERIAL PRIMARY KEY,
+        student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        category VARCHAR(50) DEFAULT 'other',
+        org VARCHAR(255),
+        ach_date DATE,
+        cert_b64 TEXT,
+        is_verified BOOLEAN DEFAULT FALSE,
+        verified_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- ── New: Resources ────────────────────────────────────────────────────
+      CREATE TABLE IF NOT EXISTS resources (
+        id SERIAL PRIMARY KEY,
+        subject_id INTEGER REFERENCES subjects(id) ON DELETE CASCADE,
+        uploaded_by INTEGER REFERENCES users(id),
+        title VARCHAR(255) NOT NULL,
+        resource_type VARCHAR(30) DEFAULT 'notes',
+        description TEXT,
+        file_b64 TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- ── New: Certificates ─────────────────────────────────────────────────
+      CREATE TABLE IF NOT EXISTS certificates (
+        id SERIAL PRIMARY KEY,
+        student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        event_id INTEGER REFERENCES events(id),
+        cert_id VARCHAR(64) UNIQUE NOT NULL,
+        student_name VARCHAR(255),
+        event_name VARCHAR(255),
+        host_org VARCHAR(255),
+        issued_date DATE DEFAULT CURRENT_DATE,
+        verify_qr_token VARCHAR(255),
+        is_valid BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- ── New: Audit Logs ───────────────────────────────────────────────────
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        user_name VARCHAR(255),
+        role VARCHAR(20),
+        action VARCHAR(100),
+        entity_type VARCHAR(50),
+        entity_id INTEGER,
+        old_value TEXT,
+        new_value TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- ── New: Academic Risk ────────────────────────────────────────────────
+      CREATE TABLE IF NOT EXISTS academic_risk (
+        id SERIAL PRIMARY KEY,
+        student_id INTEGER REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+        risk_level VARCHAR(20) DEFAULT 'low',
+        reasons_json TEXT,
+        calculated_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- ── New: Settings ─────────────────────────────────────────────────────
+      CREATE TABLE IF NOT EXISTS settings (
+        id SERIAL PRIMARY KEY,
+        key VARCHAR(100) UNIQUE NOT NULL,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
     `);
 
-    // Migration: drop old OD status constraint and allow new status values
-    try {
-      await client.query(`ALTER TABLE od_requests DROP CONSTRAINT IF EXISTS od_requests_status_check`);
-    } catch(e) { /* ignore */ }
+    // ── Safe migrations for existing tables ──────────────────────────────────
+    const migrations = [
+      `ALTER TABLE od_requests DROP CONSTRAINT IF EXISTS od_requests_status_check`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`,
+      `ALTER TABLE classes ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS host_institution VARCHAR(255)`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS radius_meters INTEGER DEFAULT 200`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS start_time TIME`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS end_time TIME`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS event_type VARCHAR(50) DEFAULT 'general'`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS event_status VARCHAR(20) DEFAULT 'active'`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS qr_token VARCHAR(255)`,
+      `ALTER TABLE events ADD COLUMN IF NOT EXISTS qr_expires_at TIMESTAMP`,
+      `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS rejection_reason TEXT`,
+      `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS distance_meters DOUBLE PRECISION`,
+      `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS checkin_time TIMESTAMP`,
+      `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS checkin_lat DOUBLE PRECISION`,
+      `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS checkin_lng DOUBLE PRECISION`,
+      `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS checkin_b64 TEXT`,
+      `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS checkout_time TIMESTAMP`,
+      `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS checkout_lat DOUBLE PRECISION`,
+      `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS checkout_lng DOUBLE PRECISION`,
+      `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS checkout_b64 TEXT`,
+      `ALTER TABLE subjects ADD COLUMN IF NOT EXISTS subject_type VARCHAR(30) DEFAULT 'classroom'`,
+      `CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date)`,
+      `CREATE INDEX IF NOT EXISTS idx_grades_student ON grades(student_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_od_student ON od_requests(student_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_timetable_class ON timetable_entries(class_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_timetable_room ON timetable_entries(classroom_id)`,
+    ];
+    for (const sql of migrations) {
+      try { await client.query(sql); } catch(e) { /* column already exists */ }
+    }
 
-    // Seed default faculty admin
+    // ── Seed default settings ────────────────────────────────────────────────
+    await client.query(`
+      INSERT INTO settings(key, value) VALUES
+        ('attendance_threshold', '75'),
+        ('academic_risk_attend_high', '60'),
+        ('academic_risk_attend_mod', '75'),
+        ('academic_risk_grade_high', '50'),
+        ('academic_risk_grade_mod', '60')
+      ON CONFLICT (key) DO NOTHING
+    `);
+
+    // ── Seed default faculty admin ───────────────────────────────────────────
     const adminCheck = await client.query(
-      "SELECT id FROM users WHERE role='faculty' LIMIT 1"
+      "SELECT id FROM users WHERE role='faculty' AND admin_id=$1 LIMIT 1",
+      [process.env.ADMIN_ID || '192411184']
     );
     if (adminCheck.rows.length === 0) {
-      const hash = await bcrypt.hash(
-        process.env.ADMIN_PASSWORD || 'katam@123', 10
-      );
+      const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'katam@123', 10);
       await client.query(
         `INSERT INTO users (role, name, email, admin_id, password_hash)
          VALUES ($1,$2,$3,$4,$5)`,
-        ['faculty','Administrator','admin@eduportal.com',
+        ['faculty', 'Administrator', 'admin@eduportal.com',
          process.env.ADMIN_ID || '192411184', hash]
       );
       console.log('✅ Default admin seeded');
     }
 
-    console.log('✅ Database initialized');
+    console.log('✅ Database initialized (v3.0 — full platform)');
   } catch (err) {
     console.error('❌ DB init error:', err.message);
     throw err;

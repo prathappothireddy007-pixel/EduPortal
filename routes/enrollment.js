@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { pool } = require('../db');
 const { authenticate, requireFaculty, requireStudent } = require('../middleware/auth');
+const { notify, logAction } = require('../services/audit');
 
 // GET enrollment requests
 router.get('/', authenticate, async (req, res) => {
@@ -19,8 +20,7 @@ router.get('/', authenticate, async (req, res) => {
         `SELECT er.*, c.name as class_name
          FROM enrollment_requests er
          JOIN classes c ON er.class_id=c.id
-         WHERE er.student_id=$1
-         ORDER BY er.created_at DESC`,
+         WHERE er.student_id=$1 ORDER BY er.created_at DESC`,
         [req.user.id]
       );
     }
@@ -33,7 +33,6 @@ router.post('/', authenticate, requireStudent, async (req, res) => {
   const { classId } = req.body;
   if (!classId) return res.status(400).json({ error: 'classId required' });
   try {
-    // Cancel previous pending requests
     await pool.query(
       "DELETE FROM enrollment_requests WHERE student_id=$1 AND status='pending'",
       [req.user.id]
@@ -42,6 +41,12 @@ router.post('/', authenticate, requireStudent, async (req, res) => {
       'INSERT INTO enrollment_requests (student_id,class_id) VALUES ($1,$2) RETURNING *',
       [req.user.id, classId]
     );
+    // Notify faculty
+    const faculty = await pool.query(`SELECT id FROM users WHERE role='faculty' LIMIT 1`);
+    if (faculty.rows[0]) {
+      await notify(faculty.rows[0].id, 'enrollment_request', 'New Enrollment Request',
+        `${req.user.name} requested enrollment in a class`, r.rows[0].id);
+    }
     res.status(201).json(r.rows[0]);
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
@@ -53,11 +58,14 @@ router.put('/:id/approve', authenticate, requireFaculty, async (req, res) => {
       "UPDATE enrollment_requests SET status='approved' WHERE id=$1 RETURNING *",
       [req.params.id]
     );
-    const req2 = r.rows[0];
-    if (req2) {
-      await pool.query('UPDATE users SET class_id=$1 WHERE id=$2', [req2.class_id, req2.student_id]);
+    const enr = r.rows[0];
+    if (enr) {
+      await pool.query('UPDATE users SET class_id=$1 WHERE id=$2', [enr.class_id, enr.student_id]);
+      await notify(enr.student_id, 'enrollment_approved', 'Enrollment Approved',
+        'Your class enrollment request has been approved!', enr.id);
+      await logAction(req.user.id, req.user.name, 'faculty', 'approve_enrollment', 'enrollment_requests', enr.id);
     }
-    res.json(req2);
+    res.json(enr);
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
@@ -68,7 +76,12 @@ router.put('/:id/reject', authenticate, requireFaculty, async (req, res) => {
       "UPDATE enrollment_requests SET status='rejected' WHERE id=$1 RETURNING *",
       [req.params.id]
     );
-    res.json(r.rows[0]);
+    const enr = r.rows[0];
+    if (enr) {
+      await notify(enr.student_id, 'enrollment_rejected', 'Enrollment Rejected',
+        'Your class enrollment request was rejected.', enr.id);
+    }
+    res.json(enr);
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
