@@ -41,45 +41,49 @@ router.get('/', authenticate, async (req, res) => {
 
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error('[Issues GET] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 // POST / - student creates issue
-router.post('/', authenticate, requireStudent, async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   try {
     const { title, category, description, priority } = req.body;
 
-    if (!title || !category || !description) {
-      return res.status(400).json({ error: 'title, category, and description are required' });
+    if (!title) {
+      return res.status(400).json({ error: 'title is required' });
     }
 
     // Auto-assign to first faculty found
     const facultyResult = await pool.query(
       "SELECT id FROM users WHERE role = 'faculty' ORDER BY id LIMIT 1"
     );
-    const assignedTo = facultyResult.rows.length > 0 ? facultyResult.rows[0].id : null;
+    const assignedTo = facultyResult.rows[0]?.id || null;
 
     const result = await pool.query(
-      `INSERT INTO issues (student_id, title, category, description, priority, status, assigned_to)
-       VALUES ($1, $2, $3, $4, $5, 'open', $6)
+      `INSERT INTO issues (student_id, assigned_to, category, title, description, priority, status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'open')
        RETURNING *`,
-      [req.user.id, title, category, description, priority || 'medium', assignedTo]
+      [req.user.id, assignedTo, category || 'general', title, description || '', priority || 'medium']
     );
+
+    const newIssue = result.rows[0];
 
     if (assignedTo) {
       await notify(
         assignedTo,
-        'New Issue Assigned',
-        `A new issue has been assigned to you: "${title}"`,
-        'issue'
+        'new_issue',
+        'New Support Ticket',
+        `A new ticket "${title}" was created by ${req.user.name}`,
+        newIssue.id
       );
     }
 
-    res.status(201).json(result.rows[0]);
+    await logAction(req.user.id, req.user.name, req.user.role, 'create_issue', 'issues', newIssue.id);
+    res.status(201).json(newIssue);
   } catch (err) {
-    console.error(err);
+    console.error('[Issues POST] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -88,8 +92,6 @@ router.post('/', authenticate, requireStudent, async (req, res) => {
 router.get('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const isFaculty = req.user.role === 'faculty';
-
     const issueResult = await pool.query(
       `SELECT i.*,
          u_student.name AS student_name,
@@ -107,126 +109,118 @@ router.get('/:id', authenticate, async (req, res) => {
 
     const issue = issueResult.rows[0];
 
-    if (!isFaculty && issue.student_id !== req.user.id) {
+    if (req.user.role === 'student' && issue.student_id !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
     const responsesResult = await pool.query(
-      `SELECT ir.*, u.name AS author_name, u.role AS author_role
-       FROM issue_responses ir
-       LEFT JOIN users u ON ir.user_id = u.id
-       WHERE ir.issue_id = $1
-       ORDER BY ir.created_at ASC`,
+      `SELECT * FROM issue_responses WHERE issue_id = $1 ORDER BY created_at ASC`,
       [id]
     );
 
-    res.json({ ...issue, responses: responsesResult.rows });
+    res.json({ issue, responses: responsesResult.rows });
   } catch (err) {
-    console.error(err);
+    console.error('[Issue Detail] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// PUT /:id - update issue status
+// PUT /:id - update status
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const isFaculty = req.user.role === 'faculty';
 
-    if (!status) {
-      return res.status(400).json({ error: 'status is required' });
-    }
-
-    const existing = await pool.query('SELECT * FROM issues WHERE id = $1', [id]);
-    if (existing.rows.length === 0) {
+    const issueResult = await pool.query('SELECT * FROM issues WHERE id = $1', [id]);
+    if (issueResult.rows.length === 0) {
       return res.status(404).json({ error: 'Issue not found' });
     }
 
-    const issue = existing.rows[0];
+    const issue = issueResult.rows[0];
 
-    if (!isFaculty) {
+    if (req.user.role === 'student') {
       if (issue.student_id !== req.user.id) {
         return res.status(403).json({ error: 'Access denied' });
       }
-      // Students can only close their own resolved issues
-      if (!(issue.status === 'resolved' && status === 'closed')) {
-        return res.status(403).json({ error: 'Students can only close resolved issues' });
+      if (status !== 'closed') {
+        return res.status(403).json({ error: 'Students can only close their own issues' });
       }
     }
 
-    const resolvedAt = (status === 'resolved' || status === 'closed') ? new Date() : issue.resolved_at;
-
-    const result = await pool.query(
+    const isResolving = status === 'resolved' || status === 'closed';
+    const updateResult = await pool.query(
       `UPDATE issues
-       SET status = $1, resolved_at = $2, updated_at = NOW()
+       SET status = $1,
+           resolved_at = CASE WHEN $2 THEN NOW() ELSE resolved_at END
        WHERE id = $3
        RETURNING *`,
-      [status, resolvedAt, id]
+      [status, isResolving, id]
     );
 
-    await logAction(req.user.id, 'UPDATE_STATUS', 'issue', id, { status });
+    const updatedIssue = updateResult.rows[0];
 
-    // Notify student if faculty updates
-    if (isFaculty) {
+    if (req.user.role === 'faculty' && updatedIssue.student_id) {
       await notify(
-        issue.student_id,
-        'Issue Status Updated',
-        `Your issue "${issue.title}" status has been updated to: ${status}`,
-        'issue'
+        updatedIssue.student_id,
+        'issue_update',
+        'Ticket Status Updated',
+        `Your ticket "${updatedIssue.title}" status changed to ${status}`,
+        updatedIssue.id
       );
     }
 
-    res.json(result.rows[0]);
+    await logAction(req.user.id, req.user.name, req.user.role, 'update_issue_status', 'issues', id);
+    res.json(updatedIssue);
   } catch (err) {
-    console.error(err);
+    console.error('[Issue PUT] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// POST /:id/respond - add response to issue
+// POST /:id/respond - add response
 router.post('/:id/respond', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { message } = req.body;
-    const isFaculty = req.user.role === 'faculty';
 
     if (!message) {
       return res.status(400).json({ error: 'message is required' });
     }
 
-    const existing = await pool.query('SELECT * FROM issues WHERE id = $1', [id]);
-    if (existing.rows.length === 0) {
+    const issueResult = await pool.query('SELECT * FROM issues WHERE id = $1', [id]);
+    if (issueResult.rows.length === 0) {
       return res.status(404).json({ error: 'Issue not found' });
     }
 
-    const issue = existing.rows[0];
+    const issue = issueResult.rows[0];
 
-    if (!isFaculty && issue.student_id !== req.user.id) {
+    if (req.user.role === 'student' && issue.student_id !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const result = await pool.query(
-      `INSERT INTO issue_responses (issue_id, user_id, message)
-       VALUES ($1, $2, $3)
+    const responseResult = await pool.query(
+      `INSERT INTO issue_responses (issue_id, user_id, user_name, message)
+       VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [id, req.user.id, message]
+      [id, req.user.id, req.user.name, message]
     );
 
-    // Notify the other party
-    const notifyUserId = isFaculty ? issue.student_id : issue.assigned_to;
-    if (notifyUserId) {
+    const newResponse = responseResult.rows[0];
+
+    const notifyRecipient = req.user.role === 'faculty' ? issue.student_id : issue.assigned_to;
+    if (notifyRecipient) {
       await notify(
-        notifyUserId,
-        'New Response on Issue',
-        `A new response has been added to issue "${issue.title}"`,
-        'issue'
+        notifyRecipient,
+        'issue_response',
+        'New Ticket Response',
+        `${req.user.name} responded to "${issue.title}"`,
+        id
       );
     }
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(newResponse);
   } catch (err) {
-    console.error(err);
+    console.error('[Issue Respond] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

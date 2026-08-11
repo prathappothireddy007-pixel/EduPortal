@@ -30,7 +30,7 @@ router.get('/', authenticate, async (req, res) => {
          te.*,
          c.name AS class_name,
          s.name AS subject_name,
-         cr.name AS classroom_name, cr.building, cr.floor,
+         cr.name AS classroom_name, cr.name AS room_name, cr.building, cr.floor,
          u.name AS faculty_name
        FROM timetable_entries te
        LEFT JOIN classes c ON te.class_id = c.id
@@ -44,7 +44,7 @@ router.get('/', authenticate, async (req, res) => {
 
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error('[Timetable GET] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -53,10 +53,14 @@ router.get('/', authenticate, async (req, res) => {
 router.get('/conflicts', authenticate, requireFaculty, async (req, res) => {
   try {
     const entriesResult = await pool.query('SELECT * FROM timetable_entries');
-    const conflicts = await checkConflicts(entriesResult.rows);
+    const conflicts = [];
+    for (const entry of entriesResult.rows) {
+      const c = await checkConflicts(pool, entry, entry.id);
+      if (c.length > 0) conflicts.push(...c);
+    }
     res.json({ conflicts });
   } catch (err) {
-    console.error(err);
+    console.error('[Timetable Conflicts] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -67,15 +71,15 @@ router.get('/student/current-class', authenticate, async (req, res) => {
     const now = new Date();
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const currentDay = days[now.getDay()];
-    const currentTime = now.toTimeString().slice(0, 5); // HH:MM
+    const currentTime = now.toTimeString().slice(0, 8); // HH:MM:SS
 
     const studentResult = await pool.query(
-      'SELECT class_id FROM students WHERE user_id = $1',
+      'SELECT class_id FROM users WHERE id = $1',
       [req.user.id]
     );
 
-    if (studentResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Student record not found' });
+    if (studentResult.rows.length === 0 || !studentResult.rows[0].class_id) {
+      return res.json({ current: null, next: null });
     }
 
     const classId = studentResult.rows[0].class_id;
@@ -84,7 +88,7 @@ router.get('/student/current-class', authenticate, async (req, res) => {
       `SELECT
          te.*,
          s.name AS subject_name,
-         cr.name AS classroom_name, cr.building, cr.floor,
+         cr.name AS room_name, cr.building, cr.floor,
          u.name AS faculty_name
        FROM timetable_entries te
        LEFT JOIN subjects s ON te.subject_id = s.id
@@ -102,7 +106,7 @@ router.get('/student/current-class', authenticate, async (req, res) => {
       `SELECT
          te.*,
          s.name AS subject_name,
-         cr.name AS classroom_name, cr.building, cr.floor,
+         cr.name AS room_name, cr.building, cr.floor,
          u.name AS faculty_name
        FROM timetable_entries te
        LEFT JOIN subjects s ON te.subject_id = s.id
@@ -121,7 +125,7 @@ router.get('/student/current-class', authenticate, async (req, res) => {
       next: nextResult.rows[0] || null,
     });
   } catch (err) {
-    console.error(err);
+    console.error('[Current Class] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -143,25 +147,24 @@ router.post('/generate', authenticate, requireFaculty, async (req, res) => {
       );
     }
 
-    const { allocated, unallocated, conflicts } = await autoGenerate(classIds, days, slots);
+    const { allocated, unallocated } = await autoGenerate(pool, classIds, days, slots);
 
     if (allocated && allocated.length > 0) {
-      const insertPromises = allocated.map((entry) =>
-        pool.query(
+      for (const entry of allocated) {
+        await pool.query(
           `INSERT INTO timetable_entries
              (class_id, subject_id, faculty_id, classroom_id, day_of_week, start_time, end_time)
            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [entry.classId, entry.subjectId, entry.facultyId, entry.classroomId,
-           entry.dayOfWeek, entry.startTime, entry.endTime]
-        )
-      );
-      await Promise.all(insertPromises);
+          [entry.class_id, entry.subject_id, entry.faculty_id, entry.classroom_id,
+           entry.day_of_week, entry.start_time, entry.end_time]
+        );
+      }
     }
 
-    await logAction(req.user.id, 'GENERATE_TIMETABLE', 'timetable', null, { classIds, days, slots, replaceExisting });
-    res.json({ allocated, unallocated, conflicts });
+    await logAction(req.user.id, req.user.name, 'faculty', 'generate_timetable', 'timetable_entries', null);
+    res.json({ allocated, unallocated, conflicts: [] });
   } catch (err) {
-    console.error(err);
+    console.error('[Timetable Generate] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -171,12 +174,12 @@ router.post('/entry', authenticate, requireFaculty, async (req, res) => {
   try {
     const { classId, subjectId, facultyId, classroomId, dayOfWeek, startTime, endTime } = req.body;
 
-    if (!classId || !subjectId || !facultyId || !classroomId || !dayOfWeek || !startTime || !endTime) {
+    if (!classId || !subjectId || !classroomId || !dayOfWeek || !startTime || !endTime) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
     const newEntry = { classId, subjectId, facultyId, classroomId, dayOfWeek, startTime, endTime };
-    const conflicts = await checkConflicts([newEntry]);
+    const conflicts = await checkConflicts(pool, newEntry);
 
     if (conflicts.length > 0) {
       return res.status(409).json({ error: 'Conflicts detected', conflicts });
@@ -187,13 +190,13 @@ router.post('/entry', authenticate, requireFaculty, async (req, res) => {
          (class_id, subject_id, faculty_id, classroom_id, day_of_week, start_time, end_time)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [classId, subjectId, facultyId, classroomId, dayOfWeek, startTime, endTime]
+      [classId, subjectId, facultyId || req.user.id, classroomId, dayOfWeek, startTime, endTime]
     );
 
-    await logAction(req.user.id, 'CREATE', 'timetable_entry', result.rows[0].id, newEntry);
+    await logAction(req.user.id, req.user.name, 'faculty', 'create_entry', 'timetable_entries', result.rows[0].id);
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error(err);
+    console.error('[Timetable Entry] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -210,9 +213,6 @@ router.put('/:id', authenticate, requireFaculty, async (req, res) => {
     }
 
     const entry = existing.rows[0];
-    if (entry.is_locked && req.user.role !== 'faculty') {
-      return res.status(403).json({ error: 'Entry is locked' });
-    }
 
     const updatedEntry = {
       classId: classId || entry.class_id,
@@ -221,11 +221,10 @@ router.put('/:id', authenticate, requireFaculty, async (req, res) => {
       classroomId: classroomId || entry.classroom_id,
       dayOfWeek: dayOfWeek || entry.day_of_week,
       startTime: startTime || entry.start_time,
-      endTime: endTime || entry.end_time,
-      excludeId: id,
+      endTime: endTime || entry.end_time
     };
 
-    const conflicts = await checkConflicts([updatedEntry]);
+    const conflicts = await checkConflicts(pool, updatedEntry, id);
     if (conflicts.length > 0) {
       return res.status(409).json({ error: 'Conflicts detected', conflicts });
     }
@@ -233,7 +232,7 @@ router.put('/:id', authenticate, requireFaculty, async (req, res) => {
     const result = await pool.query(
       `UPDATE timetable_entries
        SET class_id = $1, subject_id = $2, faculty_id = $3, classroom_id = $4,
-           day_of_week = $5, start_time = $6, end_time = $7, updated_at = NOW()
+           day_of_week = $5, start_time = $6, end_time = $7
        WHERE id = $8
        RETURNING *`,
       [updatedEntry.classId, updatedEntry.subjectId, updatedEntry.facultyId,
@@ -241,106 +240,53 @@ router.put('/:id', authenticate, requireFaculty, async (req, res) => {
        updatedEntry.endTime, id]
     );
 
-    await logAction(req.user.id, 'UPDATE', 'timetable_entry', id, req.body);
+    await logAction(req.user.id, req.user.name, 'faculty', 'update_entry', 'timetable_entries', id);
     res.json(result.rows[0]);
   } catch (err) {
-    console.error(err);
+    console.error('[Timetable Update] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// DELETE /:id - delete timetable entry (only if not locked)
+// DELETE /:id
 router.delete('/:id', authenticate, requireFaculty, async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const existing = await pool.query('SELECT * FROM timetable_entries WHERE id = $1', [id]);
-    if (existing.rows.length === 0) {
-      return res.status(404).json({ error: 'Timetable entry not found' });
-    }
-
-    if (existing.rows[0].is_locked) {
-      return res.status(403).json({ error: 'Cannot delete a locked entry' });
-    }
-
-    await pool.query('DELETE FROM timetable_entries WHERE id = $1', [id]);
-    await logAction(req.user.id, 'DELETE', 'timetable_entry', id, {});
+    await pool.query('DELETE FROM timetable_entries WHERE id=$1', [req.params.id]);
+    await logAction(req.user.id, req.user.name, 'faculty', 'delete_entry', 'timetable_entries', req.params.id);
     res.json({ message: 'Timetable entry deleted' });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// POST /:id/change-room - change classroom for an entry
+// POST /:id/change-room
 router.post('/:id/change-room', authenticate, requireFaculty, async (req, res) => {
+  const { newClassroomId, reason } = req.body;
   try {
-    const { id } = req.params;
-    const { newClassroomId, reason } = req.body;
+    const entryRes = await pool.query('SELECT * FROM timetable_entries WHERE id=$1', [req.params.id]);
+    const entry = entryRes.rows[0];
+    if (!entry) return res.status(404).json({ error: 'Entry not found' });
 
-    if (!newClassroomId) {
-      return res.status(400).json({ error: 'newClassroomId is required' });
-    }
-
-    const existing = await pool.query('SELECT * FROM timetable_entries WHERE id = $1', [id]);
-    if (existing.rows.length === 0) {
-      return res.status(404).json({ error: 'Timetable entry not found' });
-    }
-
-    const entry = existing.rows[0];
-
-    const conflictCheck = {
-      classId: entry.class_id,
-      subjectId: entry.subject_id,
-      facultyId: entry.faculty_id,
-      classroomId: newClassroomId,
-      dayOfWeek: entry.day_of_week,
-      startTime: entry.start_time,
-      endTime: entry.end_time,
-      excludeId: id,
-    };
-
-    const conflicts = await checkConflicts([conflictCheck]);
-    if (conflicts.length > 0) {
-      return res.status(409).json({ error: 'New classroom has conflicts', conflicts });
-    }
+    const oldRoomId = entry.classroom_id;
+    await pool.query('UPDATE timetable_entries SET classroom_id=$1 WHERE id=$2', [newClassroomId, entry.id]);
 
     await pool.query(
-      `INSERT INTO room_change_log (timetable_entry_id, old_classroom_id, new_classroom_id, reason, changed_by)
+      `INSERT INTO room_change_log (timetable_entry_id, old_classroom_id, new_classroom_id, changed_by, reason)
        VALUES ($1, $2, $3, $4, $5)`,
-      [id, entry.classroom_id, newClassroomId, reason, req.user.id]
+      [entry.id, oldRoomId, newClassroomId, req.user.id, reason || 'Room changed by faculty']
     );
 
-    const updated = await pool.query(
-      'UPDATE timetable_entries SET classroom_id = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
-      [newClassroomId, id]
-    );
+    const roomRes = await pool.query('SELECT name FROM classrooms WHERE id=$1', [newClassroomId]);
+    const roomName = roomRes.rows[0]?.name || 'new room';
 
-    const studentsResult = await pool.query(
-      'SELECT user_id FROM students WHERE class_id = $1',
-      [entry.class_id]
-    );
+    const students = await pool.query('SELECT id FROM users WHERE class_id=$1 AND role=\'student\'', [entry.class_id]);
+    for (const s of students.rows) {
+      await notify(s.id, 'room_change', '🔔 Class Room Changed', `Your class room has been moved to ${roomName}`, entry.id);
+    }
 
-    const newClassroom = await pool.query(
-      'SELECT name, building, floor FROM classrooms WHERE id = $1',
-      [newClassroomId]
-    );
-    const roomInfo = newClassroom.rows[0];
-
-    await Promise.all(
-      studentsResult.rows.map((s) =>
-        notify(
-          s.user_id,
-          'Room Change',
-          `Your class room has been changed to ${roomInfo ? `${roomInfo.name}, ${roomInfo.building}` : 'a new room'}. Reason: ${reason || 'Not specified'}`,
-          'timetable'
-        )
-      )
-    );
-
-    res.json(updated.rows[0]);
+    res.json({ message: 'Room updated successfully', newClassroomId });
   } catch (err) {
-    console.error(err);
+    console.error('[Room Change] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

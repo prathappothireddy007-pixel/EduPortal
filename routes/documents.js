@@ -36,7 +36,7 @@ router.get('/', authenticate, async (req, res) => {
 
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error('[Documents GET] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -47,11 +47,10 @@ router.post('/', authenticate, async (req, res) => {
     const isFaculty = req.user.role === 'faculty';
     let { ownerId, category, title, filename, fileB64 } = req.body;
 
-    if (!category || !title || !filename) {
-      return res.status(400).json({ error: 'category, title, and filename are required' });
+    if (!title) {
+      return res.status(400).json({ error: 'title is required' });
     }
 
-    // Students can only upload for themselves
     if (!isFaculty) {
       ownerId = req.user.id;
     } else {
@@ -59,47 +58,16 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO documents (owner_id, category, title, filename, file_data, uploaded_by)
+      `INSERT INTO documents (owner_id, uploaded_by, category, title, filename, file_b64)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [ownerId, category, title, filename, fileB64, req.user.id]
+      [ownerId, req.user.id, category || 'general', title, filename || title, fileB64 || '']
     );
 
-    await logAction(req.user.id, 'UPLOAD', 'document', result.rows[0].id, { category, title, filename, ownerId });
+    await logAction(req.user.id, req.user.name, req.user.role, 'upload_document', 'documents', result.rows[0].id);
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// GET /:id - get single document
-router.get('/:id', authenticate, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const isFaculty = req.user.role === 'faculty';
-
-    const result = await pool.query(
-      `SELECT d.*, u.name AS owner_name
-       FROM documents d
-       LEFT JOIN users u ON d.owner_id = u.id
-       WHERE d.id = $1`,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Document not found' });
-    }
-
-    const doc = result.rows[0];
-
-    if (!isFaculty && doc.owner_id !== req.user.id) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    res.json(doc);
-  } catch (err) {
-    console.error(err);
+    console.error('[Documents POST] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -110,52 +78,47 @@ router.put('/:id/archive', authenticate, async (req, res) => {
     const { id } = req.params;
     const isFaculty = req.user.role === 'faculty';
 
-    const existing = await pool.query('SELECT * FROM documents WHERE id = $1', [id]);
-    if (existing.rows.length === 0) {
+    const docResult = await pool.query('SELECT * FROM documents WHERE id = $1', [id]);
+    if (docResult.rows.length === 0) {
       return res.status(404).json({ error: 'Document not found' });
     }
 
-    const doc = existing.rows[0];
-
+    const doc = docResult.rows[0];
     if (!isFaculty && doc.owner_id !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
     const result = await pool.query(
-      'UPDATE documents SET is_archived = NOT is_archived, updated_at = NOW() WHERE id = $1 RETURNING *',
+      `UPDATE documents SET is_archived = NOT is_archived WHERE id = $1 RETURNING *`,
       [id]
     );
 
-    await logAction(req.user.id, 'TOGGLE_ARCHIVE', 'document', id, { is_archived: result.rows[0].is_archived });
     res.json(result.rows[0]);
   } catch (err) {
-    console.error(err);
+    console.error('[Document Archive] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// DELETE /:id - delete document (students can only delete own)
+// DELETE /:id
 router.delete('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const isFaculty = req.user.role === 'faculty';
 
-    const existing = await pool.query('SELECT * FROM documents WHERE id = $1', [id]);
-    if (existing.rows.length === 0) {
+    const docResult = await pool.query('SELECT * FROM documents WHERE id = $1', [id]);
+    if (docResult.rows.length === 0) {
       return res.status(404).json({ error: 'Document not found' });
     }
 
-    const doc = existing.rows[0];
-
+    const doc = docResult.rows[0];
     if (!isFaculty && doc.owner_id !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
     await pool.query('DELETE FROM documents WHERE id = $1', [id]);
-    await logAction(req.user.id, 'DELETE', 'document', id, {});
     res.json({ message: 'Document deleted' });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
 });

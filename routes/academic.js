@@ -3,286 +3,226 @@ const { pool } = require('../db');
 const { authenticate, requireFaculty } = require('../middleware/auth');
 const { logAction } = require('../services/audit');
 
-// Grade mapping helper
-function scoreToGrade(score) {
-  if (score >= 90) return 'S';
-  if (score >= 80) return 'A';
-  if (score >= 70) return 'B';
-  if (score >= 60) return 'C';
-  if (score >= 50) return 'D';
+const scoreToGrade = (avg) => {
+  if (avg >= 90) return 'S';
+  if (avg >= 80) return 'A';
+  if (avg >= 70) return 'B';
+  if (avg >= 60) return 'C';
+  if (avg >= 50) return 'D';
   return 'F';
-}
+};
 
-// GET /risk - faculty only: compute risk for ALL students and persist to academic_risk
+const getSetting = async (key, fallback = '75') => {
+  try {
+    const r = await pool.query('SELECT value FROM settings WHERE key=$1', [key]);
+    return parseFloat(r.rows[0]?.value ?? fallback);
+  } catch { return parseFloat(fallback); }
+};
+
+// GET /risk - faculty only: compute risk for ALL students
 router.get('/risk', authenticate, requireFaculty, async (req, res) => {
   try {
-    const settingsResult = await pool.query(
-      `SELECT key, value FROM settings
-       WHERE key IN ('attendance_high_threshold', 'attendance_mod_threshold',
-                     'grade_high_threshold', 'grade_mod_threshold')`
-    );
+    const attendThreshHigh = await getSetting('academic_risk_attend_high', '60');
+    const attendThreshMod  = await getSetting('academic_risk_attend_mod',  '75');
+    const gradeThreshHigh  = await getSetting('academic_risk_grade_high',  '50');
+    const gradeThreshMod   = await getSetting('academic_risk_grade_mod',   '60');
 
-    const settings = {};
-    for (const row of settingsResult.rows) {
-      settings[row.key] = parseFloat(row.value);
-    }
-
-    const attendHighThreshold = settings['attendance_high_threshold'] ?? 60;
-    const attendModThreshold  = settings['attendance_mod_threshold']  ?? 75;
-    const gradeHighThreshold  = settings['grade_high_threshold']      ?? 50;
-    const gradeModThreshold   = settings['grade_mod_threshold']       ?? 60;
-
-    const studentsResult = await pool.query(
-      "SELECT u.id, u.name FROM users u WHERE u.role = 'student'"
+    const students = await pool.query(
+      `SELECT id, name, class_id FROM users
+       WHERE role='student' AND deleted_at IS NULL ORDER BY name`
     );
 
     const results = [];
-
-    for (const student of studentsResult.rows) {
-      const attendResult = await pool.query(
-        `SELECT
-           COUNT(*) FILTER (WHERE status = 'present') AS present_count,
-           COUNT(*) AS total_count
-         FROM attendance WHERE student_id = $1`,
-        [student.id]
+    for (const s of students.rows) {
+      // Attendance %
+      const attRes = await pool.query(
+        `SELECT COUNT(*) as total,
+                COUNT(*) FILTER (WHERE status IN ('Present','OD')) as attended
+         FROM attendance WHERE student_id=$1`, [s.id]
       );
+      const att = attRes.rows[0];
+      const total = parseInt(att.total, 10) || 0;
+      const attendedDays = parseInt(att.attended, 10) || 0;
+      const attendPct = total > 0 ? (attendedDays / total) * 100 : 100;
 
-      const presentCount = parseInt(attendResult.rows[0].present_count, 10) || 0;
-      const totalCount   = parseInt(attendResult.rows[0].total_count, 10)   || 0;
-      const attendanceRate = totalCount > 0 ? (presentCount / totalCount) * 100 : 100;
-
-      const gradeResult = await pool.query(
-        `SELECT AVG(CASE WHEN max_score > 0 THEN (score / max_score) * 100 ELSE 0 END) AS avg_pct
-         FROM grades WHERE student_id = $1`,
-        [student.id]
+      // Average grade
+      const gradeRes = await pool.query(
+        `SELECT AVG(CAST(score AS FLOAT)) as avg
+         FROM grades WHERE student_id=$1 AND score ~ '^[0-9]+(\\.[0-9]+)?$'`, [s.id]
       );
+      const avgGrade = parseFloat(gradeRes.rows[0]?.avg ?? 100);
 
-      const avgGrade = parseFloat(gradeResult.rows[0].avg_pct) || 100;
-
-      const trendResult = await pool.query(
-        `SELECT DATE_TRUNC('week', created_at) AS week,
-                AVG(CASE WHEN max_score > 0 THEN (score / max_score) * 100 ELSE 0 END) AS avg_pct
-         FROM grades
-         WHERE student_id = $1 AND created_at >= NOW() - INTERVAL '4 weeks'
-         GROUP BY DATE_TRUNC('week', created_at)
-         ORDER BY week ASC`,
-        [student.id]
-      );
-
-      let riskLevel;
+      // Risk classification
       const reasons = [];
+      let riskLevel = 'low';
 
-      if (attendanceRate < attendHighThreshold && avgGrade < gradeHighThreshold) {
-        riskLevel = 'High';
-        reasons.push(`Attendance ${attendanceRate.toFixed(1)}% < ${attendHighThreshold}%`);
-        reasons.push(`Avg grade ${avgGrade.toFixed(1)}% < ${gradeHighThreshold}%`);
-      } else if (attendanceRate < attendModThreshold || avgGrade < gradeModThreshold) {
-        riskLevel = 'Moderate';
-        if (attendanceRate < attendModThreshold) {
-          reasons.push(`Attendance ${attendanceRate.toFixed(1)}% < ${attendModThreshold}%`);
-        }
-        if (avgGrade < gradeModThreshold) {
-          reasons.push(`Avg grade ${avgGrade.toFixed(1)}% < ${gradeModThreshold}%`);
-        }
-      } else {
-        riskLevel = 'Low';
+      if (attendPct < attendThreshHigh && avgGrade < gradeThreshHigh) {
+        riskLevel = 'high';
+        reasons.push(`Attendance critically low at ${attendPct.toFixed(1)}%`);
+        reasons.push(`Average grade critically low at ${avgGrade.toFixed(1)}%`);
+      } else if (attendPct < attendThreshMod || avgGrade < gradeThreshMod) {
+        riskLevel = 'moderate';
+        if (attendPct < attendThreshMod) reasons.push(`Attendance below threshold: ${attendPct.toFixed(1)}%`);
+        if (avgGrade < gradeThreshMod)   reasons.push(`Average grade below threshold: ${avgGrade.toFixed(1)}%`);
       }
 
+      // Persist to academic_risk
       await pool.query(
-        `INSERT INTO academic_risk (student_id, risk_level, attendance_rate, avg_grade, reasons, computed_at)
-         VALUES ($1, $2, $3, $4, $5, NOW())
+        `INSERT INTO academic_risk (student_id, risk_level, reasons_json, calculated_at)
+         VALUES ($1,$2,$3,NOW())
          ON CONFLICT (student_id) DO UPDATE
-           SET risk_level = EXCLUDED.risk_level, attendance_rate = EXCLUDED.attendance_rate,
-               avg_grade = EXCLUDED.avg_grade, reasons = EXCLUDED.reasons,
-               computed_at = EXCLUDED.computed_at`,
-        [student.id, riskLevel, attendanceRate, avgGrade, JSON.stringify(reasons)]
+           SET risk_level=$2, reasons_json=$3, calculated_at=NOW()`,
+        [s.id, riskLevel, JSON.stringify(reasons)]
       );
 
       results.push({
-        studentId: student.id,
-        studentName: student.name,
-        riskLevel,
-        attendanceRate: parseFloat(attendanceRate.toFixed(2)),
-        avgGrade: parseFloat(avgGrade.toFixed(2)),
-        reasons,
-        weeklyTrend: trendResult.rows,
+        student_id: s.id, name: s.name, class_id: s.class_id,
+        attend_pct: Math.round(attendPct * 10) / 10,
+        avg_grade: Math.round(avgGrade * 10) / 10,
+        grade_label: scoreToGrade(avgGrade),
+        risk_level: riskLevel, reasons
       });
     }
 
-    res.json(results);
+    const order = { high: 0, moderate: 1, low: 2 };
+    results.sort((a, b) => order[a.risk_level] - order[b.risk_level]);
+
+    const summary = {
+      high:     results.filter(r => r.risk_level === 'high').length,
+      moderate: results.filter(r => r.risk_level === 'moderate').length,
+      low:      results.filter(r => r.risk_level === 'low').length,
+      total:    results.length
+    };
+
+    res.json({ summary, students: results });
   } catch (err) {
-    console.error(err);
+    console.error('[Academic Risk] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// GET /risk/:studentId - get risk record for one student (faculty or own student)
+// GET /risk/:studentId - risk for a single student
 router.get('/risk/:studentId', authenticate, async (req, res) => {
-  try {
-    const { studentId } = req.params;
-    const isFaculty = req.user.role === 'faculty';
-
-    if (!isFaculty && req.user.id !== parseInt(studentId, 10)) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    const result = await pool.query(
-      `SELECT ar.*, u.name AS student_name
-       FROM academic_risk ar
-       LEFT JOIN users u ON ar.student_id = u.id
-       WHERE ar.student_id = $1`,
-      [studentId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Risk data not found. Run GET /risk to compute.' });
-    }
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+  const sid = req.params.studentId;
+  if (req.user.role === 'student' && String(req.user.id) !== String(sid)) {
+    return res.status(403).json({ error: 'Not authorized' });
   }
+  try {
+    const r = await pool.query(
+      `SELECT ar.*, u.name FROM academic_risk ar
+       JOIN users u ON ar.student_id=u.id
+       WHERE ar.student_id=$1`, [sid]
+    );
+    if (!r.rows[0]) return res.json({ risk_level: 'low', reasons: [] });
+    const row = r.rows[0];
+    res.json({ ...row, reasons: JSON.parse(row.reasons_json || '[]') });
+  } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-// GET /trends/:studentId - weekly grade trends per subject (both roles; student sees own)
+// GET /trends/:studentId
 router.get('/trends/:studentId', authenticate, async (req, res) => {
+  const sid = req.params.studentId;
+  if (req.user.role === 'student' && String(req.user.id) !== String(sid)) {
+    return res.status(403).json({ error: 'Not authorized' });
+  }
   try {
-    const { studentId } = req.params;
-    const isFaculty = req.user.role === 'faculty';
-
-    if (!isFaculty && req.user.id !== parseInt(studentId, 10)) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    const result = await pool.query(
-      `SELECT s.id AS subject_id, s.name AS subject,
-              DATE_TRUNC('week', g.created_at) AS week,
-              AVG(CASE WHEN g.max_score > 0 THEN (g.score / g.max_score) * 100 ELSE 0 END) AS avg_pct
-       FROM grades g
-       LEFT JOIN subjects s ON g.subject_id = s.id
-       WHERE g.student_id = $1
-       GROUP BY s.id, s.name, DATE_TRUNC('week', g.created_at)
-       ORDER BY s.name, week ASC`,
-      [studentId]
+    const r = await pool.query(
+      `SELECT subject_name, subject_id, week,
+              AVG(CAST(score AS FLOAT)) as avg_score
+       FROM grades
+       WHERE student_id=$1 AND score ~ '^[0-9]+(\\.[0-9]+)?$'
+       GROUP BY subject_name, subject_id, week
+       ORDER BY subject_name, week`,
+      [sid]
     );
-
     const subjectMap = {};
-    for (const row of result.rows) {
-      if (!subjectMap[row.subject_id]) {
-        subjectMap[row.subject_id] = { subject: row.subject, weeklyScores: [] };
+    for (const row of r.rows) {
+      if (!subjectMap[row.subject_name]) {
+        subjectMap[row.subject_name] = { subject: row.subject_name, subject_id: row.subject_id, weeks: [], scores: [] };
       }
-      subjectMap[row.subject_id].weeklyScores.push({
-        week: row.week,
-        avgPct: parseFloat(parseFloat(row.avg_pct).toFixed(2)),
-      });
+      subjectMap[row.subject_name].weeks.push(row.week);
+      subjectMap[row.subject_name].scores.push(Math.round(parseFloat(row.avg_score) * 10) / 10);
     }
-
     res.json(Object.values(subjectMap));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-// POST /simulate - stateless grade simulation (no DB writes)
+// POST /simulate - stateless what-if calculator
 router.post('/simulate', authenticate, async (req, res) => {
+  const { studentId, additionalScore } = req.body;
+  const sid = studentId || req.user.id;
+  if (req.user.role === 'student' && String(req.user.id) !== String(sid)) {
+    return res.status(403).json({ error: 'Not authorized' });
+  }
+  const newScore = parseFloat(additionalScore);
+  if (isNaN(newScore) || newScore < 0 || newScore > 100) {
+    return res.status(400).json({ error: 'additionalScore must be 0-100' });
+  }
   try {
-    const { studentId, additionalScore } = req.body;
-
-    if (!studentId || additionalScore === undefined) {
-      return res.status(400).json({ error: 'studentId and additionalScore are required' });
-    }
-
-    const gradesResult = await pool.query(
-      'SELECT score, max_score FROM grades WHERE student_id = $1',
-      [studentId]
+    const r = await pool.query(
+      `SELECT CAST(score AS FLOAT) as score
+       FROM grades WHERE student_id=$1 AND score ~ '^[0-9]+(\\.[0-9]+)?$'`,
+      [sid]
     );
-
-    if (gradesResult.rows.length === 0) {
-      return res.status(404).json({ error: 'No grades found for student' });
-    }
-
-    const totalScore = gradesResult.rows.reduce((sum, r) => sum + parseFloat(r.score), 0);
-    const totalMax   = gradesResult.rows.reduce((sum, r) => sum + parseFloat(r.max_score), 0);
-    const currentAvg = totalMax > 0 ? (totalScore / totalMax) * 100 : 0;
-
-    // Assume new assessment is out of 100
-    const newTotalScore = totalScore + parseFloat(additionalScore);
-    const newTotalMax   = totalMax + 100;
-    const projectedAvg  = newTotalMax > 0 ? (newTotalScore / newTotalMax) * 100 : 0;
+    const scores = r.rows.map(row => parseFloat(row.score));
+    const currentAvg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+    const projectedScores = [...scores, newScore];
+    const projectedAvg = projectedScores.reduce((a, b) => a + b, 0) / projectedScores.length;
+    const difference = projectedAvg - currentAvg;
 
     res.json({
-      currentAvg: parseFloat(currentAvg.toFixed(2)),
-      projectedAvg: parseFloat(projectedAvg.toFixed(2)),
-      currentGrade: scoreToGrade(currentAvg),
+      currentAvg:     Math.round(currentAvg * 100) / 100,
+      projectedAvg:   Math.round(projectedAvg * 100) / 100,
+      currentGrade:   scoreToGrade(currentAvg),
       projectedGrade: scoreToGrade(projectedAvg),
-      difference: parseFloat((projectedAvg - currentAvg).toFixed(2)),
+      difference:     Math.round(difference * 100) / 100,
+      totalGrades:    scores.length,
+      newScore
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-// GET /attendance-shortage/:studentId - attendance shortage analysis (both roles; student sees own)
+// GET /attendance-shortage/:studentId
 router.get('/attendance-shortage/:studentId', authenticate, async (req, res) => {
+  const sid = req.params.studentId;
+  if (req.user.role === 'student' && String(req.user.id) !== String(sid)) {
+    return res.status(403).json({ error: 'Not authorized' });
+  }
   try {
-    const { studentId } = req.params;
-    const isFaculty = req.user.role === 'faculty';
-
-    if (!isFaculty && req.user.id !== parseInt(studentId, 10)) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    const thresholdResult = await pool.query(
-      "SELECT value FROM settings WHERE key = 'attendance_threshold'"
+    const threshold = await getSetting('attendance_threshold', '75');
+    const r = await pool.query(
+      `SELECT COUNT(*) as total,
+              COUNT(*) FILTER (WHERE status IN ('Present','OD')) as attended
+       FROM attendance WHERE student_id=$1`, [sid]
     );
-    const threshold = thresholdResult.rows.length > 0
-      ? parseFloat(thresholdResult.rows[0].value)
-      : 75;
+    const { total, attended } = r.rows[0];
+    const totalClasses  = parseInt(total, 10) || 0;
+    const attendedClasses = parseInt(attended, 10) || 0;
+    const currentPct = totalClasses > 0 ? (attendedClasses / totalClasses) * 100 : 100;
 
-    const attendResult = await pool.query(
-      `SELECT
-         COUNT(*) FILTER (WHERE status = 'present') AS present_count,
-         COUNT(*) AS total_count
-       FROM attendance WHERE student_id = $1`,
-      [studentId]
-    );
+    let message = '';
+    let canMiss = 0;
+    let mustAttend = 0;
 
-    const presentCount = parseInt(attendResult.rows[0].present_count, 10) || 0;
-    const totalCount   = parseInt(attendResult.rows[0].total_count, 10)   || 0;
-    const currentPct   = totalCount > 0 ? (presentCount / totalCount) * 100 : 0;
-
-    const thresholdDecimal = threshold / 100;
-    let classesNeeded = 0;
-    let classesThatCanBeMissed = 0;
-
-    if (currentPct < threshold) {
-      // Solve: (present + n) / (total + n) >= threshold/100
-      const numerator   = thresholdDecimal * totalCount - presentCount;
-      const denominator = 1 - thresholdDecimal;
-      classesNeeded = denominator > 0 ? Math.ceil(numerator / denominator) : Infinity;
+    if (currentPct >= threshold) {
+      canMiss = Math.floor(attendedClasses / (threshold / 100) - totalClasses);
+      canMiss = Math.max(0, canMiss);
+      message = `You can miss up to ${canMiss} more class${canMiss !== 1 ? 'es' : ''} and remain above ${threshold}%`;
     } else {
-      // Solve: present / (total + n) >= threshold/100
-      const maxMiss = Math.floor(presentCount / thresholdDecimal - totalCount);
-      classesThatCanBeMissed = Math.max(0, maxMiss);
+      const t = threshold / 100;
+      mustAttend = Math.ceil((t * totalClasses - attendedClasses) / (1 - t));
+      mustAttend = Math.max(0, mustAttend);
+      message = `You need to attend ${mustAttend} consecutive class${mustAttend !== 1 ? 'es' : ''} to reach ${threshold}%`;
     }
 
     res.json({
-      studentId: parseInt(studentId, 10),
-      presentCount,
-      totalCount,
-      currentPercentage: parseFloat(currentPct.toFixed(2)),
-      threshold,
-      isShortage: currentPct < threshold,
-      classesNeededToReachThreshold: currentPct < threshold ? classesNeeded : 0,
-      classesThatCanBeMissed: currentPct >= threshold ? classesThatCanBeMissed : 0,
+      totalClasses, attendedClasses,
+      currentPct: Math.round(currentPct * 10) / 10,
+      threshold, canMiss, mustAttend,
+      isAboveThreshold: currentPct >= threshold,
+      message
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
+  } catch (err) { console.error('[Attendance Shortage] Error:', err); res.status(500).json({ error: 'Server error' }); }
 });
 
 module.exports = router;
