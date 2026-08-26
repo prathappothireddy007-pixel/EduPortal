@@ -5,16 +5,24 @@ const { pool } = require('../db');
 
 router.post('/login', async (req, res) => {
   const { role, adminId, email, password } = req.body;
+  const loginIdentifier = (adminId || email || '').trim();
+
+  if (!loginIdentifier || !password) {
+    return res.status(400).json({ error: 'Identifier and password are required' });
+  }
+
   try {
     let user;
     if (role === 'faculty') {
       const r = await pool.query(
-        "SELECT * FROM users WHERE role='faculty' AND admin_id=$1", [adminId]
+        "SELECT * FROM users WHERE role='faculty' AND (admin_id=$1 OR LOWER(email)=LOWER($1))",
+        [loginIdentifier]
       );
       user = r.rows[0];
     } else {
       const r = await pool.query(
-        "SELECT * FROM users WHERE role='student' AND LOWER(email)=LOWER($1)", [email]
+        "SELECT * FROM users WHERE role='student' AND (admin_id=$1 OR LOWER(email)=LOWER($1))",
+        [loginIdentifier]
       );
       user = r.rows[0];
     }
@@ -26,7 +34,7 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       { id: user.id, role: user.role, name: user.name },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'supersecretjwtkey123',
       { expiresIn: '7d' }
     );
 
@@ -34,11 +42,11 @@ router.post('/login', async (req, res) => {
       token,
       user: {
         id: user.id, role: user.role, name: user.name,
-        email: user.email, classId: user.class_id
+        email: user.email, classId: user.class_id, admin_id: user.admin_id
       }
     });
   } catch (err) {
-    console.error(err);
+    console.error('[Auth Login] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
