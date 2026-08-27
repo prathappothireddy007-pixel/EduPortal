@@ -3,86 +3,170 @@ const { pool } = require('../db');
 const { authenticate, requireFaculty, requireStudent } = require('../middleware/auth');
 const { notify, logAction } = require('../services/audit');
 
-// GET enrollment requests
+// GET /available - Student gets all launched courses/subjects with faculty name & enrollment status
+router.get('/available', authenticate, async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const r = await pool.query(
+      `SELECT s.id, s.name as subject_name,
+              COALESCE(s.code, CONCAT('SUB', LPAD(s.id::text, 3, '0'))) as course_code,
+              s.subject_type, s.target_dept, s.is_launched, s.description,
+              u.name as faculty_name, u.email as faculty_email,
+              EXISTS (
+                SELECT 1 FROM enrollment_requests er 
+                WHERE er.subject_id = s.id AND er.student_id = $1 AND er.status = 'enrolled'
+              ) as is_enrolled
+       FROM subjects s
+       LEFT JOIN users u ON s.faculty_id = u.id
+       WHERE (s.is_launched IS TRUE OR s.is_launched IS NULL)
+       ORDER BY is_enrolled DESC, s.name ASC`,
+      [studentId]
+    );
+    res.json(r.rows);
+  } catch (err) {
+    console.error('[Enrollment Available] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /my-courses - Current student gets enrolled courses
+router.get('/my-courses', authenticate, async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const r = await pool.query(
+      `SELECT er.id as enrollment_id, er.created_at as enrolled_at,
+              s.id as subject_id, s.name as subject_name,
+              COALESCE(s.code, CONCAT('SUB', LPAD(s.id::text, 3, '0'))) as course_code,
+              s.subject_type, s.target_dept,
+              u.name as faculty_name, u.email as faculty_email
+       FROM enrollment_requests er
+       JOIN subjects s ON er.subject_id = s.id
+       LEFT JOIN users u ON s.faculty_id = u.id
+       WHERE er.student_id = $1 AND er.status = 'enrolled'
+       ORDER BY s.name ASC`,
+      [studentId]
+    );
+    res.json(r.rows);
+  } catch (err) {
+    console.error('[My Courses] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET / - All enrollments (faculty view) or own enrollments (student view)
 router.get('/', authenticate, async (req, res) => {
   try {
     let r;
     if (req.user.role === 'faculty') {
       r = await pool.query(
-        `SELECT er.*, u.name as student_name, u.email as student_email, c.name as class_name
+        `SELECT er.id, er.status, er.created_at,
+                u_s.id as student_id, u_s.name as student_name, u_s.admin_id as reg_no, u_s.email as student_email,
+                s.id as subject_id, s.name as subject_name,
+                COALESCE(s.code, CONCAT('SUB', LPAD(s.id::text, 3, '0'))) as course_code,
+                u_f.name as faculty_name
          FROM enrollment_requests er
-         JOIN users u ON er.student_id=u.id
-         JOIN classes c ON er.class_id=c.id
+         JOIN users u_s ON er.student_id = u_s.id
+         JOIN subjects s ON er.subject_id = s.id
+         LEFT JOIN users u_f ON s.faculty_id = u_f.id
          ORDER BY er.created_at DESC`
       );
     } else {
       r = await pool.query(
-        `SELECT er.*, c.name as class_name
+        `SELECT er.id, er.status, er.created_at,
+                s.id as subject_id, s.name as subject_name,
+                COALESCE(s.code, CONCAT('SUB', LPAD(s.id::text, 3, '0'))) as course_code,
+                u_f.name as faculty_name
          FROM enrollment_requests er
-         JOIN classes c ON er.class_id=c.id
-         WHERE er.student_id=$1 ORDER BY er.created_at DESC`,
+         JOIN subjects s ON er.subject_id = s.id
+         LEFT JOIN users u_f ON s.faculty_id = u_f.id
+         WHERE er.student_id = $1
+         ORDER BY er.created_at DESC`,
         [req.user.id]
       );
     }
     res.json(r.rows);
-  } catch (err) { res.status(500).json({ error: 'Server error' }); }
+  } catch (err) {
+    console.error('[Enrollment GET] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
-// POST create request (student)
-router.post('/', authenticate, requireStudent, async (req, res) => {
-  const { classId } = req.body;
-  if (!classId) return res.status(400).json({ error: 'classId required' });
+// POST /enroll - Student enrolls directly into a course/subject
+router.post('/enroll', authenticate, async (req, res) => {
+  const { subjectId } = req.body;
+  if (!subjectId) return res.status(400).json({ error: 'Subject ID required' });
+
+  try {
+    // Check if already enrolled
+    const check = await pool.query(
+      `SELECT * FROM enrollment_requests WHERE student_id=$1 AND subject_id=$2`,
+      [req.user.id, subjectId]
+    );
+
+    if (check.rows.length > 0) {
+      if (check.rows[0].status === 'enrolled') {
+        return res.status(400).json({ error: 'You are already enrolled in this course' });
+      }
+      // Re-activate
+      const r = await pool.query(
+        `UPDATE enrollment_requests SET status='enrolled', created_at=NOW() WHERE id=$1 RETURNING *`,
+        [check.rows[0].id]
+      );
+      return res.json(r.rows[0]);
+    }
+
+    const r = await pool.query(
+      `INSERT INTO enrollment_requests (student_id, subject_id, status)
+       VALUES ($1, $2, 'enrolled')
+       RETURNING *`,
+      [req.user.id, subjectId]
+    );
+
+    // Notify faculty in charge
+    const sub = await pool.query(`SELECT s.name, s.faculty_id FROM subjects s WHERE s.id=$1`, [subjectId]);
+    if (sub.rows[0] && sub.rows[0].faculty_id) {
+      await notify(
+        sub.rows[0].faculty_id,
+        'student_enrolled',
+        'New Course Enrollment 🎓',
+        `${req.user.name} enrolled in "${sub.rows[0].name}"`,
+        r.rows[0].id
+      );
+    }
+
+    await logAction(req.user.id, req.user.name, req.user.role, 'enroll_course', 'subjects', subjectId);
+    res.status(201).json(r.rows[0]);
+  } catch (err) {
+    console.error('[Enroll POST] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /unenroll - Student drops course
+router.post('/unenroll', authenticate, async (req, res) => {
+  const { subjectId } = req.body;
+  if (!subjectId) return res.status(400).json({ error: 'Subject ID required' });
+
   try {
     await pool.query(
-      "DELETE FROM enrollment_requests WHERE student_id=$1 AND status='pending'",
-      [req.user.id]
+      `DELETE FROM enrollment_requests WHERE student_id=$1 AND subject_id=$2`,
+      [req.user.id, subjectId]
     );
-    const r = await pool.query(
-      'INSERT INTO enrollment_requests (student_id,class_id) VALUES ($1,$2) RETURNING *',
-      [req.user.id, classId]
-    );
-    // Notify faculty
-    const faculty = await pool.query(`SELECT id FROM users WHERE role='faculty' LIMIT 1`);
-    if (faculty.rows[0]) {
-      await notify(faculty.rows[0].id, 'enrollment_request', 'New Enrollment Request',
-        `${req.user.name} requested enrollment in a class`, r.rows[0].id);
-    }
-    res.status(201).json(r.rows[0]);
-  } catch (err) { res.status(500).json({ error: 'Server error' }); }
+    res.json({ message: 'Unenrolled from course' });
+  } catch (err) {
+    console.error('[Unenroll] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
-// PUT approve (faculty)
-router.put('/:id/approve', authenticate, requireFaculty, async (req, res) => {
+// DELETE /:id - Faculty removes enrollment
+router.delete('/:id', authenticate, requireFaculty, async (req, res) => {
   try {
-    const r = await pool.query(
-      "UPDATE enrollment_requests SET status='approved' WHERE id=$1 RETURNING *",
-      [req.params.id]
-    );
-    const enr = r.rows[0];
-    if (enr) {
-      await pool.query('UPDATE users SET class_id=$1 WHERE id=$2', [enr.class_id, enr.student_id]);
-      await notify(enr.student_id, 'enrollment_approved', 'Enrollment Approved',
-        'Your class enrollment request has been approved!', enr.id);
-      await logAction(req.user.id, req.user.name, 'faculty', 'approve_enrollment', 'enrollment_requests', enr.id);
-    }
-    res.json(enr);
-  } catch (err) { res.status(500).json({ error: 'Server error' }); }
-});
-
-// PUT reject (faculty)
-router.put('/:id/reject', authenticate, requireFaculty, async (req, res) => {
-  try {
-    const r = await pool.query(
-      "UPDATE enrollment_requests SET status='rejected' WHERE id=$1 RETURNING *",
-      [req.params.id]
-    );
-    const enr = r.rows[0];
-    if (enr) {
-      await notify(enr.student_id, 'enrollment_rejected', 'Enrollment Rejected',
-        'Your class enrollment request was rejected.', enr.id);
-    }
-    res.json(enr);
-  } catch (err) { res.status(500).json({ error: 'Server error' }); }
+    await pool.query('DELETE FROM enrollment_requests WHERE id=$1', [req.params.id]);
+    res.json({ message: 'Enrollment removed' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 module.exports = router;

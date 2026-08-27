@@ -387,13 +387,13 @@
       if (role === 'faculty') {
         bFac.className = 'py-2.5 rounded-lg text-sm font-semibold transition-all bg-blue-600 text-white shadow-md';
         bStu.className = 'py-2.5 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white';
-        lbl.innerText = 'Admin / Faculty ID';
-        inp.placeholder = 'e.g. 192411184';
+        lbl.innerText = 'Faculty Admin ID or Email Address';
+        inp.placeholder = 'e.g. 2024FACCSE001 or 192411184';
       } else {
         bStu.className = 'py-2.5 rounded-lg text-sm font-semibold transition-all bg-blue-600 text-white shadow-md';
         bFac.className = 'py-2.5 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white';
-        lbl.innerText = 'Student Register / Roll ID';
-        inp.placeholder = 'e.g. 2024STU101';
+        lbl.innerText = 'Student Register Number (Reg No) or Email';
+        inp.placeholder = 'e.g. 2024CSE001';
       }
     }
 
@@ -432,8 +432,7 @@
       { section: 'ACADEMICS', items: [
         { tab: 'students', label: 'Students Directory', icon: 'users' },
         { tab: 'faculty-users', label: 'Faculty Management', icon: 'shield-check' },
-        { tab: 'classes', label: 'Classes & Batches', icon: 'layout-grid' },
-        { tab: 'subjects', label: 'Subjects Catalog', icon: 'book' },
+        { tab: 'subjects', label: 'Courses & Subjects Master', icon: 'book-open' },
         { tab: 'gradebook', label: 'Academic Gradebook', icon: 'award' },
         { tab: 'evaluation', label: 'PPT Report Generator', icon: 'bar-chart-2' }
       ]},
@@ -460,6 +459,7 @@
     const STUDENT_NAV = [
       { section: 'MY ACADEMICS', items: [
         { tab: 'dashboard', label: 'Overview', icon: 'home' },
+        { tab: 'course-enrollment', label: 'Course Enrollment', icon: 'book-plus' },
         { tab: 'grades', label: 'My Grades & Scores', icon: 'award' },
         { tab: 'what-if', label: 'What-If Simulator', icon: 'zap' },
         { tab: 'attendance-calc', label: 'Attendance Shortage', icon: 'calculator' }
@@ -578,10 +578,9 @@
         if (S.user.role === 'faculty') {
           switch(S.tab) {
             case 'dashboard': title.innerText = 'Faculty Dashboard'; await renderFacultyDashboard(main); break;
-            case 'students': title.innerText = 'Students Directory'; await renderStudentsDirectory(main); break;
+            case 'students': title.innerText = 'Engineering Students Directory'; await renderStudentsDirectory(main); break;
             case 'faculty-users': title.innerText = 'Faculty User Management'; await renderFacultyUsers(main); break;
-            case 'classes': title.innerText = 'Classes & Batches'; await renderClasses(main); break;
-            case 'subjects': title.innerText = 'Subject Master Catalog'; await renderSubjects(main); break;
+            case 'subjects': title.innerText = 'Courses & Subjects Master Catalog'; await renderSubjects(main); break;
             case 'gradebook': title.innerText = 'Academic Gradebook'; await renderGradebook(main); break;
             case 'evaluation': title.innerText = 'Student Performance Evaluation'; await renderEvaluation(main); break;
             case 'attendance': title.innerText = 'Daily Attendance Recording'; await renderAttendance(main); break;
@@ -601,6 +600,7 @@
         } else {
           switch(S.tab) {
             case 'dashboard': title.innerText = 'Student Overview'; await renderStudentDashboard(main); break;
+            case 'course-enrollment': title.innerText = 'Course Catalog & Enrollment'; await renderStudentCourseEnrollment(main); break;
             case 'grades': title.innerText = 'My Academic Marks & Grades'; await renderStudentGrades(main); break;
             case 'what-if': title.innerText = 'What-If Grade Simulator'; await renderWhatIfSimulator(main); break;
             case 'attendance-calc': title.innerText = 'Attendance Shortage Calculator'; await renderAttendanceCalculator(main); break;
@@ -1023,15 +1023,19 @@
       } catch(e) {}
     }
 
+    // --- FACULTY USER MANAGEMENT ---
     async function renderFacultyUsers(container) {
-      const students = await api('GET', '/students');
-      const facultyList = students.filter(u => u.role === 'faculty');
+      const allUsers = await api('GET', '/students');
+      const facultyList = allUsers.filter(u => u.role === 'faculty');
 
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-white">Faculty Accounts</h3>
-            <button onclick="openAddFacultyModal()" class="btn-primary">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-xl font-extrabold text-white tracking-tight">Faculty & Instructor Directory</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Manage faculty profiles, department appointments, and system credentials.</p>
+            </div>
+            <button onclick="openAddFacultyModal()" class="btn-primary flex items-center gap-2">
               <i data-lucide="user-plus" class="w-4 h-4"></i>
               <span>Add Faculty User</span>
             </button>
@@ -1041,17 +1045,26 @@
             <table class="w-full text-left text-sm text-slate-300">
               <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
                 <tr>
+                  <th class="p-4">Faculty ID (Fac ID)</th>
                   <th class="p-4">Faculty Name</th>
-                  <th class="p-4">Faculty Admin ID</th>
-                  <th class="p-4">Email</th>
+                  <th class="p-4">Department / Branch</th>
+                  <th class="p-4">Designation</th>
+                  <th class="p-4">Email Address</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/5">
                 ${facultyList.map(f => `
-                  <tr class="hover:bg-white/[0.02]">
+                  <tr class="hover:bg-white/[0.02] transition-colors">
+                    <td class="p-4">
+                      <span class="inline-flex items-center gap-1.5 font-mono text-xs font-bold text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded-lg border border-purple-500/20">
+                        <i data-lucide="shield" class="w-3 h-3 text-purple-400"></i>
+                        <span>${f.admin_id}</span>
+                      </span>
+                    </td>
                     <td class="p-4 font-semibold text-white">${f.name}</td>
-                    <td class="p-4 font-mono text-xs text-blue-400">${f.admin_id}</td>
-                    <td class="p-4 text-slate-400">${f.email || 'N/A'}</td>
+                    <td class="p-4"><span class="badge badge-purple">${f.department || 'General'}</span></td>
+                    <td class="p-4 text-slate-300 text-xs font-medium">${f.designation || 'Assistant Professor'}</td>
+                    <td class="p-4 text-slate-400 text-xs">${f.email || 'N/A'}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -1059,126 +1072,382 @@
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
-    function openAddFacultyModal() {
-      openModal('Create Faculty User', `
-        <div class="space-y-4">
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Faculty Name</label><input type="text" id="m-f-name" class="glass-input w-full" required></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Faculty Admin ID</label><input type="text" id="m-f-id" class="glass-input w-full" required placeholder="e.g. FAC101"></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Password</label><input type="password" id="m-f-pass" class="glass-input w-full" required></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Email</label><input type="email" id="m-f-email" class="glass-input w-full"></div>
+    async function openAddFacultyModal() {
+      const currentYear = new Date().getFullYear();
+
+      openModal('Create Faculty User — Academic Appointments', `
+        <div class="space-y-4 text-left">
+          <!-- 1. Engineering Department -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+              <span>1. Faculty Department / Branch</span>
+              <span class="text-[11px] text-purple-400 font-normal">Auto-Generates Fac ID</span>
+            </label>
+            <select id="m-f-dept" onchange="autoGenerateFacId()" class="glass-input w-full font-medium">
+              <option value="CSE" selected>Department of Computer Science & Engineering (CSE)</option>
+              <option value="IT">Department of Information Technology (IT)</option>
+              <option value="AIDS">Department of AI & Data Science (AI&DS)</option>
+              <option value="ECE">Department of Electronics & Communication (ECE)</option>
+              <option value="EEE">Department of Electrical & Electronics (EEE)</option>
+              <option value="MECH">Department of Mechanical Engineering (MECH)</option>
+              <option value="CIVIL">Department of Civil Engineering (CIVIL)</option>
+              <option value="CSBS">Department of CS & Business Systems (CSBS)</option>
+              <option value="BME">Department of Biomedical Engineering (BME)</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <!-- 2. Auto-Generated Faculty ID -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                <span>2. Faculty ID</span>
+                <button type="button" onclick="autoGenerateFacId()" class="text-[10px] text-purple-400 hover:text-purple-300 font-semibold flex items-center gap-1">
+                  <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                  <span>Refresh</span>
+                </button>
+              </label>
+              <input type="text" id="m-f-id" required 
+                     class="glass-input w-full font-mono text-sm font-bold text-purple-400 tracking-wider bg-purple-500/10 border-purple-500/30">
+            </div>
+
+            <!-- Designation -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Designation</label>
+              <select id="m-f-desig" class="glass-input w-full font-medium">
+                <option value="Assistant Professor" selected>Assistant Professor</option>
+                <option value="Associate Professor">Associate Professor</option>
+                <option value="Professor">Professor</option>
+                <option value="Head of Department (HOD)">Head of Department (HOD)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 3. Faculty Name -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">3. Faculty Full Name</label>
+            <input type="text" id="m-f-name" placeholder="e.g. Dr. Sarah Miller" class="glass-input w-full font-medium" required>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Login Password</label>
+              <input type="text" id="m-f-pass" value="Faculty@123" class="glass-input w-full font-mono text-sm" required>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Email Address</label>
+              <input type="email" id="m-f-email" placeholder="faculty@eduportal.com" class="glass-input w-full font-medium">
+            </div>
+          </div>
         </div>
       `, `
-        <button onclick="saveFaculty()" class="btn-primary w-full">Create Faculty Account</button>
+        <button onclick="saveFaculty()" class="btn-primary w-full flex items-center justify-center gap-2">
+          <i data-lucide="user-check" class="w-4 h-4"></i>
+          <span>Appoint Faculty Member</span>
+        </button>
       `);
+
+      lucide.createIcons();
+      autoGenerateFacId();
+    }
+
+    async function autoGenerateFacId() {
+      const dept = document.getElementById('m-f-dept')?.value || 'CSE';
+      const year = new Date().getFullYear();
+      const idInput = document.getElementById('m-f-id');
+      const emailInput = document.getElementById('m-f-email');
+
+      if (!idInput) return;
+
+      try {
+        const res = await api('GET', `/students/next-facid?dept=${dept}&year=${year}`);
+        if (res && res.facId) {
+          idInput.value = res.facId;
+          if (emailInput && (!emailInput.value || emailInput.value.includes('@eduportal.com'))) {
+            emailInput.value = `${res.facId.toLowerCase()}@eduportal.com`;
+          }
+        }
+      } catch (err) {
+        const fallback = `${year}FAC${dept}001`;
+        idInput.value = fallback;
+        if (emailInput && (!emailInput.value || emailInput.value.includes('@eduportal.com'))) {
+          emailInput.value = `${fallback.toLowerCase()}@eduportal.com`;
+        }
+      }
     }
 
     async function saveFaculty() {
-      const name = document.getElementById('m-f-name').value;
-      const adminId = document.getElementById('m-f-id').value;
-      const password = document.getElementById('m-f-pass').value;
-      const email = document.getElementById('m-f-email').value;
+      const name = document.getElementById('m-f-name')?.value.trim();
+      const adminId = document.getElementById('m-f-id')?.value.trim();
+      const password = document.getElementById('m-f-pass')?.value.trim();
+      const email = document.getElementById('m-f-email')?.value.trim();
+      const department = document.getElementById('m-f-dept')?.value || 'CSE';
+      const designation = document.getElementById('m-f-desig')?.value || 'Assistant Professor';
+
+      if (!name) return toast('Faculty name is required', 'warning');
+      if (!adminId) return toast('Faculty ID is required', 'warning');
+      if (!password) return toast('Password is required', 'warning');
 
       try {
-        await api('POST', '/students/faculty', { name, adminId, password, email });
-        toast('Faculty user created successfully!', 'success');
+        await api('POST', '/students/faculty', { name, adminId, password, email, department, designation });
+        toast(`Faculty account created with ID: ${adminId}!`, 'success');
         closeModal();
         renderPage();
       } catch(e) {}
     }
 
-    async function renderClasses(container) {
-      const classes = await api('GET', '/classes');
-      container.innerHTML = `
-        <div class="space-y-6 animate-fade-in">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-white">Batches & Classes</h3>
-            <button onclick="openAddClassModal()" class="btn-primary">Add Class</button>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            ${classes.map(c => `
-              <div class="glass-card p-6 rounded-2xl flex items-center justify-between">
-                <div>
-                  <h4 class="text-lg font-extrabold text-white">${c.name}</h4>
-                  <p class="text-xs text-slate-400 mt-1">Class ID: #${c.id}</p>
-                </div>
-                <button onclick="deleteClass(${c.id})" class="text-slate-400 hover:text-rose-400 p-2 rounded-lg hover:bg-white/5"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }
-
-    function openAddClassModal() {
-      openModal('Add Class', `<div><label class="block text-xs font-semibold text-slate-400 mb-1">Class Name</label><input type="text" id="m-c-name" class="glass-input w-full" placeholder="e.g. CSE-A"></div>`, `<button onclick="saveClass()" class="btn-primary w-full">Add Class</button>`);
-    }
-
-    async function saveClass() {
-      const name = document.getElementById('m-c-name').value;
-      try {
-        await api('POST', '/classes', { name });
-        toast('Class added', 'success');
-        closeModal();
-        renderPage();
-      } catch(e) {}
-    }
-
-    async function deleteClass(id) {
-      if (!confirm('Delete class?')) return;
-      try {
-        await api('DELETE', `/classes/${id}`);
-        toast('Class deleted', 'success');
-        renderPage();
-      } catch(e) {}
-    }
-
+    // --- COURSES & SUBJECTS MASTER (FACULTY) ---
     async function renderSubjects(container) {
       const subjects = await api('GET', '/subjects');
-      const classes = await api('GET', '/classes');
 
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-white">Subject Master Catalog</h3>
-            <button onclick="openAddSubjectModal()" class="btn-primary">Add Subject</button>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-xl font-extrabold text-white tracking-tight">Courses & Subjects Master Catalog</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Define course codes, assign instructors, set eligible student groups, and launch courses.</p>
+            </div>
+            <button onclick="openAddSubjectModal()" class="btn-primary flex items-center gap-2">
+              <i data-lucide="book-plus" class="w-4 h-4"></i>
+              <span>Launch / Create Course</span>
+            </button>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             ${subjects.map(s => `
-              <div class="glass-card p-6 rounded-2xl">
-                <span class="badge badge-purple mb-2">${s.subject_type || 'classroom'}</span>
-                <h4 class="text-lg font-extrabold text-white">${s.name}</h4>
-                <p class="text-xs text-slate-400 mt-1">Class: ${s.class_name || 'Unassigned'}</p>
+              <div class="glass-card p-6 rounded-2xl flex flex-col justify-between border border-white/10 hover:border-blue-500/30 transition-all space-y-4">
+                <div>
+                  <div class="flex items-center justify-between gap-2 mb-2">
+                    <span class="font-mono text-xs font-bold text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-lg border border-blue-500/20">
+                      ${s.course_code || 'CS3451'}
+                    </span>
+                    <span class="badge ${s.is_launched !== false ? 'badge-emerald' : 'badge-amber'} text-[10px]">
+                      ${s.is_launched !== false ? '🟢 Enrollment Open' : '🔴 Closed'}
+                    </span>
+                  </div>
+
+                  <h4 class="text-lg font-bold text-white leading-snug">${s.name}</h4>
+                  <p class="text-xs text-slate-400 mt-1">${s.description || 'Core Engineering Course'}</p>
+                </div>
+
+                <div class="space-y-2 pt-3 border-t border-white/10 text-xs">
+                  <div class="flex items-center justify-between text-slate-300">
+                    <span class="text-slate-500">Instructor:</span>
+                    <span class="font-semibold text-white">${s.faculty_name || 'Assigned Faculty'}</span>
+                  </div>
+                  <div class="flex items-center justify-between text-slate-300">
+                    <span class="text-slate-500">Eligible Group:</span>
+                    <span class="badge badge-purple">${s.target_dept || 'ALL'}</span>
+                  </div>
+                  <div class="flex items-center justify-between text-slate-300">
+                    <span class="text-slate-500">Type & Enrolled:</span>
+                    <span class="font-mono text-slate-300">${s.subject_type || 'Theory'} • <b class="text-blue-400">${s.enrolled_count || 0} students</b></span>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2 pt-2">
+                  <button onclick="toggleCourseLaunch(${s.id}, ${s.is_launched === false ? 'true' : 'false'})" class="btn-secondary flex-1 text-xs py-2">
+                    ${s.is_launched === false ? '🚀 Launch Course' : '⏸️ Close Course'}
+                  </button>
+                  <button onclick="deleteSubject(${s.id})" title="Delete Course" class="text-slate-400 hover:text-rose-400 p-2 rounded-lg hover:bg-white/5">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>
+                </div>
               </div>
             `).join('')}
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
-    function openAddSubjectModal() {
-      openModal('Add Subject', `
-        <div class="space-y-4">
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Subject Name</label><input type="text" id="m-sub-name" class="glass-input w-full"></div>
+    async function openAddSubjectModal() {
+      const facultyList = await api('GET', '/students/faculty-list');
+
+      openModal('Create & Launch New Course', `
+        <div class="space-y-4 text-left">
+          <div class="grid grid-cols-2 gap-3">
+            <!-- Course Code -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Course Code</label>
+              <input type="text" id="m-sub-code" placeholder="e.g. CS3451" class="glass-input w-full font-mono font-bold text-blue-400" required>
+            </div>
+
+            <!-- Subject / Course Type -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Course Type</label>
+              <select id="m-sub-type" class="glass-input w-full font-medium">
+                <option value="classroom" selected>Theory / Lecture</option>
+                <option value="laboratory">Practical / Laboratory</option>
+                <option value="elective">Open Elective</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Course / Subject Name -->
           <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1">Type</label>
-            <select id="m-sub-type" class="glass-input w-full">
-              <option value="classroom">Classroom / Lecture</option>
-              <option value="laboratory">Laboratory</option>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Course / Subject Name</label>
+            <input type="text" id="m-sub-name" placeholder="e.g. Operating Systems & System Programming" class="glass-input w-full font-medium" required>
+          </div>
+
+          <!-- Faculty In-Charge Assignment -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Faculty / Instructor In-Charge</label>
+            <select id="m-sub-fac" class="glass-input w-full font-medium">
+              ${facultyList.map(f => `<option value="${f.id}">${f.name} (${f.admin_id} - ${f.department || 'Dept'})</option>`).join('')}
             </select>
           </div>
+
+          <!-- Eligible Target Student Groups -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Target Student Group (Eligible Branch)</label>
+            <select id="m-sub-group" class="glass-input w-full font-medium">
+              <option value="ALL" selected>All Engineering Branches (Open Enrollment)</option>
+              <option value="CSE">B.E. Computer Science & Engineering (CSE)</option>
+              <option value="IT">B.Tech Information Technology (IT)</option>
+              <option value="AIDS">B.Tech AI & Data Science (AI&DS)</option>
+              <option value="ECE">B.E. Electronics & Communication (ECE)</option>
+              <option value="EEE">B.E. Electrical & Electronics (EEE)</option>
+              <option value="MECH">B.E. Mechanical Engineering (MECH)</option>
+              <option value="CIVIL">B.E. Civil Engineering (CIVIL)</option>
+              <option value="CSBS">B.Tech CS & Business Systems (CSBS)</option>
+            </select>
+          </div>
+
+          <!-- Launch Checkbox -->
+          <div class="flex items-center gap-2 pt-1">
+            <input type="checkbox" id="m-sub-launch" checked class="w-4 h-4 text-blue-600 rounded bg-white/5 border-white/20">
+            <label for="m-sub-launch" class="text-xs font-semibold text-emerald-400 cursor-pointer">
+              Launch Course Immediately (Open for Student Enrollment)
+            </label>
+          </div>
         </div>
-      `, `<button onclick="saveSubject()" class="btn-primary w-full">Add Subject</button>`);
+      `, `
+        <button onclick="saveSubject()" class="btn-primary w-full flex items-center justify-center gap-2">
+          <i data-lucide="rocket" class="w-4 h-4"></i>
+          <span>Launch Course for Students</span>
+        </button>
+      `);
+
+      lucide.createIcons();
     }
 
     async function saveSubject() {
-      const name = document.getElementById('m-sub-name').value;
-      const subjectType = document.getElementById('m-sub-type').value;
+      const code = document.getElementById('m-sub-code')?.value.trim();
+      const name = document.getElementById('m-sub-name')?.value.trim();
+      const subjectType = document.getElementById('m-sub-type')?.value || 'classroom';
+      const facultyId = document.getElementById('m-sub-fac')?.value;
+      const targetDept = document.getElementById('m-sub-group')?.value || 'ALL';
+      const isLaunched = document.getElementById('m-sub-launch')?.checked;
+
+      if (!name) return toast('Subject / Course name is required', 'warning');
+      if (!code) return toast('Course code is required', 'warning');
+
       try {
-        await api('POST', '/subjects', { name, subjectType });
-        toast('Subject added', 'success');
+        await api('POST', '/subjects', { code, name, subjectType, facultyId, targetDept, isLaunched });
+        toast(`Course "${name}" created & launched!`, 'success');
         closeModal();
+        renderPage();
+      } catch(e) {}
+    }
+
+    async function toggleCourseLaunch(id, isLaunched) {
+      try {
+        await api('PUT', `/subjects/${id}`, { isLaunched });
+        toast(`Course status updated!`, 'success');
+        renderPage();
+      } catch(e) {}
+    }
+
+    async function deleteSubject(id) {
+      if (!confirm('Are you sure you want to delete this course?')) return;
+      try {
+        await api('DELETE', `/subjects/${id}`);
+        toast('Course deleted successfully', 'success');
+        renderPage();
+      } catch(e) {}
+    }
+
+    // --- STUDENT COURSE ENROLLMENT (STUDENT) ---
+    async function renderStudentCourseEnrollment(container) {
+      const availableCourses = await api('GET', '/enrollment/available');
+
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-blue-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-xl font-extrabold text-white">Course Catalog & Enrollment</h3>
+              <p class="text-xs text-slate-400 mt-1">Browse launched engineering courses, review instructors, and enroll in your curriculum subjects.</p>
+            </div>
+            <span class="badge badge-blue text-xs font-semibold py-1.5 px-3">
+              ${availableCourses.filter(c => c.is_enrolled).length} Enrolled Courses
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            ${availableCourses.map(c => `
+              <div class="glass-card p-6 rounded-2xl flex flex-col justify-between border ${c.is_enrolled ? 'border-emerald-500/40 bg-emerald-950/10' : 'border-white/10'} hover:border-blue-500/30 transition-all space-y-4">
+                <div>
+                  <div class="flex items-center justify-between gap-2 mb-2">
+                    <span class="font-mono text-xs font-bold text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-lg border border-blue-500/20">
+                      ${c.course_code || 'CS3451'}
+                    </span>
+                    <span class="badge ${c.is_enrolled ? 'badge-emerald' : 'badge-purple'} text-[10px]">
+                      ${c.is_enrolled ? '✅ Enrolled' : (c.subject_type || 'Theory')}
+                    </span>
+                  </div>
+
+                  <h4 class="text-lg font-bold text-white leading-snug">${c.subject_name}</h4>
+                  <p class="text-xs text-slate-400 mt-1">${c.description || 'Engineering Degree Subject'}</p>
+                </div>
+
+                <div class="space-y-2 pt-3 border-t border-white/10 text-xs">
+                  <div class="flex items-center justify-between text-slate-300">
+                    <span class="text-slate-500">Instructor / Faculty:</span>
+                    <span class="font-semibold text-white">${c.faculty_name || 'Department Faculty'}</span>
+                  </div>
+                  <div class="flex items-center justify-between text-slate-300">
+                    <span class="text-slate-500">Target Department:</span>
+                    <span class="badge badge-blue">${c.target_dept || 'ALL'}</span>
+                  </div>
+                </div>
+
+                <div class="pt-2">
+                  ${c.is_enrolled ? `
+                    <button onclick="unenrollCourse(${c.id})" class="btn-secondary w-full text-xs text-rose-400 hover:text-rose-300 border-rose-500/20 py-2.5 flex items-center justify-center gap-2">
+                      <i data-lucide="user-minus" class="w-3.5 h-3.5"></i>
+                      <span>Drop / Unenroll</span>
+                    </button>
+                  ` : `
+                    <button onclick="enrollCourse(${c.id})" class="btn-primary w-full text-xs py-2.5 flex items-center justify-center gap-2">
+                      <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                      <span>Enroll in Course</span>
+                    </button>
+                  `}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    async function enrollCourse(subjectId) {
+      try {
+        await api('POST', '/enrollment/enroll', { subjectId });
+        toast('Enrolled in course successfully! 🎉', 'success');
+        renderPage();
+      } catch(e) {}
+    }
+
+    async function unenrollCourse(subjectId) {
+      if (!confirm('Are you sure you want to drop this course?')) return;
+      try {
+        await api('POST', '/enrollment/unenroll', { subjectId });
+        toast('Unenrolled from course', 'info');
         renderPage();
       } catch(e) {}
     }
