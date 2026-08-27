@@ -7,12 +7,12 @@ const { logAction } = require('../services/audit');
 router.get('/', authenticate, async (req, res) => {
   try {
     const { category, owner_id } = req.query;
-    const isFaculty = req.user.role === 'faculty';
+    const isStaff = req.user.role === 'faculty' || req.user.role === 'admin';
     const params = [];
     let idx = 1;
     let whereClause = 'WHERE 1=1';
 
-    if (!isFaculty) {
+    if (!isStaff) {
       whereClause += ` AND d.owner_id = $${idx++}`;
       params.push(req.user.id);
     } else if (owner_id) {
@@ -44,14 +44,14 @@ router.get('/', authenticate, async (req, res) => {
 // POST / - upload document (both roles)
 router.post('/', authenticate, async (req, res) => {
   try {
-    const isFaculty = req.user.role === 'faculty';
+    const isStaff = req.user.role === 'faculty' || req.user.role === 'admin';
     let { ownerId, category, title, filename, fileB64 } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: 'title is required' });
     }
 
-    if (!isFaculty) {
+    if (!isStaff) {
       ownerId = req.user.id;
     } else {
       ownerId = ownerId || req.user.id;

@@ -444,9 +444,16 @@
       ]},
       { section: 'ACADEMIC OVERSIGHT', items: [
         { tab: 'subjects', label: 'Courses & Curriculum', icon: 'book-open' },
+        { tab: 'gradebook', label: '5-Tier Gradebook', icon: 'award' },
         { tab: 'classrooms', label: 'Campus Classrooms', icon: 'building-2' },
         { tab: 'academic-risk', label: 'Academic Risk Engine', icon: 'alert-triangle' },
         { tab: 'events', label: 'Institutional Events', icon: 'star' }
+      ]},
+      { section: 'SUPPORT & VAULT', items: [
+        { tab: 'issues', label: 'Campus Support Desk', icon: 'message-square' },
+        { tab: 'documents', label: 'Institutional Vault', icon: 'file-text' },
+        { tab: 'achievements', label: 'Achievements Review', icon: 'trophy' },
+        { tab: 'certificates', label: 'Certificate Generator', icon: 'medal' }
       ]},
       { section: 'SECURITY & SYSTEM', items: [
         { tab: 'audit-logs', label: 'Security Audit Trail', icon: 'activity' },
@@ -462,7 +469,7 @@
       { section: 'ACADEMICS', items: [
         { tab: 'subjects', label: 'Courses & Subjects Master', icon: 'book-open' },
         { tab: 'students', label: 'Students Directory', icon: 'users' },
-        { tab: 'gradebook', label: 'Academic Gradebook', icon: 'award' },
+        { tab: 'gradebook', label: '5-Tier Academic Gradebook', icon: 'award' },
         { tab: 'evaluation', label: 'PPT Report Generator', icon: 'bar-chart-2' }
       ]},
       { section: 'ATTENDANCE & OD', items: [
@@ -488,7 +495,8 @@
         { tab: 'dashboard', label: 'Overview', icon: 'home' },
         { tab: 'announcements', label: 'Campus Notices', icon: 'megaphone' },
         { tab: 'course-enrollment', label: 'Course Enrollment', icon: 'book-plus' },
-        { tab: 'grades', label: 'My Grades & Scores', icon: 'award' },
+        { tab: 'grades', label: 'My 5-Tier Marks & Grades', icon: 'award' },
+        { tab: 'hall-ticket', label: 'University Hall Ticket', icon: 'ticket' },
         { tab: 'what-if', label: 'What-If Simulator', icon: 'zap' },
         { tab: 'attendance-calc', label: 'Attendance Shortage', icon: 'calculator' }
       ]},
@@ -610,9 +618,14 @@
             case 'faculty-users': title.innerText = 'Faculty Appointments & Accounts'; await renderFacultyUsers(main); break;
             case 'students': title.innerText = 'Engineering Students Directory'; await renderStudentsDirectory(main); break;
             case 'subjects': title.innerText = 'Courses & Subjects Master Catalog'; await renderSubjects(main); break;
+            case 'gradebook': title.innerText = '5-Tier Academic Gradebook'; await renderGradebook(main); break;
             case 'classrooms': title.innerText = 'Classrooms & Campus Status'; await renderClassrooms(main); break;
             case 'academic-risk': title.innerText = 'Early Academic Risk Engine'; await renderAcademicRisk(main); break;
             case 'events': title.innerText = 'Campus Events & Conferences'; await renderEvents(main); break;
+            case 'issues': title.innerText = 'Student Support Helpdesk'; await renderIssues(main); break;
+            case 'documents': title.innerText = 'Institutional Digital Vault'; await renderDocuments(main); break;
+            case 'achievements': title.innerText = 'Student Achievements Review'; await renderAchievements(main); break;
+            case 'certificates': title.innerText = 'Certificate Generation & Verification'; await renderCertificates(main); break;
             case 'audit-logs': title.innerText = 'Security & System Audit Logs'; await renderAuditLogs(main); break;
             case 'settings': title.innerText = 'System Global Settings'; await renderSettings(main); break;
             default: await renderAdminDashboard(main);
@@ -623,7 +636,7 @@
             case 'announcements': title.innerText = 'Campus Announcements'; await renderAnnouncements(main); break;
             case 'students': title.innerText = 'Engineering Students Directory'; await renderStudentsDirectory(main); break;
             case 'subjects': title.innerText = 'Courses & Subjects Master Catalog'; await renderSubjects(main); break;
-            case 'gradebook': title.innerText = 'Academic Gradebook'; await renderGradebook(main); break;
+            case 'gradebook': title.innerText = '5-Tier Academic Gradebook'; await renderGradebook(main); break;
             case 'evaluation': title.innerText = 'Student Performance Evaluation'; await renderEvaluation(main); break;
             case 'attendance': title.innerText = 'Daily Attendance Recording'; await renderAttendance(main); break;
             case 'od-requests': title.innerText = 'On-Duty (OD) Verification Engine'; await renderODRequests(main); break;
@@ -642,7 +655,8 @@
             case 'dashboard': title.innerText = 'Student Overview'; await renderStudentDashboard(main); break;
             case 'announcements': title.innerText = 'Campus Announcements & Notices'; await renderAnnouncements(main); break;
             case 'course-enrollment': title.innerText = 'Course Catalog & Enrollment'; await renderStudentCourseEnrollment(main); break;
-            case 'grades': title.innerText = 'My Academic Marks & Grades'; await renderStudentGrades(main); break;
+            case 'grades': title.innerText = 'My 5-Tier Marks & Academic Divisions'; await renderStudentGrades(main); break;
+            case 'hall-ticket': title.innerText = 'University Examination Hall Ticket'; await renderStudentHallTicket(main); break;
             case 'what-if': title.innerText = 'What-If Grade Simulator'; await renderWhatIfSimulator(main); break;
             case 'attendance-calc': title.innerText = 'Attendance Shortage Calculator'; await renderAttendanceCalculator(main); break;
             case 'where-is-my-class': title.innerText = 'Where Is My Class?'; await renderWhereIsMyClass(main); break;
@@ -838,6 +852,15 @@
                 <h4 class="text-xl font-extrabold text-white tracking-tight">${a.title}</h4>
                 <p class="text-sm text-slate-300 whitespace-pre-line leading-relaxed">${a.content}</p>
 
+                ${a.pdf_b64 ? `
+                  <div class="pt-2">
+                    <button onclick="downloadOrViewPDF('${a.pdf_b64}', '${a.pdf_name || a.title + '.pdf'}')" class="btn-secondary text-xs py-2 px-3 flex items-center gap-2 border-purple-500/30 text-purple-300 hover:bg-purple-500/10">
+                      <i data-lucide="file-text" class="w-4 h-4 text-purple-400"></i>
+                      <span>📄 View / Download Attached PDF Circular (${a.pdf_name || 'Official Notice.pdf'})</span>
+                    </button>
+                  </div>
+                ` : ''}
+
                 <div class="pt-3 border-t border-white/10 flex items-center justify-between text-xs">
                   <div class="flex items-center gap-2 text-slate-400">
                     <i data-lucide="user-check" class="w-4 h-4 text-purple-400"></i>
@@ -862,6 +885,20 @@
         </div>
       `;
       lucide.createIcons();
+    }
+
+    function downloadOrViewPDF(b64, name) {
+      try {
+        const link = document.createElement('a');
+        link.href = b64.startsWith('data:') ? b64 : `data:application/pdf;base64,${b64}`;
+        link.download = name || 'Campus_Circular.pdf';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } catch(e) {
+        toast('Failed to download PDF attachment', 'error');
+      }
     }
 
     function openBroadcastAnnouncementModal() {
@@ -905,8 +942,17 @@
 
           <!-- Message Content -->
           <div>
-            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Announcement Content</label>
-            <textarea id="m-ann-content" rows="4" placeholder="Write your broadcast message to be delivered to all selected campus members..." class="glass-input w-full font-normal text-sm" required></textarea>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Announcement Message / Description</label>
+            <textarea id="m-ann-content" rows="3" placeholder="Write your broadcast message to be delivered to all selected campus members..." class="glass-input w-full font-normal text-sm" required></textarea>
+          </div>
+
+          <!-- Attach PDF Document -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+              <span>Attach PDF Document / Circular (Optional)</span>
+              <span class="text-[11px] text-purple-400 font-normal">PDF Only</span>
+            </label>
+            <input type="file" id="m-ann-pdf" accept=".pdf,application/pdf" class="glass-input w-full text-xs text-slate-300">
           </div>
 
           <!-- Pin Checkbox -->
@@ -933,12 +979,26 @@
       const priority = document.getElementById('m-ann-priority')?.value || 'info';
       const content = document.getElementById('m-ann-content')?.value.trim();
       const isPinned = document.getElementById('m-ann-pin')?.checked;
+      const fileInput = document.getElementById('m-ann-pdf');
 
       if (!title) return toast('Announcement title is required', 'warning');
       if (!content) return toast('Announcement content is required', 'warning');
 
+      let pdfB64 = null;
+      let pdfName = null;
+
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        const file = fileInput.files[0];
+        pdfName = file.name;
+        pdfB64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+      }
+
       try {
-        await api('POST', '/announcements', { title, content, targetAudience, priority, isPinned });
+        await api('POST', '/announcements', { title, content, targetAudience, priority, isPinned, pdfB64, pdfName });
         toast('Announcement broadcasted to campus! 📢', 'success');
         closeModal();
         renderPage();
@@ -1822,79 +1882,358 @@
       } catch(e) {}
     }
 
+    // --- 5-TIER ACADEMIC GRADEBOOK & MARKS ENTRY ---
     async function renderGradebook(container) {
-      const students = await api('GET', '/students');
+      const [allUsers, subjects, grades] = await Promise.all([
+        api('GET', '/students'),
+        api('GET', '/subjects'),
+        api('GET', '/grades')
+      ]);
+
+      const students = allUsers.filter(u => u.role === 'student');
+
+      container.innerHTML = `
+        <div class="space-y-8 animate-fade-in">
+          <!-- Gradebook Header -->
+          <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-blue-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="badge badge-purple text-[10px] uppercase tracking-wider">5 ACADEMIC DIVISIONS (MAX: 500 MARKS)</span>
+                <span class="text-xs text-blue-400 font-mono">Internal: 400 | Univ Exam: 100</span>
+              </div>
+              <h3 class="text-xl font-black text-white mt-1">Academic Gradebook & Internal Assessment Engine</h3>
+              <p class="text-xs text-slate-400">Record marks across Continuous Assessments, Capstone, Class Lab, University Lab, and University Theory Exam.</p>
+            </div>
+            <button onclick="openCloseCourseModal()" class="btn-secondary flex items-center gap-2 border-purple-500/30 text-purple-300 hover:bg-purple-500/10">
+              <i data-lucide="lock" class="w-4 h-4 text-purple-400"></i>
+              <span>Close Course for Exams & Unlock Hall Tickets</span>
+            </button>
+          </div>
+
+          <!-- 5-Division Marks Entry Form -->
+          <div class="glass-panel p-6 rounded-2xl border border-white/10 space-y-6">
+            <h4 class="text-base font-extrabold text-white flex items-center gap-2">
+              <i data-lucide="edit-3" class="w-5 h-5 text-blue-400"></i>
+              <span>Enter / Update Student Division Marks</span>
+            </h4>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Student Selection (Filtered to ONLY students) -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  1. Select Student (Filtered Students Only)
+                </label>
+                <select id="gb-student" class="glass-input w-full font-medium">
+                  ${students.length === 0 ? '<option value="">No enrolled students found</option>' : students.map(s => `
+                    <option value="${s.id}">${s.name} (${s.admin_id || 'No RegNo'} - ${s.department || 'Dept'})</option>
+                  `).join('')}
+                </select>
+              </div>
+
+              <!-- Subject Selection -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  2. Select Curriculum Course / Subject
+                </label>
+                <select id="gb-subject" class="glass-input w-full font-medium">
+                  ${subjects.map(s => `
+                    <option value="${s.id}">${s.code ? s.code + ' — ' : ''}${s.name} ${s.is_closed ? '(Closed for Exam)' : ''}</option>
+                  `).join('')}
+                </select>
+              </div>
+            </div>
+
+            <!-- The 5 Academic Divisions Grid -->
+            <div>
+              <label class="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">
+                3. Enter Marks for Academic Divisions (Each Division carries 100 Marks)
+              </label>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                <!-- Div 1: Assessments -->
+                <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-white">Div 1: Assessments</span>
+                    <span class="text-[10px] text-slate-400 font-mono">/ 100</span>
+                  </div>
+                  <input type="number" id="gb-d1" min="0" max="100" placeholder="0 - 100" oninput="recalcDivisionsTotal()"
+                         class="glass-input w-full font-mono text-center font-bold text-white text-sm">
+                  <p class="text-[10px] text-slate-500">Continuous Assessment / CAT</p>
+                </div>
+
+                <!-- Div 2: Capstone -->
+                <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-white">Div 2: Capstone</span>
+                    <span class="text-[10px] text-slate-400 font-mono">/ 100</span>
+                  </div>
+                  <input type="number" id="gb-d2" min="0" max="100" placeholder="0 - 100" oninput="recalcDivisionsTotal()"
+                         class="glass-input w-full font-mono text-center font-bold text-white text-sm">
+                  <p class="text-[10px] text-slate-500">Capstone Project Work</p>
+                </div>
+
+                <!-- Div 3: Class Lab -->
+                <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-white">Div 3: Class Lab</span>
+                    <span class="text-[10px] text-slate-400 font-mono">/ 100</span>
+                  </div>
+                  <input type="number" id="gb-d3" min="0" max="100" placeholder="0 - 100" oninput="recalcDivisionsTotal()"
+                         class="glass-input w-full font-mono text-center font-bold text-white text-sm">
+                  <p class="text-[10px] text-slate-500">Practical & Lab Continuous</p>
+                </div>
+
+                <!-- Div 4: Univ Lab -->
+                <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-white">Div 4: Univ Lab</span>
+                    <span class="text-[10px] text-slate-400 font-mono">/ 100</span>
+                  </div>
+                  <input type="number" id="gb-d4" min="0" max="100" placeholder="0 - 100" oninput="recalcDivisionsTotal()"
+                         class="glass-input w-full font-mono text-center font-bold text-white text-sm">
+                  <p class="text-[10px] text-slate-500">University Practical Exam</p>
+                </div>
+
+                <!-- Div 5: Univ Exam -->
+                <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-white">Div 5: Univ Exam</span>
+                    <span class="text-[10px] text-slate-400 font-mono">/ 100</span>
+                  </div>
+                  <input type="number" id="gb-d5" min="0" max="100" placeholder="0 - 100" oninput="recalcDivisionsTotal()"
+                         class="glass-input w-full font-mono text-center font-bold text-white text-sm">
+                  <p class="text-[10px] text-slate-500">Main University Theory Exam</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Calculation Summary Pill -->
+            <div class="p-4 rounded-xl bg-gradient-to-r from-blue-950/30 to-purple-950/30 border border-blue-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="flex items-center gap-6">
+                <div>
+                  <p class="text-[11px] text-slate-400 uppercase font-semibold">Total Internal Marks (Div 1+2+3+4)</p>
+                  <p id="calc-internal-total" class="text-2xl font-black text-blue-400 font-mono">0 / 400</p>
+                </div>
+                <div class="h-8 w-[1px] bg-white/10 hidden sm:block"></div>
+                <div>
+                  <p class="text-[11px] text-slate-400 uppercase font-semibold">Grand Total (Div 1 to 5)</p>
+                  <p id="calc-grand-total" class="text-2xl font-black text-emerald-400 font-mono">0 / 500</p>
+                </div>
+                <div class="h-8 w-[1px] bg-white/10 hidden sm:block"></div>
+                <div>
+                  <p class="text-[11px] text-slate-400 uppercase font-semibold">Calculated Grade</p>
+                  <span id="calc-grade-badge" class="badge badge-purple text-xs font-bold mt-1">Pending</span>
+                </div>
+              </div>
+
+              <button onclick="saveDivisionsGrade()" class="btn-primary flex items-center justify-center gap-2 py-3 px-6 shrink-0">
+                <i data-lucide="check-circle" class="w-4 h-4"></i>
+                <span>Submit & Record 5-Division Marks</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Submitted Grades Records Table -->
+          <div class="space-y-4">
+            <h4 class="text-base font-extrabold text-white">Consolidated Student Academic Division Records</h4>
+            
+            <div class="glass-panel rounded-2xl border border-white/10 overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-300">
+                <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
+                  <tr>
+                    <th class="p-4">Reg No & Student</th>
+                    <th class="p-4">Course</th>
+                    <th class="p-4 text-center">Div 1 (Assess.)</th>
+                    <th class="p-4 text-center">Div 2 (Capstone)</th>
+                    <th class="p-4 text-center">Div 3 (Class Lab)</th>
+                    <th class="p-4 text-center">Div 4 (Univ Lab)</th>
+                    <th class="p-4 text-center text-blue-400 font-bold">Total Internal (/400)</th>
+                    <th class="p-4 text-center">Div 5 (Univ Exam)</th>
+                    <th class="p-4 text-center text-emerald-400 font-bold">Grand Total (/500)</th>
+                    <th class="p-4 text-center">Grade</th>
+                    <th class="p-4 text-center">Course Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5 whitespace-nowrap">
+                  ${grades.length === 0 ? `
+                    <tr><td colspan="11" class="p-8 text-center text-slate-500">No division marks submitted yet. Select a student and subject above to enter marks.</td></tr>
+                  ` : grades.map(g => `
+                    <tr class="hover:bg-white/[0.02] transition-colors">
+                      <td class="p-4">
+                        <span class="font-mono text-blue-400 font-bold">${g.student_reg_no || ''}</span>
+                        <div class="font-semibold text-white">${g.student_name}</div>
+                      </td>
+                      <td class="p-4">
+                        <span class="font-mono text-purple-400 font-semibold">${g.course_code || ''}</span>
+                        <div class="text-slate-300">${g.subject_name}</div>
+                      </td>
+                      <td class="p-4 text-center font-mono">${g.div1_assessments || 0}</td>
+                      <td class="p-4 text-center font-mono">${g.div2_capstone || 0}</td>
+                      <td class="p-4 text-center font-mono">${g.div3_class_lab || 0}</td>
+                      <td class="p-4 text-center font-mono">${g.div4_univ_lab || 0}</td>
+                      <td class="p-4 text-center font-mono font-bold text-blue-400 bg-blue-500/5">${g.total_internal || 0}</td>
+                      <td class="p-4 text-center font-mono">${g.div5_univ_exam || 0}</td>
+                      <td class="p-4 text-center font-mono font-bold text-emerald-400 bg-emerald-500/5">${g.grand_total || g.score || 0}</td>
+                      <td class="p-4 text-center"><span class="badge badge-purple">${g.grade_letter || 'B'}</span></td>
+                      <td class="p-4 text-center">
+                        <span class="badge ${g.course_is_closed ? 'badge-emerald' : 'badge-amber'} text-[10px]">
+                          ${g.course_is_closed ? '🏁 Closed for Exam' : '🟢 In Progress'}
+                        </span>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    function recalcDivisionsTotal() {
+      const d1 = Math.min(100, Math.max(0, parseFloat(document.getElementById('gb-d1')?.value) || 0));
+      const d2 = Math.min(100, Math.max(0, parseFloat(document.getElementById('gb-d2')?.value) || 0));
+      const d3 = Math.min(100, Math.max(0, parseFloat(document.getElementById('gb-d3')?.value) || 0));
+      const d4 = Math.min(100, Math.max(0, parseFloat(document.getElementById('gb-d4')?.value) || 0));
+      const d5 = Math.min(100, Math.max(0, parseFloat(document.getElementById('gb-d5')?.value) || 0));
+
+      const internalTotal = d1 + d2 + d3 + d4;
+      const grandTotal = internalTotal + d5;
+
+      const intEl = document.getElementById('calc-internal-total');
+      const grandEl = document.getElementById('calc-grand-total');
+      const badgeEl = document.getElementById('calc-grade-badge');
+
+      if (intEl) intEl.innerText = `${internalTotal} / 400`;
+      if (grandEl) grandEl.innerText = `${grandTotal} / 500`;
+      if (badgeEl) {
+        let grade = 'RA';
+        if (grandTotal >= 450) grade = 'O (Outstanding)';
+        else if (grandTotal >= 400) grade = 'A+ (Excellent)';
+        else if (grandTotal >= 350) grade = 'A (Very Good)';
+        else if (grandTotal >= 300) grade = 'B+ (Good)';
+        else if (grandTotal >= 250) grade = 'B (Pass)';
+        badgeEl.innerText = `Grade ${grade}`;
+      }
+    }
+
+    async function saveDivisionsGrade() {
+      const studentId = document.getElementById('gb-student')?.value;
+      const subjectId = document.getElementById('gb-subject')?.value;
+      const div1Assessments = document.getElementById('gb-d1')?.value;
+      const div2Capstone = document.getElementById('gb-d2')?.value;
+      const div3ClassLab = document.getElementById('gb-d3')?.value;
+      const div4UnivLab = document.getElementById('gb-d4')?.value;
+      const div5UnivExam = document.getElementById('gb-d5')?.value;
+
+      if (!studentId) return toast('Please select an enrolled student', 'warning');
+      if (!subjectId) return toast('Please select a course / subject', 'warning');
+
+      try {
+        await api('POST', '/grades/submit-divisions', {
+          studentId,
+          subjectId,
+          div1Assessments,
+          div2Capstone,
+          div3ClassLab,
+          div4UnivLab,
+          div5UnivExam
+        });
+        toast('5-Division marks submitted successfully! 🎓', 'success');
+        renderPage();
+      } catch(e) {}
+    }
+
+    async function openCloseCourseModal() {
       const subjects = await api('GET', '/subjects');
+      const nextWeekDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      openModal('Close Course for University Examinations', `
+        <div class="space-y-4 text-left">
+          <p class="text-xs text-slate-300">
+            Closing a course finalizes internal marks (Divisions 1 to 3) and unlocks the <b>University Examination Hall Ticket</b> generation for all enrolled students.
+          </p>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Select Course to Close</label>
+            <select id="m-close-subject" class="glass-input w-full font-medium">
+              ${subjects.map(s => `<option value="${s.id}">${s.code ? s.code + ' — ' : ''}${s.name} ${s.is_closed ? '(Already Closed)' : ''}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">University Exam Date</label>
+              <input type="date" id="m-close-date" value="${nextWeekDate}" class="glass-input w-full font-medium">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Exam Session</label>
+              <select id="m-close-session" class="glass-input w-full font-medium">
+                <option value="FN (09:30 AM - 12:30 PM)" selected>FN (09:30 AM - 12:30 PM)</option>
+                <option value="AN (01:30 PM - 04:30 PM)">AN (01:30 PM - 04:30 PM)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Allocated Examination Hall</label>
+            <input type="text" id="m-close-hall" value="University Exam Block — Hall A" class="glass-input w-full font-medium">
+          </div>
+        </div>
+      `, `
+        <button onclick="closeCourseForExams()" class="btn-primary w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600">
+          <i data-lucide="lock" class="w-4 h-4"></i>
+          <span>Close Course & Unlock Hall Tickets</span>
+        </button>
+      `);
+      lucide.createIcons();
+    }
+
+    async function closeCourseForExams() {
+      const subjectId = document.getElementById('m-close-subject')?.value;
+      const examDate = document.getElementById('m-close-date')?.value;
+      const examSession = document.getElementById('m-close-session')?.value;
+      const examHall = document.getElementById('m-close-hall')?.value;
+
+      if (!subjectId) return toast('Please select a course', 'warning');
+
+      try {
+        await api('POST', `/grades/close-course/${subjectId}`, { examDate, examSession, examHall });
+        toast('Course closed successfully! Hall tickets unlocked for students! 🎟️', 'success');
+        closeModal();
+        renderPage();
+      } catch(e) {}
+    }
+
+    // --- STUDENT PERFORMANCE EVALUATION & PPT REPORTS ---
+    async function renderEvaluation(container) {
+      const allUsers = await api('GET', '/students');
+      const students = allUsers.filter(u => u.role === 'student');
 
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-white">Academic Gradebook Entry</h3>
+            <h3 class="text-xl font-black text-white">Student Performance PowerPoint Reports</h3>
           </div>
-          <div class="glass-panel p-6 rounded-2xl space-y-4">
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1">Select Student</label>
-                <select id="gb-student" class="glass-input w-full">
-                  ${students.map(s => `<option value="${s.id}">${s.name} (${s.admin_id || ''})</option>`).join('')}
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1">Select Subject</label>
-                <select id="gb-subject" class="glass-input w-full">
-                  ${subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1">Week Number (1-16)</label>
-                <input type="number" id="gb-week" value="1" min="1" max="16" class="glass-input w-full">
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1">Score / Grade (0 - 100)</label>
-              <input type="number" id="gb-score" placeholder="85" class="glass-input w-full">
-            </div>
-            <button onclick="saveGrade()" class="btn-primary w-full">Save Grade Entry</button>
-          </div>
-        </div>
-      `;
-    }
-
-    async function saveGrade() {
-      const studentId = document.getElementById('gb-student').value;
-      const subjectId = document.getElementById('gb-subject').value;
-      const week = document.getElementById('gb-week').value;
-      const score = document.getElementById('gb-score').value;
-
-      try {
-        await api('POST', '/grades', { studentId, subjectId, week, score });
-        toast('Grade recorded successfully', 'success');
-        document.getElementById('gb-score').value = '';
-      } catch(e) {}
-    }
-
-    async function renderEvaluation(container) {
-      const students = await api('GET', '/students');
-
-      container.innerHTML = `
-        <div class="space-y-6 animate-fade-in">
-          <h3 class="text-lg font-bold text-white">PowerPoint Performance Reports</h3>
           <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
             <table class="w-full text-left text-sm text-slate-300">
               <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
                 <tr>
                   <th class="p-4">Student Name</th>
-                  <th class="p-4">Register ID</th>
-                  <th class="p-4">Class Batch</th>
+                  <th class="p-4">Register Number</th>
+                  <th class="p-4">Department / Batch</th>
                   <th class="p-4 text-right">Generate & Dispatch</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/5">
-                ${students.map(s => `
+                ${students.length === 0 ? `
+                  <tr><td colspan="4" class="p-8 text-center text-slate-500">No registered students found.</td></tr>
+                ` : students.map(s => `
                   <tr class="hover:bg-white/[0.02]">
                     <td class="p-4 font-semibold text-white">${s.name}</td>
                     <td class="p-4 font-mono text-xs text-blue-400">${s.admin_id || 'N/A'}</td>
-                    <td class="p-4"><span class="badge badge-purple">${s.class_name || 'Unassigned'}</span></td>
+                    <td class="p-4"><span class="badge badge-purple">${s.department || s.class_name || 'Engineering'}</span></td>
                     <td class="p-4 text-right">
                       <button onclick="generatePPTReport(${s.id})" class="btn-primary text-xs py-1.5 px-3">
                         <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
@@ -1908,6 +2247,7 @@
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
     async function generatePPTReport(studentId) {
@@ -1937,33 +2277,41 @@
     }
 
     async function renderAttendance(container) {
-      const students = await api('GET', '/students');
+      const allUsers = await api('GET', '/students');
+      const students = allUsers.filter(u => u.role === 'student');
 
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-white">Daily Attendance Marking</h3>
-            <input type="date" id="att-date" value="${new Date().toISOString().split('T')[0]}" class="glass-input text-xs">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-xl font-black text-white">Daily Attendance Recording</h3>
+              <p class="text-xs text-slate-400">Mark Present, Absent, or On-Duty (OD) for registered engineering students.</p>
+            </div>
+            <input type="date" id="att-date" value="${new Date().toISOString().split('T')[0]}" class="glass-input text-xs font-semibold">
           </div>
           <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
             <table class="w-full text-left text-sm text-slate-300">
               <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
                 <tr>
                   <th class="p-4">Student Name</th>
-                  <th class="p-4">Register ID</th>
+                  <th class="p-4">Register Number</th>
+                  <th class="p-4">Department</th>
                   <th class="p-4 text-right">Attendance Status</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/5">
-                ${students.map(s => `
-                  <tr class="hover:bg-white/[0.02]">
+                ${students.length === 0 ? `
+                  <tr><td colspan="4" class="p-8 text-center text-slate-500">No registered students found.</td></tr>
+                ` : students.map(s => `
+                  <tr class="hover:bg-white/[0.02] transition-colors">
                     <td class="p-4 font-semibold text-white">${s.name}</td>
-                    <td class="p-4 font-mono text-xs text-slate-400">${s.admin_id || 'N/A'}</td>
+                    <td class="p-4 font-mono text-xs text-blue-400 font-bold">${s.admin_id || 'N/A'}</td>
+                    <td class="p-4"><span class="badge badge-purple">${s.department || 'Engineering'}</span></td>
                     <td class="p-4 text-right">
-                      <div class="inline-flex items-center gap-3">
-                        <button onclick="markAttendance(${s.id}, '${s.name}', 'Present')" class="btn-success text-xs py-1 px-3">Present</button>
-                        <button onclick="markAttendance(${s.id}, '${s.name}', 'Absent')" class="btn-danger text-xs py-1 px-3">Absent</button>
-                        <button onclick="markAttendance(${s.id}, '${s.name}', 'OD')" class="btn-secondary text-xs py-1 px-3">OD</button>
+                      <div class="inline-flex items-center gap-2">
+                        <button onclick="markAttendance(${s.id}, '${s.name}', 'Present')" class="btn-success text-xs py-1.5 px-3">Present</button>
+                        <button onclick="markAttendance(${s.id}, '${s.name}', 'Absent')" class="btn-danger text-xs py-1.5 px-3">Absent</button>
+                        <button onclick="markAttendance(${s.id}, '${s.name}', 'OD')" class="btn-secondary text-xs py-1.5 px-3">OD</button>
                       </div>
                     </td>
                   </tr>
@@ -1973,14 +2321,15 @@
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
     async function markAttendance(studentId, studentName, status) {
-      const date = document.getElementById('att-date').value;
+      const date = document.getElementById('att-date')?.value || new Date().toISOString().split('T')[0];
       try {
         const res = await api('POST', '/attendance', { studentId, studentName, status, date });
-        if (res.autoAbsent) {
-          toast(`Student marked Absent (No approved OD request found)`, 'warning');
+        if (res && res.autoAbsent) {
+          toast(`Student marked Absent (No approved OD request found for today)`, 'warning');
         } else {
           toast(`Marked ${status} for ${studentName}`, 'success');
         }
@@ -1991,7 +2340,7 @@
       const odList = await api('GET', '/od');
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
-          <h3 class="text-lg font-bold text-white">On-Duty (OD) Submissions & Verification</h3>
+          <h3 class="text-xl font-black text-white">On-Duty (OD) Submissions & Verification</h3>
           <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
             <table class="w-full text-left text-sm text-slate-300">
               <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
@@ -2004,7 +2353,9 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/5">
-                ${odList.map(o => `
+                ${odList.length === 0 ? `
+                  <tr><td colspan="5" class="p-8 text-center text-slate-500">No OD requests pending.</td></tr>
+                ` : odList.map(o => `
                   <tr class="hover:bg-white/[0.02]">
                     <td class="p-4 font-semibold text-white">${o.student_name}</td>
                     <td class="p-4">${o.event_name}</td>
@@ -2027,6 +2378,7 @@
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
     async function approveOD(id) { await api('PUT', `/od/${id}/approve`); toast('OD Approved', 'success'); renderPage(); }
@@ -2038,45 +2390,64 @@
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-white">Classrooms & Visual Status</h3>
-            <button onclick="openAddRoomModal()" class="btn-primary">Add Room</button>
+            <div>
+              <h3 class="text-xl font-black text-white">Classroom & Infrastructure Status</h3>
+              <p class="text-xs text-slate-400">Manage lecture halls, laboratory occupancy, and smart facilities.</p>
+            </div>
+            <button onclick="openAddRoomModal()" class="btn-primary">Add New Room</button>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-4 gap-6">
             ${rooms.map(r => `
-              <div class="glass-card p-6 rounded-2xl">
-                <div class="flex items-center justify-between mb-2">
-                  <span class="text-xs font-bold text-slate-400 uppercase">${r.building || 'Main'} - Floor ${r.floor}</span>
+              <div class="glass-card p-6 rounded-2xl border border-white/10 space-y-2">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-[11px] font-bold text-slate-400 uppercase">${r.building || 'Main Block'} - Floor ${r.floor}</span>
                   <span class="w-3 h-3 rounded-full ${r.is_active ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-rose-400'}"></span>
                 </div>
                 <h4 class="text-xl font-extrabold text-white">${r.name}</h4>
-                <p class="text-xs text-slate-400 mt-1">Capacity: ${r.capacity} Seats • ${r.room_type}</p>
+                <p class="text-xs text-slate-400">Capacity: ${r.capacity} Seats • <span class="text-blue-400">${r.room_type}</span></p>
               </div>
             `).join('')}
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
     function openAddRoomModal() {
-      openModal('Add Classroom', `
-        <div class="space-y-4">
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Room Name</label><input type="text" id="m-r-name" class="glass-input w-full" placeholder="e.g. A101"></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Capacity</label><input type="number" id="m-r-cap" class="glass-input w-full" value="60"></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Building</label><input type="text" id="m-r-build" class="glass-input w-full" value="Block A"></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Floor</label><input type="number" id="m-r-floor" class="glass-input w-full" value="1"></div>
+      openModal('Add Campus Room', `
+        <div class="space-y-4 text-left">
+          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Room Name / Number</label><input type="text" id="m-rm-name" placeholder="e.g. Hall 401" class="glass-input w-full"></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="block text-xs font-semibold text-slate-400 mb-1">Building</label><input type="text" id="m-rm-bld" value="Main Academic Block" class="glass-input w-full"></div>
+            <div><label class="block text-xs font-semibold text-slate-400 mb-1">Floor</label><input type="number" id="m-rm-fl" value="1" class="glass-input w-full"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="block text-xs font-semibold text-slate-400 mb-1">Capacity (Seats)</label><input type="number" id="m-rm-cap" value="60" class="glass-input w-full"></div>
+            <div><label class="block text-xs font-semibold text-slate-400 mb-1">Room Type</label>
+              <select id="m-rm-type" class="glass-input w-full">
+                <option value="Lecture Hall" selected>Lecture Hall</option>
+                <option value="Computer Lab">Computer Lab</option>
+                <option value="Electronics Lab">Electronics Lab</option>
+                <option value="Seminar Hall">Seminar Hall</option>
+              </select>
+            </div>
+          </div>
         </div>
-      `, `<button onclick="saveRoom()" class="btn-primary w-full">Add Classroom</button>`);
+      `, `<button onclick="saveRoom()" class="btn-primary w-full">Create Room</button>`);
+      lucide.createIcons();
     }
 
     async function saveRoom() {
-      const name = document.getElementById('m-r-name').value;
-      const capacity = parseInt(document.getElementById('m-r-cap').value);
-      const building = document.getElementById('m-r-build').value;
-      const floor = parseInt(document.getElementById('m-r-floor').value);
+      const name = document.getElementById('m-rm-name')?.value;
+      const building = document.getElementById('m-rm-bld')?.value;
+      const floor = document.getElementById('m-rm-fl')?.value;
+      const capacity = document.getElementById('m-rm-cap')?.value;
+      const roomType = document.getElementById('m-rm-type')?.value;
 
+      if (!name) return toast('Room name required', 'warning');
       try {
-        await api('POST', '/classrooms', { name, capacity, building, floor });
-        toast('Classroom added', 'success');
+        await api('POST', '/classrooms', { name, building, floor, capacity, roomType });
+        toast('Room added successfully', 'success');
         closeModal();
         renderPage();
       } catch(e) {}
@@ -2087,7 +2458,10 @@
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-white">Timetable Schedule Allocations</h3>
+            <div>
+              <h3 class="text-xl font-black text-white">Timetable Schedule Allocations</h3>
+              <p class="text-xs text-slate-400">Classroom allocations and weekly scheduling.</p>
+            </div>
             <button onclick="openAutoGenerateTimetableModal()" class="btn-primary">Auto-Generate Timetable</button>
           </div>
           <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden p-6">
@@ -2107,13 +2481,15 @@
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
     function openAutoGenerateTimetableModal() {
       openModal('Auto-Generate Timetable', `
-        <p class="text-xs text-slate-400">Automatically allocate available classrooms and subjects to schedule slots.</p>
+        <p class="text-xs text-slate-300">Automatically allocate available classrooms and subjects across engineering schedule slots.</p>
         <button onclick="runAutoGenerateTimetable()" class="btn-primary w-full mt-4">Run Auto-Generator</button>
       `);
+      lucide.createIcons();
     }
 
     async function runAutoGenerateTimetable() {
@@ -2136,17 +2512,20 @@
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-white">Campus Events</h3>
+            <div>
+              <h3 class="text-xl font-black text-white">Campus Events & Symposiums</h3>
+              <p class="text-xs text-slate-400">Conferences, Hackathons, and Technical Workshops.</p>
+            </div>
             <button onclick="openAddEventModal()" class="btn-primary">Create Event</button>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
             ${events.map(e => `
-              <div class="glass-card p-6 rounded-2xl">
-                <span class="badge badge-blue mb-2">${e.event_type || 'General'}</span>
+              <div class="glass-card p-6 rounded-2xl border border-white/10 space-y-3">
+                <span class="badge badge-blue text-[10px]">${e.event_type || 'General'}</span>
                 <h4 class="text-lg font-extrabold text-white">${e.title}</h4>
-                <p class="text-xs text-slate-400 mt-2">${e.description || ''}</p>
-                <div class="mt-4 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
-                  <span>📍 ${e.venue || 'Campus'}</span>
+                <p class="text-xs text-slate-400">${e.description || 'Institutional Campus Event'}</p>
+                <div class="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
+                  <span>📍 ${e.venue || 'Auditorium'}</span>
                   <span>📅 ${e.event_date || ''}</span>
                 </div>
               </div>
@@ -2154,26 +2533,29 @@
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
     function openAddEventModal() {
-      openModal('Create Event', `
-        <div class="space-y-4">
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Event Title</label><input type="text" id="m-e-title" class="glass-input w-full"></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Venue</label><input type="text" id="m-e-venue" class="glass-input w-full"></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Date</label><input type="date" id="m-e-date" class="glass-input w-full"></div>
+      openModal('Create Institutional Event', `
+        <div class="space-y-4 text-left">
+          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Event Title</label><input type="text" id="m-e-title" placeholder="e.g. National Level Hackathon 2026" class="glass-input w-full"></div>
+          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Venue</label><input type="text" id="m-e-venue" placeholder="e.g. Tech Block Auditorium" class="glass-input w-full"></div>
+          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Event Date</label><input type="date" id="m-e-date" value="${new Date().toISOString().split('T')[0]}" class="glass-input w-full"></div>
         </div>
       `, `<button onclick="saveEvent()" class="btn-primary w-full">Create Event</button>`);
+      lucide.createIcons();
     }
 
     async function saveEvent() {
-      const title = document.getElementById('m-e-title').value;
-      const venue = document.getElementById('m-e-venue').value;
-      const eventDate = document.getElementById('m-e-date').value;
+      const title = document.getElementById('m-e-title')?.value;
+      const venue = document.getElementById('m-e-venue')?.value;
+      const eventDate = document.getElementById('m-e-date')?.value;
 
+      if (!title) return toast('Event title required', 'warning');
       try {
         await api('POST', '/events', { title, venue, eventDate });
-        toast('Event created', 'success');
+        toast('Event created successfully', 'success');
         closeModal();
         renderPage();
       } catch(e) {}
@@ -2183,6 +2565,11 @@
       const riskData = await api('GET', '/academic/risk');
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
+          <div>
+            <h3 class="text-xl font-black text-white">Early Academic Risk Engine</h3>
+            <p class="text-xs text-slate-400">Proactive detection of students requiring academic intervention or attendance support.</p>
+          </div>
+
           <div class="grid grid-cols-3 gap-6">
             <div class="glass-card stat-card stat-rose p-6 rounded-2xl text-center">
               <h4 class="text-3xl font-extrabold text-rose-400">${riskData.summary.high}</h4>
@@ -2210,7 +2597,9 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/5">
-                ${riskData.students.map(s => `
+                ${riskData.students.length === 0 ? `
+                  <tr><td colspan="5" class="p-8 text-center text-slate-500">All students are in good academic standing.</td></tr>
+                ` : riskData.students.map(s => `
                   <tr class="hover:bg-white/[0.02]">
                     <td class="p-4 font-semibold text-white">${s.name}</td>
                     <td class="p-4 font-mono">${s.attend_pct}%</td>
@@ -2224,118 +2613,68 @@
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
+    // --- STUDENT SUPPORT DESK & HELP DESK ---
     async function renderIssues(container) {
       const issues = await api('GET', '/issues');
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
-          <h3 class="text-lg font-bold text-white">Student Support Tickets</h3>
-          <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
-            <table class="w-full text-left text-sm text-slate-300">
-              <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
-                <tr>
-                  <th class="p-4">Issue Title</th>
-                  <th class="p-4">Category</th>
-                  <th class="p-4">Priority</th>
-                  <th class="p-4">Status</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/5">
-                ${issues.map(i => `
-                  <tr class="hover:bg-white/[0.02]">
-                    <td class="p-4 font-semibold text-white">${i.title}</td>
-                    <td class="p-4"><span class="badge badge-purple">${i.category}</span></td>
-                    <td class="p-4"><span class="badge badge-amber">${i.priority}</span></td>
-                    <td class="p-4"><span class="badge ${i.status === 'resolved' ? 'badge-emerald' : 'badge-blue'}">${i.status}</span></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-xl font-black text-white">Student Support Helpdesk</h3>
+              <p class="text-xs text-slate-400">Review student grievance tickets, academic queries, and campus assistance requests.</p>
+            </div>
+            <button onclick="openCreateIssueModal()" class="btn-primary flex items-center gap-2">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              <span>Create New Ticket</span>
+            </button>
           </div>
-        </div>
-      `;
-    }
 
-    async function renderDocuments(container) {
-      const docs = await api('GET', '/documents');
-      container.innerHTML = `
-        <div class="space-y-6 animate-fade-in">
-          <h3 class="text-lg font-bold text-white">Institutional Digital Vault</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            ${docs.map(d => `
-              <div class="glass-card p-6 rounded-2xl">
-                <span class="badge badge-blue mb-2">${d.category}</span>
-                <h4 class="font-bold text-white text-base">${d.title}</h4>
-                <p class="text-xs text-slate-400 mt-1">Filename: ${d.filename}</p>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }
-
-    async function renderAchievements(container) {
-      const achs = await api('GET', '/achievements');
-      container.innerHTML = `
-        <div class="space-y-6 animate-fade-in">
-          <h3 class="text-lg font-bold text-white">Student Achievements Review</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            ${achs.map(a => `
-              <div class="glass-card p-6 rounded-2xl">
-                <div class="flex items-center justify-between mb-2">
-                  <span class="badge badge-purple">${a.category}</span>
-                  <span class="badge ${a.is_verified ? 'badge-emerald' : 'badge-amber'}">${a.is_verified ? 'Verified' : 'Pending'}</span>
-                </div>
-                <h4 class="font-bold text-white text-base">${a.title}</h4>
-                <p class="text-xs text-slate-400 mt-1">${a.org || 'Organization'}</p>
-                ${!a.is_verified ? `
-                  <button onclick="verifyAchievement(${a.id})" class="btn-primary text-xs w-full mt-4">Verify Achievement</button>
-                ` : ''}
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }
-
-    async function verifyAchievement(id) {
-      try {
-        await api('PUT', `/achievements/${id}/verify`);
-        toast('Achievement verified', 'success');
-        renderPage();
-      } catch(e) {}
-    }
-
-    async function renderCertificates(container) {
-      const certs = await api('GET', '/certificates');
-      const students = await api('GET', '/students');
-      const events = await api('GET', '/events');
-
-      container.innerHTML = `
-        <div class="space-y-6 animate-fade-in">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-white">Issued Certificates</h3>
-            <button onclick="openGenerateCertModal()" class="btn-primary">Generate Certificate</button>
-          </div>
           <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
             <table class="w-full text-left text-sm text-slate-300">
               <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
                 <tr>
                   <th class="p-4">Student</th>
-                  <th class="p-4">Event</th>
-                  <th class="p-4">Cert UUID</th>
-                  <th class="p-4">Verify Link</th>
+                  <th class="p-4">Issue Title & Details</th>
+                  <th class="p-4">Category</th>
+                  <th class="p-4">Priority</th>
+                  <th class="p-4">Status</th>
+                  <th class="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/5">
-                ${certs.map(c => `
+                ${issues.length === 0 ? `
+                  <tr><td colspan="6" class="p-8 text-center text-slate-500">No support tickets found. Everything is running smoothly!</td></tr>
+                ` : issues.map(i => `
                   <tr class="hover:bg-white/[0.02]">
-                    <td class="p-4 font-semibold text-white">${c.student_name}</td>
-                    <td class="p-4">${c.event_name}</td>
-                    <td class="p-4 font-mono text-xs text-blue-400">${c.cert_id}</td>
                     <td class="p-4">
-                      <a href="/api/certificates/verify/${c.cert_id}" target="_blank" class="text-xs text-emerald-400 underline">Verify Certificate</a>
+                      <div class="font-semibold text-white">${i.student_name || 'Student'}</div>
+                      <div class="text-[11px] text-slate-500 font-mono">${new Date(i.created_at).toLocaleDateString()}</div>
+                    </td>
+                    <td class="p-4">
+                      <div class="font-bold text-white text-sm">${i.title}</div>
+                      <div class="text-xs text-slate-400 line-clamp-1">${i.description || ''}</div>
+                    </td>
+                    <td class="p-4"><span class="badge badge-purple text-xs">${i.category}</span></td>
+                    <td class="p-4">
+                      <span class="badge ${i.priority === 'urgent' ? 'badge-rose' : i.priority === 'high' ? 'badge-amber' : 'badge-blue'} text-xs">
+                        ${i.priority || 'medium'}
+                      </span>
+                    </td>
+                    <td class="p-4">
+                      <span class="badge ${i.status === 'resolved' ? 'badge-emerald' : i.status === 'in_progress' ? 'badge-purple' : 'badge-blue'} text-xs">
+                        ${i.status}
+                      </span>
+                    </td>
+                    <td class="p-4 text-right">
+                      <select onchange="updateTicketStatus(${i.id}, this.value)" class="glass-input text-xs py-1 px-2 font-medium">
+                        <option value="open" ${i.status === 'open' ? 'selected' : ''}>Open</option>
+                        <option value="in_progress" ${i.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="resolved" ${i.status === 'resolved' ? 'selected' : ''}>Resolved</option>
+                        <option value="closed" ${i.status === 'closed' ? 'selected' : ''}>Closed</option>
+                      </select>
                     </td>
                   </tr>
                 `).join('')}
@@ -2344,45 +2683,355 @@
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
-    async function openGenerateCertModal() {
-      const students = await api('GET', '/students');
-      const events = await api('GET', '/events');
-      openModal('Generate Certificate', `
-        <div class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1">Student</label>
-            <select id="m-cert-stu" class="glass-input w-full">
-              ${students.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
-            </select>
+    async function updateTicketStatus(id, status) {
+      try {
+        await api('PUT', `/issues/${id}/status`, { status });
+        toast(`Ticket #${id} marked as ${status}`, 'success');
+        renderPage();
+      } catch(e) {}
+    }
+
+    // --- INSTITUTIONAL DIGITAL VAULT ---
+    async function renderDocuments(container) {
+      const docs = await api('GET', '/documents');
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-xl font-black text-white">Institutional Digital Vault</h3>
+              <p class="text-xs text-slate-400">Secure storage for student identity, transcripts, marksheets, and official forms.</p>
+            </div>
+            <button onclick="openUploadDocModal()" class="btn-primary flex items-center gap-2">
+              <i data-lucide="upload" class="w-4 h-4"></i>
+              <span>Upload Document to Vault</span>
+            </button>
           </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1">Event</label>
-            <select id="m-cert-evt" class="glass-input w-full">
-              ${events.map(e => `<option value="${e.id}">${e.title}</option>`).join('')}
-            </select>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            ${docs.length === 0 ? `
+              <div class="col-span-full glass-panel p-12 text-center text-slate-400">
+                <i data-lucide="folder-open" class="w-10 h-10 mx-auto mb-3 text-slate-500"></i>
+                <h4 class="text-base font-bold text-white">Vault is currently empty</h4>
+                <p class="text-xs text-slate-500 mt-1">Upload verified documents or student credentials to access them securely.</p>
+              </div>
+            ` : docs.map(d => `
+              <div class="glass-card p-6 rounded-2xl border border-white/10 space-y-3 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="badge badge-blue text-[10px] uppercase font-bold">${d.category || 'General'}</span>
+                    <span class="text-[10px] text-slate-400 font-mono">${new Date(d.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <h4 class="font-extrabold text-white text-base leading-snug">${d.title}</h4>
+                  <p class="text-xs text-slate-400 mt-1">File: <span class="text-slate-300 font-mono">${d.filename}</span></p>
+                  ${d.owner_name ? `<p class="text-[11px] text-purple-400 mt-1">Student: ${d.owner_name}</p>` : ''}
+                </div>
+
+                <div class="pt-3 border-t border-white/10 flex items-center gap-2">
+                  ${d.file_b64 ? `
+                    <a href="${d.file_b64}" download="${d.filename}" class="btn-primary text-xs py-2 px-3 flex-1 flex items-center justify-center gap-2 text-center">
+                      <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                      <span>Download</span>
+                    </a>
+                  ` : `
+                    <button onclick="toast('Sample document record', 'info')" class="btn-secondary text-xs py-2 px-3 flex-1">View Info</button>
+                  `}
+                </div>
+              </div>
+            `).join('')}
           </div>
         </div>
-      `, `<button onclick="saveCert()" class="btn-primary w-full">Generate Certificate</button>`);
+      `;
+      lucide.createIcons();
     }
 
-    async function saveCert() {
-      const studentId = document.getElementById('m-cert-stu').value;
-      const eventId = document.getElementById('m-cert-evt').value;
+    function openUploadDocModal() {
+      openModal('Upload Document to Vault', `
+        <div class="space-y-4 text-left">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Document Title</label>
+            <input type="text" id="m-doc-title" placeholder="e.g. 10th/12th Marksheet & Transfer Certificate" class="glass-input w-full font-medium" required>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Category</label>
+            <select id="m-doc-cat" class="glass-input w-full font-medium">
+              <option value="Academic Marksheet" selected>Academic Marksheet / Transcript</option>
+              <option value="Identity & Aadhar">Identity & Aadhar Card</option>
+              <option value="Fee Receipt">Fee Receipt / Payment Proof</option>
+              <option value="Medical Certificate">Medical Certificate</option>
+              <option value="Curriculum Coursework">Curriculum Coursework & Assignments</option>
+              <option value="Other Document">Other Institutional Document</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Select File</label>
+            <input type="file" id="m-doc-file" class="glass-input w-full text-xs text-slate-300">
+          </div>
+        </div>
+      `, `
+        <button onclick="saveDocumentToVault()" class="btn-primary w-full flex items-center justify-center gap-2">
+          <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+          <span>Save to Digital Vault</span>
+        </button>
+      `);
+      lucide.createIcons();
+    }
+
+    async function saveDocumentToVault() {
+      const title = document.getElementById('m-doc-title')?.value.trim();
+      const category = document.getElementById('m-doc-cat')?.value;
+      const fileInput = document.getElementById('m-doc-file');
+
+      if (!title) return toast('Document title is required', 'warning');
+
+      let fileB64 = '';
+      let filename = 'document.pdf';
+
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        const file = fileInput.files[0];
+        filename = file.name;
+        fileB64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+      }
+
       try {
-        await api('POST', '/certificates/generate', { studentId, eventId });
-        toast('Certificate generated', 'success');
+        await api('POST', '/documents', { title, category, filename, fileB64 });
+        toast('Document securely stored in Vault! 📄', 'success');
         closeModal();
         renderPage();
       } catch(e) {}
+    }
+
+    // --- STUDENT ACHIEVEMENTS REVIEW ---
+    async function renderAchievements(container) {
+      const achs = await api('GET', '/achievements');
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-xl font-black text-white">Student Achievements Review</h3>
+              <p class="text-xs text-slate-400">Review student technical accomplishments, hackathon wins, and journal publications.</p>
+            </div>
+            <button onclick="openAddAchievementModal()" class="btn-primary flex items-center gap-2">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              <span>Log Achievement</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            ${achs.length === 0 ? `
+              <div class="col-span-full glass-panel p-12 text-center text-slate-400">
+                <i data-lucide="trophy" class="w-10 h-10 mx-auto mb-3 text-slate-500"></i>
+                <h4 class="text-base font-bold text-white">No achievements submitted yet</h4>
+                <p class="text-xs text-slate-500 mt-1">Student competition wins and certificates will appear here for verification.</p>
+              </div>
+            ` : achs.map(a => `
+              <div class="glass-card p-6 rounded-2xl border border-white/10 flex flex-col justify-between space-y-4">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="badge badge-purple text-[10px]">${a.category || 'Achievement'}</span>
+                    <span class="badge ${a.is_verified ? 'badge-emerald' : 'badge-amber'} text-[10px]">
+                      ${a.is_verified ? '✅ Verified' : '⏳ Pending Review'}
+                    </span>
+                  </div>
+                  <h4 class="font-extrabold text-white text-base leading-snug">${a.title}</h4>
+                  <p class="text-xs text-slate-300 mt-1">${a.org || 'Organization / Host'}</p>
+                  ${a.student_name ? `<p class="text-xs text-blue-400 mt-2">Student: <b>${a.student_name}</b></p>` : ''}
+                </div>
+
+                <div class="pt-3 border-t border-white/10">
+                  ${!a.is_verified ? `
+                    <button onclick="verifyAchievement(${a.id})" class="btn-primary w-full text-xs py-2 flex items-center justify-center gap-2">
+                      <i data-lucide="check-circle" class="w-4 h-4"></i>
+                      <span>Verify Achievement</span>
+                    </button>
+                  ` : `
+                    <p class="text-center text-xs text-emerald-400 font-semibold flex items-center justify-center gap-1">
+                      <i data-lucide="shield-check" class="w-4 h-4"></i>
+                      <span>Verified & Published in Portfolio</span>
+                    </p>
+                  `}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    async function verifyAchievement(id) {
+      try {
+        await api('PUT', `/achievements/${id}/verify`);
+        toast('Achievement verified and published! 🏆', 'success');
+        renderPage();
+      } catch(e) {}
+    }
+
+    // --- CERTIFICATE GENERATION & VERIFICATION ---
+    async function renderCertificates(container) {
+      const [certs, allUsers, events] = await Promise.all([
+        api('GET', '/certificates'),
+        api('GET', '/students'),
+        api('GET', '/events')
+      ]);
+
+      const students = allUsers.filter(u => u.role === 'student');
+
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-xl font-black text-white">Certificate Generation & Verification Engine</h3>
+              <p class="text-xs text-slate-400">Issue cryptographically verifiable certificates with UUID tokens and QR codes.</p>
+            </div>
+            <button onclick="openGenerateCertModal()" class="btn-primary flex items-center gap-2">
+              <i data-lucide="award" class="w-4 h-4"></i>
+              <span>Generate Certificate</span>
+            </button>
+          </div>
+
+          <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
+                <tr>
+                  <th class="p-4">Student Name</th>
+                  <th class="p-4">Certificate / Event Title</th>
+                  <th class="p-4">Certificate UUID</th>
+                  <th class="p-4">Issued Date</th>
+                  <th class="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5">
+                ${certs.length === 0 ? `
+                  <tr><td colspan="5" class="p-8 text-center text-slate-500">No certificates generated yet. Click Generate Certificate above to issue one.</td></tr>
+                ` : certs.map(c => `
+                  <tr class="hover:bg-white/[0.02]">
+                    <td class="p-4 font-semibold text-white">${c.student_display_name || c.student_name}</td>
+                    <td class="p-4 font-medium text-slate-200">${c.display_event_title || c.event_name}</td>
+                    <td class="p-4 font-mono text-xs text-blue-400 font-bold">${c.cert_id.slice(0, 13)}...</td>
+                    <td class="p-4 text-xs text-slate-400">${new Date(c.created_at).toLocaleDateString()}</td>
+                    <td class="p-4 text-right">
+                      <button onclick="viewCertificateModal('${c.cert_id}', '${c.student_display_name || c.student_name}', '${c.display_event_title || c.event_name}', '${c.host_org || 'Autonomous Institute of Technology'}')" class="btn-primary text-xs py-1.5 px-3">
+                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                        <span>View / Print</span>
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    async function openGenerateCertModal() {
+      const allUsers = await api('GET', '/students');
+      const events = await api('GET', '/events');
+      const students = allUsers.filter(u => u.role === 'student');
+
+      openModal('Generate Institutional Certificate', `
+        <div class="space-y-4 text-left">
+          <!-- Student Selection (Filtered to ONLY students) -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">1. Select Student Recipient</label>
+            <select id="m-cert-stu" class="glass-input w-full font-medium">
+              ${students.length === 0 ? '<option value="">No students available</option>' : students.map(s => `
+                <option value="${s.id}">${s.name} (${s.admin_id || ''} - ${s.department || 'Dept'})</option>
+              `).join('')}
+            </select>
+          </div>
+
+          <!-- Certificate Title / Event -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">2. Certificate Title / Event Name</label>
+            <input type="text" id="m-cert-name" placeholder="e.g. Excellence in Academic Engineering Curriculum" value="Excellence in Academic Engineering Curriculum" class="glass-input w-full font-medium" required>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">3. Host Institution / Authority</label>
+            <input type="text" id="m-cert-host" value="EduPortal Autonomous Institute of Technology" class="glass-input w-full font-medium">
+          </div>
+        </div>
+      `, `
+        <button onclick="saveCert()" class="btn-primary w-full flex items-center justify-center gap-2">
+          <i data-lucide="medal" class="w-4 h-4"></i>
+          <span>Issue Verifiable Certificate</span>
+        </button>
+      `);
+      lucide.createIcons();
+    }
+
+    async function saveCert() {
+      const studentId = document.getElementById('m-cert-stu')?.value;
+      const eventName = document.getElementById('m-cert-name')?.value.trim();
+      const hostOrg = document.getElementById('m-cert-host')?.value.trim();
+
+      if (!studentId) return toast('Please select a student', 'warning');
+      if (!eventName) return toast('Certificate title required', 'warning');
+
+      try {
+        await api('POST', '/certificates/generate', { studentId, eventName, hostOrg });
+        toast('Certificate generated and issued to student! 🎓', 'success');
+        closeModal();
+        renderPage();
+      } catch(e) {}
+    }
+
+    function viewCertificateModal(certId, studentName, eventName, hostOrg) {
+      openModal('Official Certificate of Excellence', `
+        <div id="printable-certificate" class="p-8 rounded-2xl bg-slate-900 border-4 border-amber-500/40 text-center space-y-6 relative overflow-hidden">
+          <div class="absolute -top-10 -right-10 w-40 h-40 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
+          
+          <div class="space-y-1">
+            <h5 class="text-xs uppercase tracking-[0.3em] text-amber-400 font-bold font-mono">EDUPORTAL INSTITUTIONAL CAMPUS</h5>
+            <h3 class="text-2xl font-black text-white tracking-tight">CERTIFICATE OF ACHIEVEMENT</h3>
+            <p class="text-xs text-slate-400">THIS IS PROUDLY PRESENTED TO</p>
+          </div>
+
+          <div class="py-2 border-b-2 border-amber-500/30 w-3/4 mx-auto">
+            <h2 class="text-3xl font-extrabold text-white tracking-wide font-serif">${studentName}</h2>
+          </div>
+
+          <p class="text-sm text-slate-300 max-w-lg mx-auto leading-relaxed">
+            In recognition of outstanding performance and successful completion in <br>
+            <b class="text-amber-300 font-semibold">${eventName}</b>
+          </p>
+
+          <div class="pt-4 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
+            <div class="text-left">
+              <p class="font-bold text-white">${hostOrg || 'EduPortal Authority'}</p>
+              <p class="text-[10px] text-slate-500">Authorized Institution</p>
+            </div>
+            <div class="text-right">
+              <p class="font-mono text-amber-400 font-bold">${certId.slice(0, 16).toUpperCase()}</p>
+              <p class="text-[10px] text-slate-500">Verification UUID</p>
+            </div>
+          </div>
+        </div>
+      `, `
+        <button onclick="window.print()" class="btn-primary w-full flex items-center justify-center gap-2">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          <span>Print / Save as PDF Certificate</span>
+        </button>
+      `);
+      lucide.createIcons();
     }
 
     async function renderAuditLogs(container) {
       const data = await api('GET', '/audit');
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
-          <h3 class="text-lg font-bold text-white">System Security Audit Logs</h3>
+          <h3 class="text-xl font-black text-white">System Security Audit Logs</h3>
           <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
             <table class="w-full text-left text-sm text-slate-300">
               <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
@@ -2409,6 +3058,7 @@
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
     async function renderSettings(container) {
@@ -2416,7 +3066,7 @@
       container.innerHTML = `
         <div class="space-y-6 max-w-xl mx-auto animate-fade-in">
           <div class="glass-panel p-8 rounded-2xl space-y-4">
-            <h3 class="text-lg font-bold text-white">System Threshold Configuration</h3>
+            <h3 class="text-xl font-black text-white">System Threshold Configuration</h3>
             <div>
               <label class="block text-xs font-semibold text-slate-400 mb-1">Minimum Attendance Threshold %</label>
               <input type="number" id="set-att" value="${settings.attendance_threshold || '75'}" class="glass-input w-full">
@@ -2425,12 +3075,13 @@
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
     async function saveSetting(key, value) {
       try {
         await api('PUT', `/settings/${key}`, { value });
-        toast('Setting saved', 'success');
+        toast('Setting saved successfully', 'success');
       } catch(e) {}
     }
 
@@ -2448,15 +3099,21 @@
             <div>
               <div class="flex items-center gap-2">
                 <span class="badge badge-emerald text-[10px] uppercase tracking-wider">STUDENT PORTAL</span>
-                <span class="text-xs text-slate-400 font-mono">${S.user.admin_id || ''}</span>
+                <span class="text-xs text-slate-400 font-mono font-bold">${S.user.admin_id || ''}</span>
               </div>
               <h3 class="text-2xl font-extrabold text-white mt-1">Good Morning, ${S.user.name} 👋</h3>
-              <p class="text-xs text-slate-400">Review your curriculum progress, attend scheduled lectures, and track performance.</p>
+              <p class="text-xs text-slate-400">Review your 5 academic divisions, generate exam hall tickets, and track lectures.</p>
             </div>
-            <button onclick="switchTab('course-enrollment')" class="btn-primary flex items-center gap-2">
-              <i data-lucide="book-plus" class="w-4 h-4"></i>
-              <span>Course Catalog</span>
-            </button>
+            <div class="flex items-center gap-3">
+              <button onclick="switchTab('hall-ticket')" class="btn-primary flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600">
+                <i data-lucide="ticket" class="w-4 h-4"></i>
+                <span>University Hall Ticket</span>
+              </button>
+              <button onclick="switchTab('course-enrollment')" class="btn-secondary flex items-center gap-2">
+                <i data-lucide="book-plus" class="w-4 h-4"></i>
+                <span>Course Catalog</span>
+              </button>
+            </div>
           </div>
 
           <!-- Official Campus Announcements Banner for Student -->
@@ -2465,7 +3122,7 @@
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2 text-purple-400 font-bold text-sm">
                   <i data-lucide="megaphone" class="w-4 h-4"></i>
-                  <span>Institutional Notices & Announcements</span>
+                  <span>Institutional Notices & Circulars</span>
                 </div>
                 <button onclick="switchTab('announcements')" class="text-xs text-purple-300 hover:underline font-semibold">View All Notices →</button>
               </div>
@@ -2480,6 +3137,11 @@
                     </div>
                     <h5 class="font-bold text-white text-xs">${a.title}</h5>
                     <p class="text-[11px] text-slate-300 line-clamp-2">${a.content}</p>
+                    ${a.pdf_b64 ? `
+                      <button onclick="downloadOrViewPDF('${a.pdf_b64}', '${a.pdf_name}')" class="text-[10px] text-purple-400 hover:underline font-semibold pt-1 block">
+                        📄 View Attached PDF
+                      </button>
+                    ` : ''}
                   </div>
                 `).join('')}
               </div>
@@ -2521,46 +3183,83 @@
 
           <!-- Quick Access Widgets -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <button onclick="switchTab('what-if')" class="glass-card p-6 rounded-2xl text-left">
-              <div class="p-3 rounded-xl bg-purple-500/10 text-purple-400 w-fit mb-3"><i data-lucide="zap" class="w-6 h-6"></i></div>
-              <h4 class="text-base font-bold text-white">What-If Simulator</h4>
-              <p class="text-xs text-slate-400 mt-1">Project your GPA & scores</p>
+            <button onclick="switchTab('grades')" class="glass-card p-6 rounded-2xl text-left border border-white/10 hover:border-blue-500/30 transition-all">
+              <div class="p-3 rounded-xl bg-blue-500/10 text-blue-400 w-fit mb-3"><i data-lucide="award" class="w-6 h-6"></i></div>
+              <h4 class="text-base font-bold text-white">5-Tier Internal Marks</h4>
+              <p class="text-xs text-slate-400 mt-1">Assessments, Capstone & Labs (/400)</p>
             </button>
-            <button onclick="switchTab('attendance-calc')" class="glass-card p-6 rounded-2xl text-left">
+            <button onclick="switchTab('hall-ticket')" class="glass-card p-6 rounded-2xl text-left border border-white/10 hover:border-purple-500/30 transition-all">
+              <div class="p-3 rounded-xl bg-purple-500/10 text-purple-400 w-fit mb-3"><i data-lucide="ticket" class="w-6 h-6"></i></div>
+              <h4 class="text-base font-bold text-white">University Hall Ticket</h4>
+              <p class="text-xs text-slate-400 mt-1">Download official exam hall ticket</p>
+            </button>
+            <button onclick="switchTab('attendance-calc')" class="glass-card p-6 rounded-2xl text-left border border-white/10 hover:border-emerald-500/30 transition-all">
               <div class="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 w-fit mb-3"><i data-lucide="calculator" class="w-6 h-6"></i></div>
-              <h4 class="text-base font-bold text-white">Attendance Calculator</h4>
-              <p class="text-xs text-slate-400 mt-1">Track 75% threshold requirement</p>
-            </button>
-            <button onclick="switchTab('od-status')" class="glass-card p-6 rounded-2xl text-left">
-              <div class="p-3 rounded-xl bg-amber-500/10 text-amber-400 w-fit mb-3"><i data-lucide="clipboard-list" class="w-6 h-6"></i></div>
-              <h4 class="text-base font-bold text-white">My OD Status</h4>
-              <p class="text-xs text-slate-400 mt-1">Check-in and submit photos</p>
+              <h4 class="text-base font-bold text-white">Attendance Shortage</h4>
+              <p class="text-xs text-slate-400 mt-1">Track 75% exam eligibility</p>
             </button>
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
+    // --- STUDENT 5-TIER GRADES & SCORES VIEW ---
     async function renderStudentGrades(container) {
       const grades = await api('GET', '/grades');
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
-          <h3 class="text-lg font-bold text-white">My Academic Marks & Scores</h3>
-          <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
-            <table class="w-full text-left text-sm text-slate-300">
-              <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
+          <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-blue-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-xl font-black text-white">My Academic Marks & 5-Division Evaluation</h3>
+              <p class="text-xs text-slate-400">Total Internal Marks carry 400 points across 4 divisions. University Exam carries 100 points.</p>
+            </div>
+            <button onclick="switchTab('hall-ticket')" class="btn-primary flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600">
+              <i data-lucide="ticket" class="w-4 h-4"></i>
+              <span>Generate Hall Ticket</span>
+            </button>
+          </div>
+
+          <div class="glass-panel rounded-2xl border border-white/10 overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
                 <tr>
-                  <th class="p-4">Subject</th>
-                  <th class="p-4">Week</th>
-                  <th class="p-4">Score</th>
+                  <th class="p-4">Course</th>
+                  <th class="p-4">Instructor</th>
+                  <th class="p-4 text-center">Div 1 (Assess.)</th>
+                  <th class="p-4 text-center">Div 2 (Capstone)</th>
+                  <th class="p-4 text-center">Div 3 (Class Lab)</th>
+                  <th class="p-4 text-center">Div 4 (Univ Lab)</th>
+                  <th class="p-4 text-center text-blue-400 font-bold">Total Internal (/400)</th>
+                  <th class="p-4 text-center">Div 5 (Univ Exam)</th>
+                  <th class="p-4 text-center text-emerald-400 font-bold">Grand Total (/500)</th>
+                  <th class="p-4 text-center">Grade</th>
+                  <th class="p-4 text-center">Exam Status</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-white/5">
-                ${grades.map(g => `
+              <tbody class="divide-y divide-white/5 whitespace-nowrap">
+                ${grades.length === 0 ? `
+                  <tr><td colspan="11" class="p-8 text-center text-slate-500">No grades recorded yet. Enroll in courses to track marks.</td></tr>
+                ` : grades.map(g => `
                   <tr class="hover:bg-white/[0.02]">
-                    <td class="p-4 font-semibold text-white">${g.subject_name}</td>
-                    <td class="p-4 text-xs font-mono text-slate-400">Week ${g.week}</td>
-                    <td class="p-4 font-mono font-bold text-blue-400">${g.score}%</td>
+                    <td class="p-4">
+                      <span class="font-mono text-purple-400 font-semibold">${g.course_code || ''}</span>
+                      <div class="font-semibold text-white">${g.subject_name}</div>
+                    </td>
+                    <td class="p-4 text-slate-400">${g.faculty_name || 'Faculty'}</td>
+                    <td class="p-4 text-center font-mono">${g.div1_assessments || 0}</td>
+                    <td class="p-4 text-center font-mono">${g.div2_capstone || 0}</td>
+                    <td class="p-4 text-center font-mono">${g.div3_class_lab || 0}</td>
+                    <td class="p-4 text-center font-mono">${g.div4_univ_lab || 0}</td>
+                    <td class="p-4 text-center font-mono font-bold text-blue-400 bg-blue-500/5">${g.total_internal || 0}</td>
+                    <td class="p-4 text-center font-mono">${g.div5_univ_exam || 0}</td>
+                    <td class="p-4 text-center font-mono font-bold text-emerald-400 bg-emerald-500/5">${g.grand_total || g.score || 0}</td>
+                    <td class="p-4 text-center"><span class="badge badge-purple">${g.grade_letter || 'B'}</span></td>
+                    <td class="p-4 text-center">
+                      <span class="badge ${g.course_is_closed ? 'badge-emerald' : 'badge-amber'} text-[10px]">
+                        ${g.course_is_closed ? '🏁 Closed for Exam' : '🟢 Course In Progress'}
+                      </span>
+                    </td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -2568,242 +3267,152 @@
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
-    async function renderWhatIfSimulator(container) {
+    // --- STUDENT UNIVERSITY EXAMINATION HALL TICKET ---
+    async function renderStudentHallTicket(container) {
+      const ticket = await api('GET', '/grades/hall-ticket');
+
       container.innerHTML = `
-        <div class="space-y-6 max-w-xl mx-auto animate-fade-in">
-          <div class="glass-panel p-8 rounded-2xl border border-purple-500/30">
-            <h3 class="text-xl font-extrabold text-white mb-1">What-If Grade Simulator</h3>
-            <p class="text-xs text-slate-400 mb-6">Simulate how your upcoming exam score will impact your overall average.</p>
-
-            <div class="space-y-4">
-              <div>
-                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Expected Next Exam Score (0 - 100)</label>
-                <input type="number" id="sim-score" value="85" min="0" max="100" class="glass-input w-full text-lg font-bold text-purple-400">
-              </div>
-              <button onclick="runSimulation()" class="btn-primary w-full">Run Simulation</button>
-            </div>
-
-            <div id="sim-result" class="hidden mt-6 pt-6 border-t border-white/10 space-y-4">
-              <div class="grid grid-cols-2 gap-4 text-center">
-                <div class="p-4 rounded-xl bg-white/5">
-                  <p class="text-xs text-slate-400">Current Average</p>
-                  <p id="sim-curr-avg" class="text-2xl font-black text-white">--</p>
-                </div>
-                <div class="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30">
-                  <p class="text-xs text-purple-400 font-semibold">Projected Average</p>
-                  <p id="sim-proj-avg" class="text-2xl font-black text-purple-400">--</p>
-                </div>
-              </div>
-              <p class="text-[11px] text-center text-slate-500 font-medium">✨ PROJECTED ONLY — OFFICIAL MARKS ARE UNCHANGED</p>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    async function runSimulation() {
-      const score = document.getElementById('sim-score').value;
-      try {
-        const res = await api('POST', '/academic/simulate', { additionalScore: score });
-        document.getElementById('sim-curr-avg').innerText = res.currentAvg + '%';
-        document.getElementById('sim-proj-avg').innerText = res.projectedAvg + '% (' + res.projectedGrade + ')';
-        document.getElementById('sim-result').classList.remove('hidden');
-      } catch(e) {}
-    }
-
-    async function renderAttendanceCalculator(container) {
-      const data = await api('GET', `/academic/attendance-shortage/${S.user.id}`);
-      container.innerHTML = `
-        <div class="space-y-6 max-w-xl mx-auto animate-fade-in">
-          <div class="glass-panel p-8 rounded-2xl border border-emerald-500/30 text-center">
-            <h3 class="text-xl font-extrabold text-white mb-2">Attendance Shortage Calculator</h3>
-            <p class="text-4xl font-black text-emerald-400 my-4">${data.currentPct}%</p>
-            <p class="text-sm font-semibold text-slate-300 mb-6">${data.message}</p>
-            <div class="p-4 rounded-xl bg-white/5 text-xs text-slate-400 text-left space-y-1">
-              <p>• Total Classes Recorded: <span class="text-white font-bold">${data.totalClasses}</span></p>
-              <p>• Attended / OD Days: <span class="text-white font-bold">${data.attendedClasses}</span></p>
-              <p>• Institutional Minimum Threshold: <span class="text-white font-bold">${data.threshold}%</span></p>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    async function renderWhereIsMyClass(container) {
-      const res = await api('GET', '/timetable/student/current-class');
-      container.innerHTML = `
-        <div class="max-w-2xl mx-auto animate-fade-in">
-          <div class="glass-panel p-8 rounded-2xl border border-blue-500/30 space-y-6">
-            <h3 class="text-2xl font-black text-white">Current Class Locator</h3>
-            ${res.current ? `
-              <div class="p-6 rounded-xl bg-blue-600/10 border border-blue-500/30 space-y-4">
-                <span class="badge badge-blue">OCCUPIED NOW</span>
-                <h4 class="text-3xl font-extrabold text-white">${res.current.subject_name}</h4>
-                <p class="text-sm text-slate-300">Room: <span class="font-extrabold text-emerald-400 text-lg">${res.current.room_name}</span> (${res.current.building || 'Main Block'})</p>
-                <p class="text-sm text-slate-400">Time Window: ${res.current.start_time} - ${res.current.end_time}</p>
-              </div>
-            ` : `
-              <div class="text-center py-12 text-slate-400">
-                <p class="text-lg font-bold text-white">No active class at this hour.</p>
-              </div>
-            `}
-          </div>
-        </div>
-      `;
-    }
-
-    async function renderStudentTimetable(container) {
-      const entries = await api('GET', '/timetable');
-      container.innerHTML = `
-        <div class="space-y-6 animate-fade-in">
-          <h3 class="text-lg font-bold text-white">My Weekly Class Schedule</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            ${entries.map(t => `
-              <div class="glass-card p-4 rounded-xl space-y-1">
-                <span class="badge badge-blue text-[10px]">${t.day_of_week}</span>
-                <h5 class="font-bold text-white">${t.subject_name || 'Subject'}</h5>
-                <p class="text-xs text-emerald-400 font-semibold">Room: ${t.room_name || ''}</p>
-                <p class="text-[11px] text-slate-500 font-mono">${t.start_time} - ${t.end_time}</p>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }
-
-    async function renderStudentEvents(container) {
-      const events = await api('GET', '/events');
-      container.innerHTML = `
-        <div class="space-y-6 animate-fade-in">
-          <h3 class="text-lg font-bold text-white">Campus Events & Workshops</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            ${events.map(e => `
-              <div class="glass-card p-6 rounded-2xl">
-                <span class="badge badge-blue mb-2">${e.event_type || 'General'}</span>
-                <h4 class="text-lg font-extrabold text-white">${e.title}</h4>
-                <p class="text-xs text-slate-400 mt-2">${e.description || ''}</p>
-                <div class="mt-4 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
-                  <span>📍 ${e.venue || 'Campus'}</span>
-                  <button onclick="registerEvent(${e.id})" class="btn-primary text-xs py-1 px-3">Register</button>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }
-
-    async function registerEvent(id) {
-      try {
-        await api('POST', `/events/${id}/register`);
-        toast('Registered for event!', 'success');
-      } catch(e) {}
-    }
-
-    async function renderStudentOD(container) {
-      const odList = await api('GET', '/od');
-      container.innerHTML = `
-        <div class="space-y-6 animate-fade-in">
+        <div class="space-y-6 animate-fade-in max-w-4xl mx-auto">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-white">My OD Submissions</h3>
-            <button onclick="openSubmitODModal()" class="btn-primary">Submit New OD</button>
+            <div>
+              <h3 class="text-xl font-black text-white">University Examination Hall Ticket</h3>
+              <p class="text-xs text-slate-400">Official admit card for End-Semester University Examinations.</p>
+            </div>
+            <button onclick="window.print()" class="btn-primary flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600">
+              <i data-lucide="printer" class="w-4 h-4"></i>
+              <span>Print / Download Hall Ticket</span>
+            </button>
           </div>
-          <div class="space-y-4">
-            ${odList.map(o => `
-              <div class="glass-card p-6 rounded-2xl space-y-4">
-                <div class="flex items-center justify-between">
-                  <h4 class="font-bold text-white text-base">${o.event_name}</h4>
-                  <span class="badge ${o.status === 'approved' || o.status === 'completed' ? 'badge-emerald' : 'badge-amber'}">${o.status}</span>
-                </div>
-                <!-- OD Stepper Progress -->
-                <div class="flex items-center justify-between pt-2">
-                  <div class="step-item">
-                    <div class="step-circle done"><i data-lucide="check" class="w-4 h-4"></i></div>
-                    <span class="text-[10px] text-slate-400 mt-1">Letter</span>
-                  </div>
-                  <div class="step-item">
-                    <div class="step-circle ${o.status !== 'pending' ? 'done' : 'active'}">2</div>
-                    <span class="text-[10px] text-slate-400 mt-1">Faculty</span>
-                  </div>
-                  <div class="step-item">
-                    <div class="step-circle ${o.status === 'geo_submitted' || o.status === 'completed' ? 'done' : 'pending'}">3</div>
-                    <span class="text-[10px] text-slate-400 mt-1">Geo Verification</span>
-                  </div>
-                </div>
 
-                ${o.status === 'approved' ? `
-                  <button onclick="triggerGeoCamera(${o.id})" class="btn-primary w-full text-xs py-2">Open Geo Camera Verification</button>
-                ` : ''}
+          <!-- Official Hall Ticket Card -->
+          <div id="official-hall-ticket" class="glass-panel p-8 rounded-3xl border-2 border-blue-500/30 bg-slate-900/90 text-left space-y-6 relative overflow-hidden shadow-2xl">
+            <!-- Institutional Watermark -->
+            <div class="absolute -right-16 -bottom-16 w-64 h-64 bg-blue-500/5 rounded-full pointer-events-none blur-3xl"></div>
+
+            <!-- Header -->
+            <div class="text-center border-b border-white/10 pb-6 space-y-1">
+              <p class="text-xs font-mono uppercase tracking-[0.3em] text-blue-400 font-bold">AUTONOMOUS UNIVERSITY CAMPUS</p>
+              <h2 class="text-2xl font-black text-white tracking-tight">OFFICIAL UNIVERSITY EXAMINATION HALL TICKET</h2>
+              <p class="text-xs text-slate-400">Academic Year 2026-2027 • End-Semester Theory & Practical Examinations</p>
+            </div>
+
+            <!-- Candidate Profile Info -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 p-5 rounded-2xl bg-white/5 border border-white/10 text-xs">
+              <div class="space-y-1">
+                <span class="text-slate-400 uppercase font-semibold text-[10px]">Candidate Full Name</span>
+                <p class="font-bold text-white text-sm">${ticket.student.name}</p>
               </div>
-            `).join('')}
+              <div class="space-y-1">
+                <span class="text-slate-400 uppercase font-semibold text-[10px]">Register / Roll Number</span>
+                <p class="font-mono font-bold text-blue-400 text-sm">${ticket.student.admin_id}</p>
+              </div>
+              <div class="space-y-1">
+                <span class="text-slate-400 uppercase font-semibold text-[10px]">Branch / Department</span>
+                <p class="font-semibold text-white">${ticket.student.department || 'B.E. Computer Science & Engineering'}</p>
+              </div>
+              <div class="space-y-1">
+                <span class="text-slate-400 uppercase font-semibold text-[10px]">Attendance Standing</span>
+                <p class="font-mono font-bold ${ticket.attendancePct >= 75 ? 'text-emerald-400' : 'text-rose-400'}">${ticket.attendancePct}% (${ticket.attendancePct >= 75 ? 'Eligible' : 'Shortage'})</p>
+              </div>
+              <div class="space-y-1">
+                <span class="text-slate-400 uppercase font-semibold text-[10px]">Internal Marks Status</span>
+                <p class="font-bold text-emerald-400">✅ Verified by Faculty</p>
+              </div>
+              <div class="space-y-1">
+                <span class="text-slate-400 uppercase font-semibold text-[10px]">Hall Ticket Verification UUID</span>
+                <p class="font-mono text-purple-400 font-bold">${ticket.qrVerificationCode}</p>
+              </div>
+            </div>
+
+            <!-- Enrolled Exam Courses Table -->
+            <div class="space-y-2">
+              <h4 class="text-xs font-bold text-blue-400 uppercase tracking-wider">Scheduled Examination Courses</h4>
+              <div class="rounded-xl border border-white/10 overflow-hidden">
+                <table class="w-full text-left text-xs text-slate-300">
+                  <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10">
+                    <tr>
+                      <th class="p-3">Course Code</th>
+                      <th class="p-3">Subject Name</th>
+                      <th class="p-3">Exam Date</th>
+                      <th class="p-3">Session</th>
+                      <th class="p-3">Exam Hall</th>
+                      <th class="p-3 text-center">Invigilator Sign</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-white/5">
+                    ${ticket.courses.length === 0 ? `
+                      <tr><td colspan="6" class="p-6 text-center text-slate-500">No closed examination courses available yet.</td></tr>
+                    ` : ticket.courses.map(c => `
+                      <tr>
+                        <td class="p-3 font-mono text-blue-400 font-bold">${c.course_code}</td>
+                        <td class="p-3 font-semibold text-white">${c.subject_name}</td>
+                        <td class="p-3 font-mono">${c.exam_date || 'TBA'}</td>
+                        <td class="p-3 font-medium text-purple-400">${c.exam_session || 'FN'}</td>
+                        <td class="p-3 font-semibold text-emerald-400">${c.exam_hall || 'Exam Hall A'}</td>
+                        <td class="p-3 text-center text-slate-500 font-mono">_______________</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Controller of Examination Seal -->
+            <div class="pt-6 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
+              <div class="space-y-1">
+                <p class="text-slate-400">1. Candidate must bring this Hall Ticket & Institutional ID Card to every exam.</p>
+                <p class="text-slate-400">2. Electronic devices & smart watches are strictly prohibited in the exam hall.</p>
+              </div>
+              <div class="text-right shrink-0">
+                <div class="font-serif italic font-bold text-white text-base">K. Raghavan, Ph.D.</div>
+                <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Controller of Examinations</p>
+                <span class="badge badge-emerald text-[9px] mt-1">SEAL VERIFIED</span>
+              </div>
+            </div>
           </div>
         </div>
       `;
-    }
-
-    function openSubmitODModal() {
-      openModal('Submit OD Request', `
-        <div class="space-y-4">
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Event Name</label><input type="text" id="m-od-event" class="glass-input w-full" placeholder="e.g. Hackathon 2026"></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Upload Letter Photo (Base64)</label><input type="file" id="m-od-file" accept="image/*" class="glass-input w-full"></div>
-        </div>
-      `, `<button onclick="saveOD()" class="btn-primary w-full">Submit OD Request</button>`);
-    }
-
-    async function saveOD() {
-      const eventName = document.getElementById('m-od-event').value;
-      const fileInput = document.getElementById('m-od-file');
-      if (!fileInput.files[0]) return toast('Photo required', 'warning');
-
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          await api('POST', '/od', { eventName, letterB64: e.target.result });
-          toast('OD Request Submitted', 'success');
-          closeModal();
-          renderPage();
-        } catch(err) {}
-      };
-      reader.readAsDataURL(fileInput.files[0]);
-    }
-
-    async function triggerGeoCamera(odId) {
-      if (!navigator.geolocation) return toast('Geolocation is not supported by your browser', 'error');
-      
-      navigator.geolocation.getCurrentPosition(async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-
-        try {
-          await api('POST', `/od/${odId}/geo-photo`, {
-            geoB64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-            lat, lng
-          });
-          toast('Geo photo verified & submitted!', 'success');
-          renderPage();
-        } catch(e) {}
-      }, (err) => toast('GPS position required for OD verification', 'error'));
+      lucide.createIcons();
     }
 
     async function renderStudentCertificates(container) {
       const certs = await api('GET', '/certificates');
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
-          <h3 class="text-lg font-bold text-white">My Earned Certificates</h3>
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-xl font-black text-white">My Earned Certificates</h3>
+              <p class="text-xs text-slate-400">Verifiable credentials awarded by the institution.</p>
+            </div>
+          </div>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            ${certs.map(c => `
-              <div class="glass-card p-6 rounded-2xl space-y-2">
-                <span class="badge badge-emerald">Verified Certificate</span>
-                <h4 class="font-extrabold text-white text-base">${c.event_name}</h4>
-                <p class="text-xs text-slate-400">UUID: ${c.cert_id}</p>
-                <a href="/api/certificates/verify/${c.cert_id}" target="_blank" class="inline-block text-xs text-blue-400 underline pt-2">View Certificate Verification</a>
+            ${certs.length === 0 ? `
+              <div class="col-span-full glass-panel p-12 text-center text-slate-400">
+                <i data-lucide="medal" class="w-10 h-10 mx-auto mb-3 text-slate-500"></i>
+                <h4 class="text-base font-bold text-white">No certificates issued yet</h4>
+                <p class="text-xs text-slate-500 mt-1">Certificates issued by faculty will be displayed here.</p>
+              </div>
+            ` : certs.map(c => `
+              <div class="glass-card p-6 rounded-2xl border border-white/10 space-y-3 flex flex-col justify-between">
+                <div>
+                  <span class="badge badge-emerald text-[10px] mb-2">Verified Certificate</span>
+                  <h4 class="font-extrabold text-white text-base leading-snug">${c.display_event_title || c.event_name}</h4>
+                  <p class="text-xs text-slate-400 mt-1">Issued: ${new Date(c.created_at).toLocaleDateString()}</p>
+                  <p class="text-[11px] font-mono text-purple-400 mt-2">${c.cert_id}</p>
+                </div>
+                <button onclick="viewCertificateModal('${c.cert_id}', '${c.student_name}', '${c.display_event_title || c.event_name}', '${c.host_org || 'EduPortal Autonomous Institute'}')" class="btn-primary text-xs py-2 w-full flex items-center justify-center gap-2">
+                  <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                  <span>View Certificate</span>
+                </button>
               </div>
             `).join('')}
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
     async function renderStudentAchievements(container) {
@@ -2811,37 +3420,69 @@
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-white">My Achievement Portfolio</h3>
-            <button onclick="openAddAchievementModal()" class="btn-primary">Add Achievement</button>
+            <div>
+              <h3 class="text-xl font-black text-white">My Achievement Portfolio</h3>
+              <p class="text-xs text-slate-400">Submit your hackathon awards, papers, and sports medals for faculty verification.</p>
+            </div>
+            <button onclick="openAddAchievementModal()" class="btn-primary flex items-center gap-2">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              <span>Submit Achievement</span>
+            </button>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            ${achs.map(a => `
-              <div class="glass-card p-6 rounded-2xl">
-                <span class="badge badge-purple mb-2">${a.category}</span>
+            ${achs.length === 0 ? `
+              <div class="col-span-full glass-panel p-12 text-center text-slate-400">
+                <i data-lucide="trophy" class="w-10 h-10 mx-auto mb-3 text-slate-500"></i>
+                <h4 class="text-base font-bold text-white">No achievements in portfolio yet</h4>
+                <p class="text-xs text-slate-500 mt-1">Submit your awards and certificates above.</p>
+              </div>
+            ` : achs.map(a => `
+              <div class="glass-card p-6 rounded-2xl border border-white/10 space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="badge badge-purple text-[10px]">${a.category}</span>
+                  <span class="badge ${a.is_verified ? 'badge-emerald' : 'badge-amber'} text-[10px]">${a.is_verified ? 'Verified' : 'Pending'}</span>
+                </div>
                 <h4 class="font-bold text-white text-base">${a.title}</h4>
-                <p class="text-xs text-slate-400 mt-1">${a.org || 'Organization'}</p>
+                <p class="text-xs text-slate-400">${a.org || 'Organization'}</p>
               </div>
             `).join('')}
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
     function openAddAchievementModal() {
-      openModal('Add Achievement', `
-        <div class="space-y-4">
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Title</label><input type="text" id="m-ach-title" class="glass-input w-full"></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Organization / Event</label><input type="text" id="m-ach-org" class="glass-input w-full"></div>
+      openModal('Submit Achievement to Portfolio', `
+        <div class="space-y-4 text-left">
+          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Achievement Title</label><input type="text" id="m-ach-title" placeholder="e.g. 1st Place — National Hackathon 2026" class="glass-input w-full" required></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Category</label>
+              <select id="m-ach-cat" class="glass-input w-full">
+                <option value="Hackathon / Coding" selected>Hackathon / Coding</option>
+                <option value="Research Paper">Research Paper / Journal</option>
+                <option value="Technical Symposium">Technical Symposium</option>
+                <option value="Sports & Athletics">Sports & Athletics</option>
+                <option value="Project Expo">Project Expo</option>
+              </select>
+            </div>
+            <div><label class="block text-xs font-semibold text-slate-400 mb-1">Host Organization</label><input type="text" id="m-ach-org" placeholder="e.g. IEEE / ACM" class="glass-input w-full"></div>
+          </div>
         </div>
-      `, `<button onclick="saveAchievement()" class="btn-primary w-full">Submit Achievement</button>`);
+      `, `<button onclick="saveAchievement()" class="btn-primary w-full">Submit for Verification</button>`);
+      lucide.createIcons();
     }
 
     async function saveAchievement() {
-      const title = document.getElementById('m-ach-title').value;
-      const org = document.getElementById('m-ach-org').value;
+      const title = document.getElementById('m-ach-title')?.value.trim();
+      const category = document.getElementById('m-ach-cat')?.value;
+      const org = document.getElementById('m-ach-org')?.value.trim();
+      if (!title) return toast('Achievement title required', 'warning');
+
       try {
-        await api('POST', '/achievements', { title, org });
-        toast('Achievement added for verification', 'success');
+        await api('POST', '/achievements', { title, category, org });
+        toast('Achievement submitted for faculty verification! 🏆', 'success');
         closeModal();
         renderPage();
       } catch(e) {}
@@ -2852,40 +3493,41 @@
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-white">Digital Document Vault</h3>
-            <button onclick="openUploadDocModal()" class="btn-primary">Upload Document</button>
+            <div>
+              <h3 class="text-xl font-black text-white">My Digital Document Vault</h3>
+              <p class="text-xs text-slate-400">Access your academic transcripts, ID proofs, and certificates.</p>
+            </div>
+            <button onclick="openUploadDocModal()" class="btn-primary flex items-center gap-2">
+              <i data-lucide="upload" class="w-4 h-4"></i>
+              <span>Upload Document</span>
+            </button>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            ${docs.map(d => `
-              <div class="glass-card p-6 rounded-2xl">
-                <span class="badge badge-blue mb-2">${d.category}</span>
-                <h4 class="font-bold text-white text-base">${d.title}</h4>
-                <p class="text-xs text-slate-400 mt-1">${d.filename}</p>
+            ${docs.length === 0 ? `
+              <div class="col-span-full glass-panel p-12 text-center text-slate-400">
+                <i data-lucide="folder-open" class="w-10 h-10 mx-auto mb-3 text-slate-500"></i>
+                <h4 class="text-base font-bold text-white">Your digital vault is empty</h4>
+                <p class="text-xs text-slate-500 mt-1">Upload verified files to store them securely.</p>
+              </div>
+            ` : docs.map(d => `
+              <div class="glass-card p-6 rounded-2xl border border-white/10 space-y-3 flex flex-col justify-between">
+                <div>
+                  <span class="badge badge-blue text-[10px] mb-2">${d.category || 'Document'}</span>
+                  <h4 class="font-bold text-white text-base">${d.title}</h4>
+                  <p class="text-xs text-slate-400 mt-1">${d.filename}</p>
+                </div>
+                ${d.file_b64 ? `
+                  <a href="${d.file_b64}" download="${d.filename}" class="btn-primary text-xs py-2 px-3 flex items-center justify-center gap-2 text-center">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                    <span>Download File</span>
+                  </a>
+                ` : ''}
               </div>
             `).join('')}
           </div>
         </div>
       `;
-    }
-
-    function openUploadDocModal() {
-      openModal('Upload Document', `
-        <div class="space-y-4">
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Title</label><input type="text" id="m-doc-title" class="glass-input w-full"></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Filename</label><input type="text" id="m-doc-fn" class="glass-input w-full"></div>
-        </div>
-      `, `<button onclick="saveDoc()" class="btn-primary w-full">Upload Document</button>`);
-    }
-
-    async function saveDoc() {
-      const title = document.getElementById('m-doc-title').value;
-      const filename = document.getElementById('m-doc-fn').value;
-      try {
-        await api('POST', '/documents', { title, filename, fileB64: 'sample' });
-        toast('Document stored in vault', 'success');
-        closeModal();
-        renderPage();
-      } catch(e) {}
+      lucide.createIcons();
     }
 
     async function renderStudentIssues(container) {
@@ -2893,8 +3535,14 @@
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-white">Support Tickets</h3>
-            <button onclick="openCreateIssueModal()" class="btn-primary">Create Ticket</button>
+            <div>
+              <h3 class="text-xl font-black text-white">Student Support Helpdesk</h3>
+              <p class="text-xs text-slate-400">Submit requests for academic queries, hostel, fee, or technical support.</p>
+            </div>
+            <button onclick="openCreateIssueModal()" class="btn-primary flex items-center gap-2">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              <span>Create Support Ticket</span>
+            </button>
           </div>
           <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
             <table class="w-full text-left text-sm text-slate-300">
@@ -2902,15 +3550,24 @@
                 <tr>
                   <th class="p-4">Ticket Title</th>
                   <th class="p-4">Category</th>
+                  <th class="p-4">Priority</th>
                   <th class="p-4">Status</th>
+                  <th class="p-4">Created Date</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/5">
-                ${issues.map(i => `
+                ${issues.length === 0 ? `
+                  <tr><td colspan="5" class="p-8 text-center text-slate-500">No support tickets filed. Click Create Support Ticket if you need assistance!</td></tr>
+                ` : issues.map(i => `
                   <tr class="hover:bg-white/[0.02]">
-                    <td class="p-4 font-semibold text-white">${i.title}</td>
+                    <td class="p-4">
+                      <div class="font-semibold text-white">${i.title}</div>
+                      <div class="text-xs text-slate-400">${i.description || ''}</div>
+                    </td>
                     <td class="p-4"><span class="badge badge-purple">${i.category}</span></td>
-                    <td class="p-4"><span class="badge ${i.status === 'resolved' ? 'badge-emerald' : 'badge-blue'}">${i.status}</span></td>
+                    <td class="p-4"><span class="badge badge-amber">${i.priority}</span></td>
+                    <td class="p-4"><span class="badge ${i.status === 'resolved' ? 'badge-emerald' : i.status === 'in_progress' ? 'badge-purple' : 'badge-blue'}">${i.status}</span></td>
+                    <td class="p-4 text-xs text-slate-400">${new Date(i.created_at).toLocaleDateString()}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -2918,23 +3575,64 @@
           </div>
         </div>
       `;
+      lucide.createIcons();
     }
 
     function openCreateIssueModal() {
-      openModal('Create Support Ticket', `
-        <div class="space-y-4">
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Issue Title</label><input type="text" id="m-iss-title" class="glass-input w-full"></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Description</label><textarea id="m-iss-desc" class="glass-input w-full h-20"></textarea></div>
+      openModal('Create Student Support Ticket', `
+        <div class="space-y-4 text-left">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Issue Title / Subject</label>
+            <input type="text" id="m-iss-title" placeholder="e.g. Need clarification on Continuous Assessment 2 schedule" class="glass-input w-full font-medium" required>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Category</label>
+              <select id="m-iss-cat" class="glass-input w-full font-medium">
+                <option value="Academic Support" selected>Academic Support</option>
+                <option value="Examination & Marks">Examination & Marks</option>
+                <option value="Hostel & Facilities">Hostel & Facilities</option>
+                <option value="IT / Portal Support">IT / Portal Support</option>
+                <option value="Accounts / Fee">Accounts / Fee</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Priority</label>
+              <select id="m-iss-prio" class="glass-input w-full font-medium">
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Detailed Description</label>
+            <textarea id="m-iss-desc" rows="4" placeholder="Describe the issue or query in detail so staff can assist you promptly..." class="glass-input w-full text-sm font-normal" required></textarea>
+          </div>
         </div>
-      `, `<button onclick="saveIssue()" class="btn-primary w-full">Submit Ticket</button>`);
+      `, `
+        <button onclick="saveIssue()" class="btn-primary w-full flex items-center justify-center gap-2">
+          <i data-lucide="send" class="w-4 h-4"></i>
+          <span>Submit Support Ticket</span>
+        </button>
+      `);
+      lucide.createIcons();
     }
 
     async function saveIssue() {
-      const title = document.getElementById('m-iss-title').value;
-      const description = document.getElementById('m-iss-desc').value;
+      const title = document.getElementById('m-iss-title')?.value.trim();
+      const category = document.getElementById('m-iss-cat')?.value;
+      const priority = document.getElementById('m-iss-prio')?.value;
+      const description = document.getElementById('m-iss-desc')?.value.trim();
+
+      if (!title) return toast('Issue title is required', 'warning');
+      if (!description) return toast('Description is required', 'warning');
+
       try {
-        await api('POST', '/issues', { title, description });
-        toast('Support ticket submitted', 'success');
+        await api('POST', '/issues', { title, category, priority, description });
+        toast('Support ticket submitted successfully! 🎟️', 'success');
         closeModal();
         renderPage();
       } catch(e) {}

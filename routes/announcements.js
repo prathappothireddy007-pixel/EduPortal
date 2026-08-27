@@ -49,7 +49,7 @@ router.get('/', authenticate, async (req, res) => {
 
 // POST / - Admin creates and broadcasts an announcement
 router.post('/', authenticate, requireAdmin, async (req, res) => {
-  const { title, content, targetAudience, priority, isPinned } = req.body;
+  const { title, content, targetAudience, priority, isPinned, pdfB64, pdfName } = req.body;
   if (!title || !content) return res.status(400).json({ error: 'Title and content are required' });
 
   try {
@@ -58,10 +58,10 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
     const pinned = Boolean(isPinned);
 
     const r = await pool.query(
-      `INSERT INTO announcements (title, content, target_audience, priority, created_by, created_by_name, is_pinned)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO announcements (title, content, target_audience, priority, created_by, created_by_name, is_pinned, pdf_b64, pdf_name)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [title.trim(), content.trim(), audience, prio, req.user.id, req.user.name, pinned]
+      [title.trim(), content.trim(), audience, prio, req.user.id, req.user.name, pinned, pdfB64 || null, pdfName || null]
     );
 
     const newAnnouncement = r.rows[0];

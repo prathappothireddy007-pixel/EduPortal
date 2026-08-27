@@ -7,12 +7,12 @@ const { logAction, notify } = require('../services/audit');
 router.get('/', authenticate, async (req, res) => {
   try {
     const { student_id } = req.query;
-    const isFaculty = req.user.role === 'faculty';
+    const isStaff = req.user.role === 'faculty' || req.user.role === 'admin';
     const params = [];
     let idx = 1;
     let whereClause = 'WHERE 1=1';
 
-    if (!isFaculty) {
+    if (!isStaff) {
       whereClause += ` AND a.student_id = $${idx++}`;
       params.push(req.user.id);
     } else if (student_id) {

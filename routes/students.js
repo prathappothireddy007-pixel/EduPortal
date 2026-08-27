@@ -82,19 +82,26 @@ router.get('/faculty-list', authenticate, async (req, res) => {
   }
 });
 
-// GET all students (faculty) or own profile (student)
+// GET all users/students (faculty/admin) or own profile (student)
 router.get('/', authenticate, async (req, res) => {
   try {
-    if (req.user.role === 'faculty') {
-      const r = await pool.query(`
+    if (req.user.role === 'faculty' || req.user.role === 'admin') {
+      const { role } = req.query;
+      let query = `
         SELECT u.id, u.name, u.email, u.admin_id, u.parent_email, u.parent_phone,
                u.dob, u.class_id, u.role, u.department, u.designation, u.created_at,
                c.name as class_name
         FROM users u
         LEFT JOIN classes c ON u.class_id = c.id
         WHERE u.deleted_at IS NULL
-        ORDER BY u.role, u.admin_id, u.name
-      `);
+      `;
+      const params = [];
+      if (role) {
+        query += ` AND u.role = $1`;
+        params.push(role);
+      }
+      query += ` ORDER BY u.role, u.admin_id, u.name`;
+      const r = await pool.query(query, params);
       res.json(r.rows);
     } else {
       const r = await pool.query(
