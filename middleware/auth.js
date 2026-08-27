@@ -6,7 +6,7 @@ const authenticate = (req, res, next) => {
     return res.status(401).json({ error: 'No token provided' });
 
   try {
-    const decoded = jwt.verify(auth.split(' ')[1], process.env.JWT_SECRET);
+    const decoded = jwt.verify(auth.split(' ')[1], process.env.JWT_SECRET || 'supersecretjwtkey123');
     req.user = decoded;
     next();
   } catch {
@@ -14,9 +14,15 @@ const authenticate = (req, res, next) => {
   }
 };
 
+const requireAdmin = (req, res, next) => {
+  if (req.user.role !== 'admin')
+    return res.status(403).json({ error: 'Administrator access required' });
+  next();
+};
+
 const requireFaculty = (req, res, next) => {
-  if (req.user.role !== 'faculty')
-    return res.status(403).json({ error: 'Faculty access required' });
+  if (req.user.role !== 'faculty' && req.user.role !== 'admin')
+    return res.status(403).json({ error: 'Faculty or Admin access required' });
   next();
 };
 
@@ -26,4 +32,4 @@ const requireStudent = (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, requireFaculty, requireStudent };
+module.exports = { authenticate, requireAdmin, requireFaculty, requireStudent };

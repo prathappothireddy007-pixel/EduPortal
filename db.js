@@ -315,6 +315,7 @@ const initDB = async () => {
       `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS checkout_lat DOUBLE PRECISION`,
       `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS checkout_lng DOUBLE PRECISION`,
       `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS checkout_b64 TEXT`,
+      `ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`,
       `ALTER TABLE subjects ADD COLUMN IF NOT EXISTS subject_type VARCHAR(30) DEFAULT 'classroom'`,
       `ALTER TABLE subjects ADD COLUMN IF NOT EXISTS code VARCHAR(50)`,
       `ALTER TABLE subjects ADD COLUMN IF NOT EXISTS faculty_id INTEGER`,
@@ -324,6 +325,17 @@ const initDB = async () => {
       `ALTER TABLE enrollment_requests ADD COLUMN IF NOT EXISTS subject_id INTEGER`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS department VARCHAR(50)`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS designation VARCHAR(100)`,
+      `CREATE TABLE IF NOT EXISTS announcements (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        content TEXT NOT NULL,
+        target_audience VARCHAR(50) DEFAULT 'ALL',
+        priority VARCHAR(20) DEFAULT 'info',
+        created_by INTEGER,
+        created_by_name VARCHAR(255),
+        is_pinned BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW()
+      )`,
       `CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id)`,
       `CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date)`,
       `CREATE INDEX IF NOT EXISTS idx_grades_student ON grades(student_id)`,
@@ -347,20 +359,22 @@ const initDB = async () => {
       ON CONFLICT (key) DO NOTHING
     `);
 
-    // ── Seed default faculty admin ───────────────────────────────────────────
+    // ── Seed default admin ───────────────────────────────────────────────────
     const adminCheck = await client.query(
-      "SELECT id FROM users WHERE role='faculty' AND admin_id=$1 LIMIT 1",
+      "SELECT id, role FROM users WHERE admin_id=$1 LIMIT 1",
       [process.env.ADMIN_ID || '192411184']
     );
     if (adminCheck.rows.length === 0) {
       const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'katam@123', 10);
       await client.query(
-        `INSERT INTO users (role, name, email, admin_id, password_hash)
-         VALUES ($1,$2,$3,$4,$5)`,
-        ['faculty', 'Administrator', 'admin@eduportal.com',
-         process.env.ADMIN_ID || '192411184', hash]
+        `INSERT INTO users (role, name, email, admin_id, password_hash, designation)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        ['admin', 'Principal / Administrator', 'admin@eduportal.com',
+         process.env.ADMIN_ID || '192411184', hash, 'Institutional Administrator']
       );
-      console.log('✅ Default admin seeded');
+      console.log('✅ Default admin seeded with role=admin');
+    } else if (adminCheck.rows[0].role !== 'admin') {
+      await client.query("UPDATE users SET role='admin' WHERE id=$1", [adminCheck.rows[0].id]);
     }
 
     console.log('✅ Database initialized (v3.0 — full platform)');

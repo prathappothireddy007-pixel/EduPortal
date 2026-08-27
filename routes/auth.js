@@ -13,7 +13,13 @@ router.post('/login', async (req, res) => {
 
   try {
     let user;
-    if (role === 'faculty') {
+    if (role === 'admin') {
+      const r = await pool.query(
+        "SELECT * FROM users WHERE role='admin' AND (admin_id=$1 OR LOWER(email)=LOWER($1))",
+        [loginIdentifier]
+      );
+      user = r.rows[0];
+    } else if (role === 'faculty') {
       const r = await pool.query(
         "SELECT * FROM users WHERE role='faculty' AND (admin_id=$1 OR LOWER(email)=LOWER($1))",
         [loginIdentifier]
@@ -27,7 +33,7 @@ router.post('/login', async (req, res) => {
       user = r.rows[0];
     }
 
-    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!user) return res.status(401).json({ error: 'Invalid credentials or user role' });
 
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
@@ -41,8 +47,14 @@ router.post('/login', async (req, res) => {
     res.json({
       token,
       user: {
-        id: user.id, role: user.role, name: user.name,
-        email: user.email, classId: user.class_id, admin_id: user.admin_id
+        id: user.id,
+        role: user.role,
+        name: user.name,
+        email: user.email,
+        classId: user.class_id,
+        admin_id: user.admin_id,
+        department: user.department,
+        designation: user.designation
       }
     });
   } catch (err) {

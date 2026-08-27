@@ -48,6 +48,7 @@ app.use('/api/certificates',  require('./routes/certificates'));
 app.use('/api/audit',         require('./routes/audit'));
 app.use('/api/settings',      require('./routes/settings'));
 app.use('/api/recovery',      require('./routes/recovery'));
+app.use('/api/announcements', require('./routes/announcements'));
 
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({

@@ -191,9 +191,10 @@
       </div>
 
       <!-- Role Selector -->
-      <div class="grid grid-cols-2 gap-2 p-1 bg-white/5 rounded-xl mb-6 border border-white/10">
-        <button id="btn-role-faculty" onclick="setRole('faculty')" class="py-2.5 rounded-lg text-sm font-semibold transition-all bg-blue-600 text-white shadow-md">Faculty Portal</button>
-        <button id="btn-role-student" onclick="setRole('student')" class="py-2.5 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white">Student Portal</button>
+      <div class="grid grid-cols-3 gap-1.5 p-1 bg-white/5 rounded-xl mb-6 border border-white/10">
+        <button id="btn-role-admin" onclick="setRole('admin')" class="py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white">Admin</button>
+        <button id="btn-role-faculty" onclick="setRole('faculty')" class="py-2 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white shadow-md">Faculty</button>
+        <button id="btn-role-student" onclick="setRole('student')" class="py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white">Student</button>
       </div>
 
       <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
@@ -379,19 +380,26 @@
 
     function setRole(role) {
       S.role = role;
+      const bAdm = document.getElementById('btn-role-admin');
       const bFac = document.getElementById('btn-role-faculty');
       const bStu = document.getElementById('btn-role-student');
       const lbl = document.getElementById('login-id-label');
       const inp = document.getElementById('login-id');
 
-      if (role === 'faculty') {
-        bFac.className = 'py-2.5 rounded-lg text-sm font-semibold transition-all bg-blue-600 text-white shadow-md';
-        bStu.className = 'py-2.5 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white';
-        lbl.innerText = 'Faculty Admin ID or Email Address';
-        inp.placeholder = 'e.g. 2024FACCSE001 or 192411184';
+      const activeClass = 'py-2 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white shadow-md';
+      const inactiveClass = 'py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white';
+
+      if (bAdm) bAdm.className = role === 'admin' ? activeClass : inactiveClass;
+      if (bFac) bFac.className = role === 'faculty' ? activeClass : inactiveClass;
+      if (bStu) bStu.className = role === 'student' ? activeClass : inactiveClass;
+
+      if (role === 'admin') {
+        lbl.innerText = 'Institutional Admin ID or Email Address';
+        inp.placeholder = 'e.g. 192411184 or admin@eduportal.com';
+      } else if (role === 'faculty') {
+        lbl.innerText = 'Faculty ID or Institutional Email';
+        inp.placeholder = 'e.g. 2024FACCSE001';
       } else {
-        bStu.className = 'py-2.5 rounded-lg text-sm font-semibold transition-all bg-blue-600 text-white shadow-md';
-        bFac.className = 'py-2.5 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white';
         lbl.innerText = 'Student Register Number (Reg No) or Email';
         inp.placeholder = 'e.g. 2024CSE001';
       }
@@ -426,13 +434,34 @@
       toast('Signed out successfully', 'info');
     }
 
-    // --- NAVIGATION DEFINITION ---
+    // --- NAVIGATION DEFINITIONS FOR ADMIN, FACULTY, AND STUDENT ---
+    const ADMIN_NAV = [
+      { section: 'ADMINISTRATION', items: [
+        { tab: 'dashboard', label: 'Admin Dashboard', icon: 'home' },
+        { tab: 'announcements', label: 'Broadcast Notices', icon: 'megaphone' },
+        { tab: 'faculty-users', label: 'Faculty Appointments', icon: 'shield-check' },
+        { tab: 'students', label: 'Student Admissions', icon: 'users' }
+      ]},
+      { section: 'ACADEMIC OVERSIGHT', items: [
+        { tab: 'subjects', label: 'Courses & Curriculum', icon: 'book-open' },
+        { tab: 'classrooms', label: 'Campus Classrooms', icon: 'building-2' },
+        { tab: 'academic-risk', label: 'Academic Risk Engine', icon: 'alert-triangle' },
+        { tab: 'events', label: 'Institutional Events', icon: 'star' }
+      ]},
+      { section: 'SECURITY & SYSTEM', items: [
+        { tab: 'audit-logs', label: 'Security Audit Trail', icon: 'activity' },
+        { tab: 'settings', label: 'Global System Settings', icon: 'settings' }
+      ]}
+    ];
+
     const FACULTY_NAV = [
-      { section: 'DASHBOARD', items: [{ tab: 'dashboard', label: 'Dashboard', icon: 'home' }] },
+      { section: 'DASHBOARD', items: [
+        { tab: 'dashboard', label: 'Dashboard', icon: 'home' },
+        { tab: 'announcements', label: 'Campus Announcements', icon: 'megaphone' }
+      ]},
       { section: 'ACADEMICS', items: [
-        { tab: 'students', label: 'Students Directory', icon: 'users' },
-        { tab: 'faculty-users', label: 'Faculty Management', icon: 'shield-check' },
         { tab: 'subjects', label: 'Courses & Subjects Master', icon: 'book-open' },
+        { tab: 'students', label: 'Students Directory', icon: 'users' },
         { tab: 'gradebook', label: 'Academic Gradebook', icon: 'award' },
         { tab: 'evaluation', label: 'PPT Report Generator', icon: 'bar-chart-2' }
       ]},
@@ -450,15 +479,14 @@
         { tab: 'issues', label: 'Student Support Desk', icon: 'message-square' },
         { tab: 'documents', label: 'Digital Vault', icon: 'file-text' },
         { tab: 'achievements', label: 'Achievements Review', icon: 'trophy' },
-        { tab: 'certificates', label: 'Certificate Generator', icon: 'medal' },
-        { tab: 'audit-logs', label: 'System Audit Logs', icon: 'activity' },
-        { tab: 'settings', label: 'Global Settings', icon: 'settings' }
+        { tab: 'certificates', label: 'Certificate Generator', icon: 'medal' }
       ]}
     ];
 
     const STUDENT_NAV = [
       { section: 'MY ACADEMICS', items: [
         { tab: 'dashboard', label: 'Overview', icon: 'home' },
+        { tab: 'announcements', label: 'Campus Notices', icon: 'megaphone' },
         { tab: 'course-enrollment', label: 'Course Enrollment', icon: 'book-plus' },
         { tab: 'grades', label: 'My Grades & Scores', icon: 'award' },
         { tab: 'what-if', label: 'What-If Simulator', icon: 'zap' },
@@ -480,7 +508,7 @@
 
     function renderNav() {
       const navContainer = document.getElementById('nav-container');
-      const navStructure = S.user.role === 'faculty' ? FACULTY_NAV : STUDENT_NAV;
+      const navStructure = S.user.role === 'admin' ? ADMIN_NAV : S.user.role === 'faculty' ? FACULTY_NAV : STUDENT_NAV;
       
       let html = '';
       navStructure.forEach(sec => {
@@ -575,11 +603,25 @@
       main.innerHTML = `<div class="flex items-center justify-center h-64"><div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>`;
 
       try {
-        if (S.user.role === 'faculty') {
+        if (S.user.role === 'admin') {
+          switch(S.tab) {
+            case 'dashboard': title.innerText = 'Institutional Admin Dashboard'; await renderAdminDashboard(main); break;
+            case 'announcements': title.innerText = 'Campus Announcements & Broadcasts'; await renderAnnouncements(main); break;
+            case 'faculty-users': title.innerText = 'Faculty Appointments & Accounts'; await renderFacultyUsers(main); break;
+            case 'students': title.innerText = 'Engineering Students Directory'; await renderStudentsDirectory(main); break;
+            case 'subjects': title.innerText = 'Courses & Subjects Master Catalog'; await renderSubjects(main); break;
+            case 'classrooms': title.innerText = 'Classrooms & Campus Status'; await renderClassrooms(main); break;
+            case 'academic-risk': title.innerText = 'Early Academic Risk Engine'; await renderAcademicRisk(main); break;
+            case 'events': title.innerText = 'Campus Events & Conferences'; await renderEvents(main); break;
+            case 'audit-logs': title.innerText = 'Security & System Audit Logs'; await renderAuditLogs(main); break;
+            case 'settings': title.innerText = 'System Global Settings'; await renderSettings(main); break;
+            default: await renderAdminDashboard(main);
+          }
+        } else if (S.user.role === 'faculty') {
           switch(S.tab) {
             case 'dashboard': title.innerText = 'Faculty Dashboard'; await renderFacultyDashboard(main); break;
+            case 'announcements': title.innerText = 'Campus Announcements'; await renderAnnouncements(main); break;
             case 'students': title.innerText = 'Engineering Students Directory'; await renderStudentsDirectory(main); break;
-            case 'faculty-users': title.innerText = 'Faculty User Management'; await renderFacultyUsers(main); break;
             case 'subjects': title.innerText = 'Courses & Subjects Master Catalog'; await renderSubjects(main); break;
             case 'gradebook': title.innerText = 'Academic Gradebook'; await renderGradebook(main); break;
             case 'evaluation': title.innerText = 'Student Performance Evaluation'; await renderEvaluation(main); break;
@@ -593,13 +635,12 @@
             case 'documents': title.innerText = 'Institutional Digital Vault'; await renderDocuments(main); break;
             case 'achievements': title.innerText = 'Student Achievements Review'; await renderAchievements(main); break;
             case 'certificates': title.innerText = 'Certificate Generation & Verification'; await renderCertificates(main); break;
-            case 'audit-logs': title.innerText = 'System Security Audit Logs'; await renderAuditLogs(main); break;
-            case 'settings': title.innerText = 'System Configuration'; await renderSettings(main); break;
             default: await renderFacultyDashboard(main);
           }
         } else {
           switch(S.tab) {
             case 'dashboard': title.innerText = 'Student Overview'; await renderStudentDashboard(main); break;
+            case 'announcements': title.innerText = 'Campus Announcements & Notices'; await renderAnnouncements(main); break;
             case 'course-enrollment': title.innerText = 'Course Catalog & Enrollment'; await renderStudentCourseEnrollment(main); break;
             case 'grades': title.innerText = 'My Academic Marks & Grades'; await renderStudentGrades(main); break;
             case 'what-if': title.innerText = 'What-If Grade Simulator'; await renderWhatIfSimulator(main); break;
@@ -621,13 +662,314 @@
       lucide.createIcons();
     }
 
+    // --- ADMIN VIEWS ---
+    async function renderAdminDashboard(container) {
+      const [allUsers, subjects, classrooms, issues, announcements] = await Promise.all([
+        api('GET', '/students'),
+        api('GET', '/subjects'),
+        api('GET', '/classrooms'),
+        api('GET', '/issues'),
+        api('GET', '/announcements')
+      ]);
+
+      const students = allUsers.filter(u => u.role === 'student');
+      const faculty = allUsers.filter(u => u.role === 'faculty');
+      const openIssues = issues.filter(i => i.status === 'open' || i.status === 'in_progress').length;
+
+      container.innerHTML = `
+        <div class="space-y-8 animate-fade-in">
+          <!-- Top Welcome Header -->
+          <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-purple-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="badge badge-purple text-[10px] uppercase tracking-wider">INSTITUTIONAL ADMINISTRATION</span>
+                <span class="text-xs text-slate-400 font-mono">Principal / Admin Authority</span>
+              </div>
+              <h3 class="text-2xl font-black text-white mt-1">Welcome, ${S.user.name} 🏛️</h3>
+              <p class="text-xs text-slate-400">Campus administration, faculty governance, admissions, and announcement broadcasting.</p>
+            </div>
+            <button onclick="openBroadcastAnnouncementModal()" class="btn-primary flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600">
+              <i data-lucide="megaphone" class="w-4 h-4"></i>
+              <span>Broadcast Announcement</span>
+            </button>
+          </div>
+
+          <!-- Admin Metric Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="glass-card stat-card stat-blue p-6 rounded-2xl">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Enrolled Students</p>
+              <div class="flex items-baseline justify-between mt-3">
+                <h4 class="text-3xl font-extrabold text-white">${students.length}</h4>
+                <span class="badge badge-blue">Admissions</span>
+              </div>
+            </div>
+
+            <div class="glass-card stat-card stat-purple p-6 rounded-2xl">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Appointed Faculty</p>
+              <div class="flex items-baseline justify-between mt-3">
+                <h4 class="text-3xl font-extrabold text-purple-400">${faculty.length}</h4>
+                <span class="badge badge-purple">Staff</span>
+              </div>
+            </div>
+
+            <div class="glass-card stat-card stat-emerald p-6 rounded-2xl">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Curriculum Courses</p>
+              <div class="flex items-baseline justify-between mt-3">
+                <h4 class="text-3xl font-extrabold text-emerald-400">${subjects.length}</h4>
+                <span class="badge badge-emerald">Launched</span>
+              </div>
+            </div>
+
+            <div class="glass-card stat-card stat-rose p-6 rounded-2xl">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Campus Helpdesk Tickets</p>
+              <div class="flex items-baseline justify-between mt-3">
+                <h4 class="text-3xl font-extrabold text-rose-400">${openIssues}</h4>
+                <span class="badge badge-rose">Attention</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Campus Announcements Section -->
+          <div class="glass-panel p-6 rounded-2xl border border-white/10 space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i data-lucide="megaphone" class="w-5 h-5 text-purple-400"></i>
+                <h4 class="font-extrabold text-base text-white">Active Campus Announcements & Broadcasts</h4>
+              </div>
+              <button onclick="switchTab('announcements')" class="text-xs text-blue-400 hover:text-blue-300 font-semibold">View All Notices →</button>
+            </div>
+
+            ${announcements.length === 0 ? `
+              <div class="text-center py-6 text-slate-400 text-xs">
+                <p>No active broadcast notices currently.</p>
+                <button onclick="openBroadcastAnnouncementModal()" class="text-blue-400 hover:underline mt-1 font-semibold">Post your first announcement</button>
+              </div>
+            ` : `
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                ${announcements.slice(0, 4).map(a => `
+                  <div class="p-4 rounded-xl ${a.is_pinned ? 'bg-purple-950/20 border border-purple-500/30' : 'bg-white/[0.02] border border-white/10'} space-y-2">
+                    <div class="flex items-center justify-between">
+                      <span class="badge ${a.priority === 'urgent' ? 'badge-rose' : a.priority === 'academic' ? 'badge-blue' : a.priority === 'event' ? 'badge-purple' : 'badge-emerald'} text-[10px]">
+                        ${a.priority ? a.priority.toUpperCase() : 'INFO'}
+                      </span>
+                      ${a.is_pinned ? '<span class="text-[10px] text-purple-400 font-bold">📌 PINNED</span>' : ''}
+                    </div>
+                    <h5 class="font-bold text-white text-sm leading-snug">${a.title}</h5>
+                    <p class="text-xs text-slate-400 line-clamp-2">${a.content}</p>
+                    <div class="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-white/5">
+                      <span>Audience: <b class="text-slate-400">${a.target_audience}</b></span>
+                      <span>${new Date(a.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+
+          <!-- Quick Governance Actions Grid -->
+          <div>
+            <h4 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Administration Operations</h4>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <button onclick="openBroadcastAnnouncementModal()" class="glass-card p-4 rounded-xl text-left flex items-center gap-3">
+                <div class="p-2.5 rounded-lg bg-purple-500/10 text-purple-400"><i data-lucide="megaphone" class="w-5 h-5"></i></div>
+                <div><p class="text-sm font-bold text-white">Broadcast Notice</p><p class="text-xs text-slate-500">Post campus announcement</p></div>
+              </button>
+              <button onclick="openAddFacultyModal()" class="glass-card p-4 rounded-xl text-left flex items-center gap-3">
+                <div class="p-2.5 rounded-lg bg-blue-500/10 text-blue-400"><i data-lucide="user-plus" class="w-5 h-5"></i></div>
+                <div><p class="text-sm font-bold text-white">Appoint Faculty</p><p class="text-xs text-slate-500">Generate Faculty ID</p></div>
+              </button>
+              <button onclick="openAddStudentModal()" class="glass-card p-4 rounded-xl text-left flex items-center gap-3">
+                <div class="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-400"><i data-lucide="users" class="w-5 h-5"></i></div>
+                <div><p class="text-sm font-bold text-white">Student Admission</p><p class="text-xs text-slate-500">Auto Reg No enrollment</p></div>
+              </button>
+              <button onclick="switchTab('audit-logs')" class="glass-card p-4 rounded-xl text-left flex items-center gap-3">
+                <div class="p-2.5 rounded-lg bg-amber-500/10 text-amber-400"><i data-lucide="activity" class="w-5 h-5"></i></div>
+                <div><p class="text-sm font-bold text-white">Audit Trail</p><p class="text-xs text-slate-500">Security event logs</p></div>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    // --- ANNOUNCEMENTS PAGE (ALL ROLES) ---
+    async function renderAnnouncements(container) {
+      const announcements = await api('GET', '/announcements');
+      const isAdmin = S.user.role === 'admin';
+
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-xl font-extrabold text-white tracking-tight">Institutional Announcements & Notices</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Official broadcasts from College Administration & Principal's Office.</p>
+            </div>
+            ${isAdmin ? `
+              <button onclick="openBroadcastAnnouncementModal()" class="btn-primary flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600">
+                <i data-lucide="megaphone" class="w-4 h-4"></i>
+                <span>Broadcast New Announcement</span>
+              </button>
+            ` : ''}
+          </div>
+
+          <div class="space-y-4">
+            ${announcements.length === 0 ? `
+              <div class="glass-panel p-12 rounded-2xl text-center text-slate-400">
+                <i data-lucide="bell-off" class="w-10 h-10 mx-auto mb-3 text-slate-500"></i>
+                <h4 class="text-base font-bold text-white">No active announcements</h4>
+                <p class="text-xs text-slate-500 mt-1">Official notices and alerts from administration will appear here.</p>
+              </div>
+            ` : announcements.map(a => `
+              <div class="glass-panel p-6 rounded-2xl border ${a.is_pinned ? 'border-purple-500/40 bg-purple-950/10 shadow-lg' : 'border-white/10'} space-y-3 relative overflow-hidden">
+                ${a.is_pinned ? '<div class="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-bl-full pointer-events-none"></div>' : ''}
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="badge ${a.priority === 'urgent' ? 'badge-rose' : a.priority === 'academic' ? 'badge-blue' : a.priority === 'event' ? 'badge-purple' : 'badge-emerald'} text-xs">
+                      ${a.priority === 'urgent' ? '🚨 URGENT' : a.priority === 'academic' ? '📚 ACADEMIC' : a.priority === 'event' ? '🎉 EVENT' : 'ℹ️ GENERAL'}
+                    </span>
+                    ${a.is_pinned ? '<span class="badge badge-purple text-[10px]">📌 PINNED</span>' : ''}
+                    <span class="badge badge-blue text-[10px]">Audience: ${a.target_audience}</span>
+                  </div>
+                  <span class="text-xs text-slate-400 font-mono">${new Date(a.created_at).toLocaleString()}</span>
+                </div>
+
+                <h4 class="text-xl font-extrabold text-white tracking-tight">${a.title}</h4>
+                <p class="text-sm text-slate-300 whitespace-pre-line leading-relaxed">${a.content}</p>
+
+                <div class="pt-3 border-t border-white/10 flex items-center justify-between text-xs">
+                  <div class="flex items-center gap-2 text-slate-400">
+                    <i data-lucide="user-check" class="w-4 h-4 text-purple-400"></i>
+                    <span>Posted by: <b class="text-white">${a.author_name || 'Administration'}</b></span>
+                  </div>
+
+                  ${isAdmin ? `
+                    <div class="flex items-center gap-2">
+                      <button onclick="togglePinAnnouncement(${a.id})" class="text-slate-400 hover:text-purple-400 text-xs px-2.5 py-1 rounded-lg hover:bg-white/5 font-medium flex items-center gap-1">
+                        <i data-lucide="pin" class="w-3.5 h-3.5"></i>
+                        <span>${a.is_pinned ? 'Unpin' : 'Pin to Top'}</span>
+                      </button>
+                      <button onclick="deleteAnnouncement(${a.id})" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-white/5" title="Delete Announcement">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    function openBroadcastAnnouncementModal() {
+      openModal('Broadcast Institutional Announcement', `
+        <div class="space-y-4 text-left">
+          <!-- Title -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Announcement Title</label>
+            <input type="text" id="m-ann-title" placeholder="e.g. End Semester Exam Schedule & Lab Guidelines" class="glass-input w-full font-medium" required>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <!-- Target Audience -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Target Audience</label>
+              <select id="m-ann-target" class="glass-input w-full font-medium">
+                <option value="ALL" selected>All Campus (Faculty & Students)</option>
+                <option value="faculty">Faculty Members Only</option>
+                <option value="student">Students Only</option>
+                <option value="CSE">Department of CSE</option>
+                <option value="IT">Department of IT</option>
+                <option value="AIDS">Department of AI&DS</option>
+                <option value="ECE">Department of ECE</option>
+                <option value="EEE">Department of EEE</option>
+                <option value="MECH">Department of MECH</option>
+                <option value="CIVIL">Department of CIVIL</option>
+              </select>
+            </div>
+
+            <!-- Priority -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Priority / Type</label>
+              <select id="m-ann-priority" class="glass-input w-full font-medium">
+                <option value="info" selected>General Information (Info)</option>
+                <option value="urgent">Urgent Notice (High Priority)</option>
+                <option value="academic">Academic & Examinations</option>
+                <option value="event">Campus Event / Festival</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Message Content -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Announcement Content</label>
+            <textarea id="m-ann-content" rows="4" placeholder="Write your broadcast message to be delivered to all selected campus members..." class="glass-input w-full font-normal text-sm" required></textarea>
+          </div>
+
+          <!-- Pin Checkbox -->
+          <div class="flex items-center gap-2 pt-1">
+            <input type="checkbox" id="m-ann-pin" class="w-4 h-4 text-purple-600 rounded bg-white/5 border-white/20">
+            <label for="m-ann-pin" class="text-xs font-semibold text-purple-400 cursor-pointer">
+              Pin this Announcement to the Top of Campus Feeds
+            </label>
+          </div>
+        </div>
+      `, `
+        <button onclick="saveAnnouncement()" class="btn-primary w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600">
+          <i data-lucide="send" class="w-4 h-4"></i>
+          <span>Broadcast Announcement</span>
+        </button>
+      `);
+
+      lucide.createIcons();
+    }
+
+    async function saveAnnouncement() {
+      const title = document.getElementById('m-ann-title')?.value.trim();
+      const targetAudience = document.getElementById('m-ann-target')?.value || 'ALL';
+      const priority = document.getElementById('m-ann-priority')?.value || 'info';
+      const content = document.getElementById('m-ann-content')?.value.trim();
+      const isPinned = document.getElementById('m-ann-pin')?.checked;
+
+      if (!title) return toast('Announcement title is required', 'warning');
+      if (!content) return toast('Announcement content is required', 'warning');
+
+      try {
+        await api('POST', '/announcements', { title, content, targetAudience, priority, isPinned });
+        toast('Announcement broadcasted to campus! 📢', 'success');
+        closeModal();
+        renderPage();
+      } catch(e) {}
+    }
+
+    async function togglePinAnnouncement(id) {
+      try {
+        await api('PUT', `/announcements/${id}/pin`);
+        toast('Announcement pinned status updated', 'success');
+        renderPage();
+      } catch(e) {}
+    }
+
+    async function deleteAnnouncement(id) {
+      if (!confirm('Are you sure you want to delete this announcement?')) return;
+      try {
+        await api('DELETE', `/announcements/${id}`);
+        toast('Announcement deleted', 'info');
+        renderPage();
+      } catch(e) {}
+    }
+
     // --- FACULTY VIEWS ---
     async function renderFacultyDashboard(container) {
-      const [students, classes, odReqs, issues] = await Promise.all([
+      const [students, subjects, odReqs, issues, announcements] = await Promise.all([
         api('GET', '/students'),
-        api('GET', '/classes'),
+        api('GET', '/subjects'),
         api('GET', '/od'),
-        api('GET', '/issues')
+        api('GET', '/issues'),
+        api('GET', '/announcements')
       ]);
 
       const pendingOD = odReqs.filter(o => o.status === 'pending' || o.status === 'geo_submitted').length;
@@ -636,16 +978,44 @@
       container.innerHTML = `
         <div class="space-y-8 animate-fade-in">
           <!-- Top Welcome Header -->
-          <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-blue-500 flex items-center justify-between">
+          <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-blue-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h3 class="text-2xl font-extrabold text-white">Good Morning, ${S.user.name} 👋</h3>
-              <p class="text-sm text-slate-400 mt-1">Here is what's happening across campus today.</p>
+              <div class="flex items-center gap-2">
+                <span class="badge badge-blue text-[10px] uppercase tracking-wider">FACULTY PORTAL</span>
+              </div>
+              <h3 class="text-2xl font-extrabold text-white mt-1">Good Morning, ${S.user.name} 👋</h3>
+              <p class="text-xs text-slate-400">Manage courses, mark attendance, verify ODs, and evaluate student performances.</p>
             </div>
-            <button onclick="switchTab('academic-risk')" class="btn-primary">
+            <button onclick="switchTab('academic-risk')" class="btn-primary flex items-center gap-2">
               <i data-lucide="shield-alert" class="w-4 h-4"></i>
               <span>Run Risk Check</span>
             </button>
           </div>
+
+          <!-- Campus Announcements Widget for Faculty -->
+          ${announcements && announcements.length > 0 ? `
+            <div class="glass-panel p-5 rounded-2xl border border-purple-500/30 bg-purple-950/15 space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 text-purple-400 font-bold text-sm">
+                  <i data-lucide="megaphone" class="w-4 h-4"></i>
+                  <span>Official Campus Announcements</span>
+                </div>
+                <button onclick="switchTab('announcements')" class="text-xs text-purple-300 hover:underline">View All →</button>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                ${announcements.slice(0, 2).map(a => `
+                  <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                      <span class="badge ${a.priority === 'urgent' ? 'badge-rose' : 'badge-purple'} text-[9px]">${a.priority ? a.priority.toUpperCase() : 'INFO'}</span>
+                      <span class="text-[10px] text-slate-400 font-mono">${new Date(a.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <h5 class="font-bold text-white text-xs">${a.title}</h5>
+                    <p class="text-[11px] text-slate-300 line-clamp-2">${a.content}</p>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
 
           <!-- High-Quality Metric Cards -->
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -658,9 +1028,9 @@
             </div>
 
             <div class="glass-card stat-card stat-purple p-6 rounded-2xl">
-              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Batches / Classes</p>
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Curriculum Courses</p>
               <div class="flex items-baseline justify-between mt-3">
-                <h4 class="text-3xl font-extrabold text-white">${classes.length}</h4>
+                <h4 class="text-3xl font-extrabold text-white">${subjects.length}</h4>
                 <span class="badge badge-purple">Active</span>
               </div>
             </div>
@@ -2066,15 +2436,55 @@
 
     // --- STUDENT VIEWS ---
     async function renderStudentDashboard(container) {
-      const currentClass = await api('GET', '/timetable/student/current-class');
+      const [currentClass, announcements] = await Promise.all([
+        api('GET', '/timetable/student/current-class'),
+        api('GET', '/announcements')
+      ]);
 
       container.innerHTML = `
         <div class="space-y-8 animate-fade-in">
           <!-- Personalized Greeting Header -->
-          <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-blue-500">
-            <h3 class="text-2xl font-extrabold text-white">Good Morning, ${S.user.name} 👋</h3>
-            <p class="text-sm text-slate-400 mt-1">Here is your academic overview for today.</p>
+          <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-blue-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="badge badge-emerald text-[10px] uppercase tracking-wider">STUDENT PORTAL</span>
+                <span class="text-xs text-slate-400 font-mono">${S.user.admin_id || ''}</span>
+              </div>
+              <h3 class="text-2xl font-extrabold text-white mt-1">Good Morning, ${S.user.name} 👋</h3>
+              <p class="text-xs text-slate-400">Review your curriculum progress, attend scheduled lectures, and track performance.</p>
+            </div>
+            <button onclick="switchTab('course-enrollment')" class="btn-primary flex items-center gap-2">
+              <i data-lucide="book-plus" class="w-4 h-4"></i>
+              <span>Course Catalog</span>
+            </button>
           </div>
+
+          <!-- Official Campus Announcements Banner for Student -->
+          ${announcements && announcements.length > 0 ? `
+            <div class="glass-panel p-5 rounded-2xl border border-purple-500/30 bg-purple-950/15 space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 text-purple-400 font-bold text-sm">
+                  <i data-lucide="megaphone" class="w-4 h-4"></i>
+                  <span>Institutional Notices & Announcements</span>
+                </div>
+                <button onclick="switchTab('announcements')" class="text-xs text-purple-300 hover:underline font-semibold">View All Notices →</button>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                ${announcements.slice(0, 2).map(a => `
+                  <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                      <span class="badge ${a.priority === 'urgent' ? 'badge-rose' : a.priority === 'academic' ? 'badge-blue' : 'badge-purple'} text-[9px]">
+                        ${a.priority ? a.priority.toUpperCase() : 'INFO'}
+                      </span>
+                      <span class="text-[10px] text-slate-400 font-mono">${new Date(a.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <h5 class="font-bold text-white text-xs">${a.title}</h5>
+                    <p class="text-[11px] text-slate-300 line-clamp-2">${a.content}</p>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
 
           <!-- PROMINENT "WHERE IS MY CLASS?" CARD -->
           <div class="glass-panel p-8 rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-900/20 via-slate-900/40 to-slate-900/60 shadow-xl relative overflow-hidden">
