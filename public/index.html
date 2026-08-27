@@ -494,9 +494,10 @@
       { section: 'MY ACADEMICS', items: [
         { tab: 'dashboard', label: 'Overview', icon: 'home' },
         { tab: 'announcements', label: 'Campus Notices', icon: 'megaphone' },
-        { tab: 'course-enrollment', label: 'Course Enrollment', icon: 'book-plus' },
-        { tab: 'grades', label: 'My 5-Tier Marks & Grades', icon: 'award' },
+        { tab: 'course-enrollment', label: 'Course Catalog', icon: 'book-plus' },
+        { tab: 'grades', label: 'Internal Marks', icon: 'award' },
         { tab: 'hall-ticket', label: 'University Hall Ticket', icon: 'ticket' },
+        { tab: 'results', label: 'Semester Results & Grades', icon: 'file-check' },
         { tab: 'what-if', label: 'What-If Simulator', icon: 'zap' },
         { tab: 'attendance-calc', label: 'Attendance Shortage', icon: 'calculator' }
       ]},
@@ -655,8 +656,9 @@
             case 'dashboard': title.innerText = 'Student Overview'; await renderStudentDashboard(main); break;
             case 'announcements': title.innerText = 'Campus Announcements & Notices'; await renderAnnouncements(main); break;
             case 'course-enrollment': title.innerText = 'Course Catalog & Enrollment'; await renderStudentCourseEnrollment(main); break;
-            case 'grades': title.innerText = 'My 5-Tier Marks & Academic Divisions'; await renderStudentGrades(main); break;
+            case 'grades': title.innerText = 'My Internal Marks & Academic Progress'; await renderStudentGrades(main); break;
             case 'hall-ticket': title.innerText = 'University Examination Hall Ticket'; await renderStudentHallTicket(main); break;
+            case 'results': title.innerText = 'Semester Examination Results & Grade Sheet'; await renderStudentResults(main); break;
             case 'what-if': title.innerText = 'What-If Grade Simulator'; await renderWhatIfSimulator(main); break;
             case 'attendance-calc': title.innerText = 'Attendance Shortage Calculator'; await renderAttendanceCalculator(main); break;
             case 'where-is-my-class': title.innerText = 'Where Is My Class?'; await renderWhereIsMyClass(main); break;
@@ -1882,160 +1884,275 @@
       } catch(e) {}
     }
 
-    // --- 5-TIER ACADEMIC GRADEBOOK & MARKS ENTRY ---
+    // --- MULTI-PHASE ACADEMIC GRADEBOOK & RESULTS ENGINE (FACULTY/ADMIN) ---
+    let currentGradebookTab = 'phase1';
+
     async function renderGradebook(container) {
-      const [allUsers, subjects, grades] = await Promise.all([
+      const [allUsers, subjects, grades, htRequests] = await Promise.all([
         api('GET', '/students'),
         api('GET', '/subjects'),
-        api('GET', '/grades')
+        api('GET', '/grades'),
+        api('GET', '/grades/hall-ticket/requests')
       ]);
 
       const students = allUsers.filter(u => u.role === 'student');
+      const pendingHtCount = htRequests.filter(r => r.status === 'requested').length;
 
       container.innerHTML = `
         <div class="space-y-8 animate-fade-in">
-          <!-- Gradebook Header -->
-          <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-blue-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="badge badge-purple text-[10px] uppercase tracking-wider">5 ACADEMIC DIVISIONS (MAX: 500 MARKS)</span>
-                <span class="text-xs text-blue-400 font-mono">Internal: 400 | Univ Exam: 100</span>
-              </div>
-              <h3 class="text-xl font-black text-white mt-1">Academic Gradebook & Internal Assessment Engine</h3>
-              <p class="text-xs text-slate-400">Record marks across Continuous Assessments, Capstone, Class Lab, University Lab, and University Theory Exam.</p>
-            </div>
-            <button onclick="openCloseCourseModal()" class="btn-secondary flex items-center gap-2 border-purple-500/30 text-purple-300 hover:bg-purple-500/10">
-              <i data-lucide="lock" class="w-4 h-4 text-purple-400"></i>
-              <span>Close Course for Exams & Unlock Hall Tickets</span>
-            </button>
-          </div>
-
-          <!-- 5-Division Marks Entry Form -->
-          <div class="glass-panel p-6 rounded-2xl border border-white/10 space-y-6">
-            <h4 class="text-base font-extrabold text-white flex items-center gap-2">
-              <i data-lucide="edit-3" class="w-5 h-5 text-blue-400"></i>
-              <span>Enter / Update Student Division Marks</span>
-            </h4>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <!-- Student Selection (Filtered to ONLY students) -->
+          <!-- Gradebook Header with Lifecycle Stepper -->
+          <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-blue-500 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  1. Select Student (Filtered Students Only)
-                </label>
-                <select id="gb-student" class="glass-input w-full font-medium">
-                  ${students.length === 0 ? '<option value="">No enrolled students found</option>' : students.map(s => `
-                    <option value="${s.id}">${s.name} (${s.admin_id || 'No RegNo'} - ${s.department || 'Dept'})</option>
-                  `).join('')}
-                </select>
+                <div class="flex items-center gap-2">
+                  <span class="badge badge-purple text-[10px] uppercase tracking-wider">5 ACADEMIC DIVISIONS LIFECYCLE</span>
+                  <span class="text-xs text-blue-400 font-mono">400 Internal | 100 Univ Exam | 500 Grand Total</span>
+                </div>
+                <h3 class="text-xl font-black text-white mt-1">Academic Gradebook, Hall Ticket & Results Engine</h3>
+                <p class="text-xs text-slate-400">Step 1: Enter Phase 1 Marks → Step 2: Close Course Launch → Step 3: Approve Hall Tickets → Step 4: Enter Phase 2 Marks → Step 5: Final Univ Exam & Publish Results.</p>
               </div>
-
-              <!-- Subject Selection -->
-              <div>
-                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                  2. Select Curriculum Course / Subject
-                </label>
-                <select id="gb-subject" class="glass-input w-full font-medium">
-                  ${subjects.map(s => `
-                    <option value="${s.id}">${s.code ? s.code + ' — ' : ''}${s.name} ${s.is_closed ? '(Closed for Exam)' : ''}</option>
-                  `).join('')}
-                </select>
+              <div class="flex items-center gap-3">
+                <button onclick="openCloseCourseModal()" class="btn-secondary flex items-center gap-2 border-purple-500/30 text-purple-300 hover:bg-purple-500/10">
+                  <i data-lucide="lock" class="w-4 h-4 text-purple-400"></i>
+                  <span>Close Course Launch for Exams</span>
+                </button>
               </div>
             </div>
 
-            <!-- The 5 Academic Divisions Grid -->
-            <div>
-              <label class="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">
-                3. Enter Marks for Academic Divisions (Each Division carries 100 Marks)
-              </label>
-              
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                <!-- Div 1: Assessments -->
-                <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
-                  <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-white">Div 1: Assessments</span>
-                    <span class="text-[10px] text-slate-400 font-mono">/ 100</span>
-                  </div>
-                  <input type="number" id="gb-d1" min="0" max="100" placeholder="0 - 100" oninput="recalcDivisionsTotal()"
-                         class="glass-input w-full font-mono text-center font-bold text-white text-sm">
-                  <p class="text-[10px] text-slate-500">Continuous Assessment / CAT</p>
-                </div>
-
-                <!-- Div 2: Capstone -->
-                <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
-                  <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-white">Div 2: Capstone</span>
-                    <span class="text-[10px] text-slate-400 font-mono">/ 100</span>
-                  </div>
-                  <input type="number" id="gb-d2" min="0" max="100" placeholder="0 - 100" oninput="recalcDivisionsTotal()"
-                         class="glass-input w-full font-mono text-center font-bold text-white text-sm">
-                  <p class="text-[10px] text-slate-500">Capstone Project Work</p>
-                </div>
-
-                <!-- Div 3: Class Lab -->
-                <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
-                  <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-white">Div 3: Class Lab</span>
-                    <span class="text-[10px] text-slate-400 font-mono">/ 100</span>
-                  </div>
-                  <input type="number" id="gb-d3" min="0" max="100" placeholder="0 - 100" oninput="recalcDivisionsTotal()"
-                         class="glass-input w-full font-mono text-center font-bold text-white text-sm">
-                  <p class="text-[10px] text-slate-500">Practical & Lab Continuous</p>
-                </div>
-
-                <!-- Div 4: Univ Lab -->
-                <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
-                  <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-white">Div 4: Univ Lab</span>
-                    <span class="text-[10px] text-slate-400 font-mono">/ 100</span>
-                  </div>
-                  <input type="number" id="gb-d4" min="0" max="100" placeholder="0 - 100" oninput="recalcDivisionsTotal()"
-                         class="glass-input w-full font-mono text-center font-bold text-white text-sm">
-                  <p class="text-[10px] text-slate-500">University Practical Exam</p>
-                </div>
-
-                <!-- Div 5: Univ Exam -->
-                <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
-                  <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-white">Div 5: Univ Exam</span>
-                    <span class="text-[10px] text-slate-400 font-mono">/ 100</span>
-                  </div>
-                  <input type="number" id="gb-d5" min="0" max="100" placeholder="0 - 100" oninput="recalcDivisionsTotal()"
-                         class="glass-input w-full font-mono text-center font-bold text-white text-sm">
-                  <p class="text-[10px] text-slate-500">Main University Theory Exam</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Live Calculation Summary Pill -->
-            <div class="p-4 rounded-xl bg-gradient-to-r from-blue-950/30 to-purple-950/30 border border-blue-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div class="flex items-center gap-6">
-                <div>
-                  <p class="text-[11px] text-slate-400 uppercase font-semibold">Total Internal Marks (Div 1+2+3+4)</p>
-                  <p id="calc-internal-total" class="text-2xl font-black text-blue-400 font-mono">0 / 400</p>
-                </div>
-                <div class="h-8 w-[1px] bg-white/10 hidden sm:block"></div>
-                <div>
-                  <p class="text-[11px] text-slate-400 uppercase font-semibold">Grand Total (Div 1 to 5)</p>
-                  <p id="calc-grand-total" class="text-2xl font-black text-emerald-400 font-mono">0 / 500</p>
-                </div>
-                <div class="h-8 w-[1px] bg-white/10 hidden sm:block"></div>
-                <div>
-                  <p class="text-[11px] text-slate-400 uppercase font-semibold">Calculated Grade</p>
-                  <span id="calc-grade-badge" class="badge badge-purple text-xs font-bold mt-1">Pending</span>
-                </div>
-              </div>
-
-              <button onclick="saveDivisionsGrade()" class="btn-primary flex items-center justify-center gap-2 py-3 px-6 shrink-0">
-                <i data-lucide="check-circle" class="w-4 h-4"></i>
-                <span>Submit & Record 5-Division Marks</span>
+            <!-- Workflow Stage Nav Pills -->
+            <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-white/10 text-xs">
+              <button onclick="switchGbTab('phase1')" class="px-3.5 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all ${currentGradebookTab === 'phase1' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/5 text-slate-400 hover:text-white'}">
+                <span>1. Phase 1 Marks (Assessments & Class Lab)</span>
+              </button>
+              <button onclick="switchGbTab('hallticket')" class="px-3.5 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all ${currentGradebookTab === 'hallticket' ? 'bg-purple-600 text-white shadow-lg' : 'bg-white/5 text-slate-400 hover:text-white'}">
+                <span>2. Hall Ticket Requests (${pendingHtCount} Pending)</span>
+                ${pendingHtCount > 0 ? '<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>' : ''}
+              </button>
+              <button onclick="switchGbTab('phase2')" class="px-3.5 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all ${currentGradebookTab === 'phase2' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white/5 text-slate-400 hover:text-white'}">
+                <span>3. Phase 2 Marks (Capstone & Univ Lab)</span>
+              </button>
+              <button onclick="switchGbTab('phase3')" class="px-3.5 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all ${currentGradebookTab === 'phase3' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white/5 text-slate-400 hover:text-white'}">
+                <span>4. Main Univ Exam & Publish Results</span>
               </button>
             </div>
           </div>
 
-          <!-- Submitted Grades Records Table -->
+          <!-- TAB 1: PHASE 1 MARKS ENTRY (Assessments /100 + Class Lab /100) -->
+          <div id="gb-tab-phase1" class="${currentGradebookTab === 'phase1' ? '' : 'hidden'} glass-panel p-6 rounded-2xl border border-blue-500/20 space-y-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-base font-extrabold text-white flex items-center gap-2">
+                  <i data-lucide="edit-3" class="w-5 h-5 text-blue-400"></i>
+                  <span>Step 1: Enter Continuous Assessment & Class Lab Marks</span>
+                </h4>
+                <p class="text-xs text-slate-400 mt-0.5">Enter initial internal assessment marks. Submitting unlocks the "Close Course Launch" option.</p>
+              </div>
+              <span class="badge badge-blue text-xs">Div 1 + Div 3 (/200)</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Select Student</label>
+                <select id="p1-student" class="glass-input w-full font-medium">
+                  ${students.map(s => `<option value="${s.id}">${s.name} (${s.admin_id || 'No RegNo'} - ${s.department || 'Dept'})</option>`).join('')}
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Select Course / Subject</label>
+                <select id="p1-subject" class="glass-input w-full font-medium">
+                  ${subjects.map(s => `<option value="${s.id}">${s.code ? s.code + ' — ' : ''}${s.name} ${s.is_closed ? '(Closed)' : '(Active)'}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-white">Division 1: Continuous Assessments (CAT)</span>
+                  <span class="text-[11px] text-blue-400 font-mono">Max: 100</span>
+                </div>
+                <input type="number" id="p1-d1" min="0" max="100" placeholder="0 - 100" class="glass-input w-full font-mono text-lg font-bold text-blue-400">
+                <p class="text-[10px] text-slate-500">Visible to student as internal assessment progress.</p>
+              </div>
+
+              <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-white">Division 3: Class Lab & Practicals</span>
+                  <span class="text-[11px] text-purple-400 font-mono">Max: 100</span>
+                </div>
+                <input type="number" id="p1-d3" min="0" max="100" placeholder="0 - 100" class="glass-input w-full font-mono text-lg font-bold text-purple-400">
+                <p class="text-[10px] text-slate-500">Day-to-day practical marks and laboratory assignments.</p>
+              </div>
+            </div>
+
+            <button onclick="savePhase1Grade()" class="btn-primary w-full py-3 flex items-center justify-center gap-2">
+              <i data-lucide="check-circle" class="w-4 h-4"></i>
+              <span>Save & Submit Phase 1 Marks (Unlock Close Course)</span>
+            </button>
+          </div>
+
+          <!-- TAB 2: HALL TICKET REQUESTS APPROVAL QUEUE -->
+          <div id="gb-tab-hallticket" class="${currentGradebookTab === 'hallticket' ? '' : 'hidden'} space-y-6">
+            <div class="glass-panel p-6 rounded-2xl border border-purple-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h4 class="text-base font-extrabold text-white flex items-center gap-2">
+                  <i data-lucide="ticket" class="w-5 h-5 text-purple-400"></i>
+                  <span>Step 2 & 3: Course Close Status & Student Hall Ticket Requests</span>
+                </h4>
+                <p class="text-xs text-slate-400 mt-0.5">Students send hall ticket requests after course launch is closed. Approve requests below to issue hall tickets.</p>
+              </div>
+              <button onclick="openCloseCourseModal()" class="btn-primary flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 shrink-0">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+                <span>Close Course Launch</span>
+              </button>
+            </div>
+
+            <div class="glass-panel rounded-2xl border border-white/10 overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-300">
+                <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
+                  <tr>
+                    <th class="p-4">Student Name</th>
+                    <th class="p-4">Register Number</th>
+                    <th class="p-4">Course</th>
+                    <th class="p-4">Request Date</th>
+                    <th class="p-4">Status</th>
+                    <th class="p-4 text-right">Faculty Action</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5 whitespace-nowrap">
+                  ${htRequests.length === 0 ? `
+                    <tr><td colspan="6" class="p-8 text-center text-slate-500">No student hall ticket requests yet. When students click "Request Hall Ticket", they will appear here.</td></tr>
+                  ` : htRequests.map(r => `
+                    <tr class="hover:bg-white/[0.02]">
+                      <td class="p-4 font-semibold text-white">${r.student_name}</td>
+                      <td class="p-4 font-mono text-blue-400 font-bold">${r.student_reg_no || 'N/A'}</td>
+                      <td class="p-4">
+                        <span class="font-mono text-purple-400">${r.course_code || ''}</span>
+                        <div class="text-white">${r.subject_name}</div>
+                      </td>
+                      <td class="p-4 text-slate-400">${new Date(r.request_date).toLocaleDateString()}</td>
+                      <td class="p-4">
+                        <span class="badge ${r.status === 'approved' ? 'badge-emerald' : 'badge-amber'} text-xs">
+                          ${r.status === 'approved' ? '✅ Approved & Issued' : '⏳ Pending Approval'}
+                        </span>
+                      </td>
+                      <td class="p-4 text-right">
+                        ${r.status !== 'approved' ? `
+                          <button onclick="approveHallTicketRequest(${r.id})" class="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 ml-auto">
+                            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                            <span>Approve & Generate Hall Ticket</span>
+                          </button>
+                        ` : `
+                          <span class="text-xs text-emerald-400 font-mono font-bold">UUID: ${r.hall_ticket_token ? r.hall_ticket_token.slice(0, 8) : 'ACTIVE'}</span>
+                        `}
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TAB 3: PHASE 2 MARKS ENTRY (Capstone /100 + Univ Lab /100) -->
+          <div id="gb-tab-phase2" class="${currentGradebookTab === 'phase2' ? '' : 'hidden'} glass-panel p-6 rounded-2xl border border-indigo-500/20 space-y-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-base font-extrabold text-white flex items-center gap-2">
+                  <i data-lucide="award" class="w-5 h-5 text-indigo-400"></i>
+                  <span>Step 4: Enter Capstone Project & University Lab Exam Marks</span>
+                </h4>
+                <p class="text-xs text-slate-400 mt-0.5">Recorded after course closing and laboratory practical examinations.</p>
+              </div>
+              <span class="badge badge-purple text-xs">Div 2 + Div 4 (/200)</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Select Student</label>
+                <select id="p2-student" class="glass-input w-full font-medium">
+                  ${students.map(s => `<option value="${s.id}">${s.name} (${s.admin_id || 'No RegNo'})</option>`).join('')}
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Select Closed Course</label>
+                <select id="p2-subject" class="glass-input w-full font-medium">
+                  ${subjects.map(s => `<option value="${s.id}">${s.code ? s.code + ' — ' : ''}${s.name} ${s.is_closed ? '(Closed)' : '(Active)'}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-white">Division 2: Capstone Project Work</span>
+                  <span class="text-[11px] text-indigo-400 font-mono">Max: 100</span>
+                </div>
+                <input type="number" id="p2-d2" min="0" max="100" placeholder="0 - 100" class="glass-input w-full font-mono text-lg font-bold text-indigo-400">
+                <p class="text-[10px] text-slate-500">Capstone design, project prototype & viva presentation.</p>
+              </div>
+
+              <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-white">Division 4: University Practical Lab Exam</span>
+                  <span class="text-[11px] text-emerald-400 font-mono">Max: 100</span>
+                </div>
+                <input type="number" id="p2-d4" min="0" max="100" placeholder="0 - 100" class="glass-input w-full font-mono text-lg font-bold text-emerald-400">
+                <p class="text-[10px] text-slate-500">External university laboratory examination marks.</p>
+              </div>
+            </div>
+
+            <button onclick="savePhase2Grade()" class="btn-primary w-full py-3 flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600">
+              <i data-lucide="check-circle" class="w-4 h-4"></i>
+              <span>Save Phase 2 Marks (Total Internal: Div 1+2+3+4 = 400)</span>
+            </button>
+          </div>
+
+          <!-- TAB 4: PHASE 3 MARKS ENTRY (Main Univ Exam /100) & PUBLISH RESULTS -->
+          <div id="gb-tab-phase3" class="${currentGradebookTab === 'phase3' ? '' : 'hidden'} glass-panel p-6 rounded-2xl border border-emerald-500/20 space-y-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-base font-extrabold text-white flex items-center gap-2">
+                  <i data-lucide="award" class="w-5 h-5 text-emerald-400"></i>
+                  <span>Step 5: Enter Main University Exam Marks & Publish Official Results</span>
+                </h4>
+                <p class="text-xs text-slate-400 mt-0.5">Enter Division 5 (Main University Theory Exam) marks to compute Grand Total (/500), Grade, and publish results.</p>
+              </div>
+              <span class="badge badge-emerald text-xs">Div 5 (/100) • Final</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Select Student</label>
+                <select id="p3-student" class="glass-input w-full font-medium">
+                  ${students.map(s => `<option value="${s.id}">${s.name} (${s.admin_id || 'No RegNo'})</option>`).join('')}
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Select Subject</label>
+                <select id="p3-subject" class="glass-input w-full font-medium">
+                  ${subjects.map(s => `<option value="${s.id}">${s.code ? s.code + ' — ' : ''}${s.name} ${s.is_results_published ? '(Results Published ✅)' : ''}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+
+            <div class="p-5 rounded-xl bg-white/5 border border-white/10 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-bold text-white">Division 5: Main University Theory Exam Marks</span>
+                <span class="text-xs text-emerald-400 font-mono font-bold">Max: 100</span>
+              </div>
+              <input type="number" id="p3-d5" min="0" max="100" placeholder="0 - 100" class="glass-input w-full font-mono text-2xl font-black text-emerald-400">
+              <p class="text-xs text-slate-400">Grand Total = Total Internal (400) + Div 5 (100) = 500 Marks.</p>
+            </div>
+
+            <button onclick="savePhase3Results()" class="btn-primary w-full py-3.5 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-xl">
+              <i data-lucide="check-check" class="w-5 h-5"></i>
+              <span>Submit Division 5 & Publish Official University Results 🎉</span>
+            </button>
+          </div>
+
+          <!-- Consolidated Student Academic Records Table -->
           <div class="space-y-4">
-            <h4 class="text-base font-extrabold text-white">Consolidated Student Academic Division Records</h4>
+            <h4 class="text-base font-extrabold text-white">All Students 5-Division Academic Records</h4>
             
             <div class="glass-panel rounded-2xl border border-white/10 overflow-x-auto">
               <table class="w-full text-left text-xs text-slate-300">
@@ -2047,16 +2164,16 @@
                     <th class="p-4 text-center">Div 2 (Capstone)</th>
                     <th class="p-4 text-center">Div 3 (Class Lab)</th>
                     <th class="p-4 text-center">Div 4 (Univ Lab)</th>
-                    <th class="p-4 text-center text-blue-400 font-bold">Total Internal (/400)</th>
+                    <th class="p-4 text-center text-blue-400 font-bold">Internal Total (/400)</th>
                     <th class="p-4 text-center">Div 5 (Univ Exam)</th>
                     <th class="p-4 text-center text-emerald-400 font-bold">Grand Total (/500)</th>
                     <th class="p-4 text-center">Grade</th>
-                    <th class="p-4 text-center">Course Status</th>
+                    <th class="p-4 text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-white/5 whitespace-nowrap">
                   ${grades.length === 0 ? `
-                    <tr><td colspan="11" class="p-8 text-center text-slate-500">No division marks submitted yet. Select a student and subject above to enter marks.</td></tr>
+                    <tr><td colspan="11" class="p-8 text-center text-slate-500">No marks entered yet. Select a phase tab above to start entering marks.</td></tr>
                   ` : grades.map(g => `
                     <tr class="hover:bg-white/[0.02] transition-colors">
                       <td class="p-4">
@@ -2073,11 +2190,11 @@
                       <td class="p-4 text-center font-mono">${g.div4_univ_lab || 0}</td>
                       <td class="p-4 text-center font-mono font-bold text-blue-400 bg-blue-500/5">${g.total_internal || 0}</td>
                       <td class="p-4 text-center font-mono">${g.div5_univ_exam || 0}</td>
-                      <td class="p-4 text-center font-mono font-bold text-emerald-400 bg-emerald-500/5">${g.grand_total || g.score || 0}</td>
-                      <td class="p-4 text-center"><span class="badge badge-purple">${g.grade_letter || 'B'}</span></td>
+                      <td class="p-4 text-center font-mono font-bold text-emerald-400 bg-emerald-500/5">${g.grand_total || 0}</td>
+                      <td class="p-4 text-center"><span class="badge ${g.grade_letter === 'RA' ? 'badge-rose' : 'badge-purple'}">${g.grade_letter || 'P'}</span></td>
                       <td class="p-4 text-center">
-                        <span class="badge ${g.course_is_closed ? 'badge-emerald' : 'badge-amber'} text-[10px]">
-                          ${g.course_is_closed ? '🏁 Closed for Exam' : '🟢 In Progress'}
+                        <span class="badge ${g.course_results_published ? 'badge-emerald' : g.course_is_closed ? 'badge-purple' : 'badge-amber'} text-[10px]">
+                          ${g.course_results_published ? '🏆 Results Published' : g.course_is_closed ? '🔒 Launch Closed' : '🟢 Active Launch'}
                         </span>
                       </td>
                     </tr>
@@ -2091,56 +2208,64 @@
       lucide.createIcons();
     }
 
-    function recalcDivisionsTotal() {
-      const d1 = Math.min(100, Math.max(0, parseFloat(document.getElementById('gb-d1')?.value) || 0));
-      const d2 = Math.min(100, Math.max(0, parseFloat(document.getElementById('gb-d2')?.value) || 0));
-      const d3 = Math.min(100, Math.max(0, parseFloat(document.getElementById('gb-d3')?.value) || 0));
-      const d4 = Math.min(100, Math.max(0, parseFloat(document.getElementById('gb-d4')?.value) || 0));
-      const d5 = Math.min(100, Math.max(0, parseFloat(document.getElementById('gb-d5')?.value) || 0));
-
-      const internalTotal = d1 + d2 + d3 + d4;
-      const grandTotal = internalTotal + d5;
-
-      const intEl = document.getElementById('calc-internal-total');
-      const grandEl = document.getElementById('calc-grand-total');
-      const badgeEl = document.getElementById('calc-grade-badge');
-
-      if (intEl) intEl.innerText = `${internalTotal} / 400`;
-      if (grandEl) grandEl.innerText = `${grandTotal} / 500`;
-      if (badgeEl) {
-        let grade = 'RA';
-        if (grandTotal >= 450) grade = 'O (Outstanding)';
-        else if (grandTotal >= 400) grade = 'A+ (Excellent)';
-        else if (grandTotal >= 350) grade = 'A (Very Good)';
-        else if (grandTotal >= 300) grade = 'B+ (Good)';
-        else if (grandTotal >= 250) grade = 'B (Pass)';
-        badgeEl.innerText = `Grade ${grade}`;
-      }
+    function switchGbTab(tab) {
+      currentGradebookTab = tab;
+      renderPage();
     }
 
-    async function saveDivisionsGrade() {
-      const studentId = document.getElementById('gb-student')?.value;
-      const subjectId = document.getElementById('gb-subject')?.value;
-      const div1Assessments = document.getElementById('gb-d1')?.value;
-      const div2Capstone = document.getElementById('gb-d2')?.value;
-      const div3ClassLab = document.getElementById('gb-d3')?.value;
-      const div4UnivLab = document.getElementById('gb-d4')?.value;
-      const div5UnivExam = document.getElementById('gb-d5')?.value;
+    async function savePhase1Grade() {
+      const studentId = document.getElementById('p1-student')?.value;
+      const subjectId = document.getElementById('p1-subject')?.value;
+      const div1Assessments = document.getElementById('p1-d1')?.value;
+      const div3ClassLab = document.getElementById('p1-d3')?.value;
 
-      if (!studentId) return toast('Please select an enrolled student', 'warning');
-      if (!subjectId) return toast('Please select a course / subject', 'warning');
+      if (!studentId || !subjectId) return toast('Please select student and subject', 'warning');
+      if (div1Assessments === '' || div3ClassLab === '') return toast('Please enter marks for both Assessment and Class Lab', 'warning');
 
       try {
-        await api('POST', '/grades/submit-divisions', {
-          studentId,
+        await api('POST', '/grades/submit-phase1', { studentId, subjectId, div1Assessments, div3ClassLab });
+        toast('Phase 1 marks saved! "Close Course Launch" is now unlocked. 🚀', 'success');
+        renderPage();
+      } catch(e) {}
+    }
+
+    async function approveHallTicketRequest(requestId) {
+      try {
+        await api('PUT', `/grades/hall-ticket/approve/${requestId}`);
+        toast('Hall ticket approved and issued to student! 🎟️', 'success');
+        renderPage();
+      } catch(e) {}
+    }
+
+    async function savePhase2Grade() {
+      const studentId = document.getElementById('p2-student')?.value;
+      const subjectId = document.getElementById('p2-subject')?.value;
+      const div2Capstone = document.getElementById('p2-d2')?.value;
+      const div4UnivLab = document.getElementById('p2-d4')?.value;
+
+      if (!studentId || !subjectId) return toast('Please select student and subject', 'warning');
+
+      try {
+        await api('POST', '/grades/submit-phase2', { studentId, subjectId, div2Capstone, div4UnivLab });
+        toast('Phase 2 marks (Capstone & Univ Lab) saved! Total internal updated to /400. 📊', 'success');
+        renderPage();
+      } catch(e) {}
+    }
+
+    async function savePhase3Results() {
+      const studentId = document.getElementById('p3-student')?.value;
+      const subjectId = document.getElementById('p3-subject')?.value;
+      const div5UnivExam = document.getElementById('p3-d5')?.value;
+
+      if (!studentId || !subjectId) return toast('Please select student and subject', 'warning');
+      if (div5UnivExam === '') return toast('Please enter Division 5 University Exam marks', 'warning');
+
+      try {
+        await api('POST', '/grades/submit-phase3-results', {
           subjectId,
-          div1Assessments,
-          div2Capstone,
-          div3ClassLab,
-          div4UnivLab,
-          div5UnivExam
+          studentMarks: [{ studentId, div5UnivExam }]
         });
-        toast('5-Division marks submitted successfully! 🎓', 'success');
+        toast('University Exam marks submitted and Official Results Published! 🎉', 'success');
         renderPage();
       } catch(e) {}
     }
@@ -2149,16 +2274,18 @@
       const subjects = await api('GET', '/subjects');
       const nextWeekDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-      openModal('Close Course for University Examinations', `
+      openModal('Close Course Launch for University Examinations', `
         <div class="space-y-4 text-left">
           <p class="text-xs text-slate-300">
-            Closing a course finalizes internal marks (Divisions 1 to 3) and unlocks the <b>University Examination Hall Ticket</b> generation for all enrolled students.
+            Closing the launch locks initial enrollments, finalizes Phase 1 assessment marks, and allows students to send <b>Hall Ticket Requests</b> directly to you.
           </p>
 
           <div>
             <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Select Course to Close</label>
             <select id="m-close-subject" class="glass-input w-full font-medium">
-              ${subjects.map(s => `<option value="${s.id}">${s.code ? s.code + ' — ' : ''}${s.name} ${s.is_closed ? '(Already Closed)' : ''}</option>`).join('')}
+              ${subjects.map(s => `
+                <option value="${s.id}">${s.code ? s.code + ' — ' : ''}${s.name} ${s.is_closed ? '(Already Closed)' : s.is_phase1_submitted ? '(Phase 1 Ready ✅)' : '(Phase 1 Pending ⚠️)'}</option>
+              `).join('')}
             </select>
           </div>
 
@@ -2184,7 +2311,7 @@
       `, `
         <button onclick="closeCourseForExams()" class="btn-primary w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600">
           <i data-lucide="lock" class="w-4 h-4"></i>
-          <span>Close Course & Unlock Hall Tickets</span>
+          <span>Close Course Launch for University Exams</span>
         </button>
       `);
       lucide.createIcons();
@@ -2200,7 +2327,7 @@
 
       try {
         await api('POST', `/grades/close-course/${subjectId}`, { examDate, examSession, examHall });
-        toast('Course closed successfully! Hall tickets unlocked for students! 🎟️', 'success');
+        toast('Course launch closed successfully! Students can now request Hall Tickets. 🎟️', 'success');
         closeModal();
         renderPage();
       } catch(e) {}
@@ -3204,60 +3331,66 @@
       lucide.createIcons();
     }
 
-    // --- STUDENT 5-TIER GRADES & SCORES VIEW ---
+    // --- STUDENT INTERNAL MARKS VIEW (Shows Assessment Marks Div 1 during course) ---
     async function renderStudentGrades(container) {
       const grades = await api('GET', '/grades');
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
           <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-blue-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h3 class="text-xl font-black text-white">My Academic Marks & 5-Division Evaluation</h3>
-              <p class="text-xs text-slate-400">Total Internal Marks carry 400 points across 4 divisions. University Exam carries 100 points.</p>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge badge-purple text-[10px] uppercase tracking-wider">Internal Continuous Progress</span>
+                <span class="text-xs text-blue-400 font-mono">Division 1: Assessments</span>
+              </div>
+              <h3 class="text-xl font-black text-white">My Internal Assessment Progress</h3>
+              <p class="text-xs text-slate-400">Current visible continuous assessment marks recorded by faculty. Full 5-division breakdown and GPA will be published on your Semester Results page.</p>
             </div>
-            <button onclick="switchTab('hall-ticket')" class="btn-primary flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600">
-              <i data-lucide="ticket" class="w-4 h-4"></i>
-              <span>Generate Hall Ticket</span>
-            </button>
+            <div class="flex items-center gap-2">
+              <button onclick="switchTab('hall-ticket')" class="btn-secondary flex items-center gap-2 text-xs py-2 px-3 border-purple-500/30 text-purple-300">
+                <i data-lucide="ticket" class="w-4 h-4 text-purple-400"></i>
+                <span>University Hall Ticket</span>
+              </button>
+              <button onclick="switchTab('results')" class="btn-primary flex items-center gap-2 text-xs py-2 px-3 bg-gradient-to-r from-blue-600 to-indigo-600">
+                <i data-lucide="file-check" class="w-4 h-4"></i>
+                <span>Semester Results</span>
+              </button>
+            </div>
           </div>
 
           <div class="glass-panel rounded-2xl border border-white/10 overflow-x-auto">
             <table class="w-full text-left text-xs text-slate-300">
               <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
                 <tr>
-                  <th class="p-4">Course</th>
-                  <th class="p-4">Instructor</th>
-                  <th class="p-4 text-center">Div 1 (Assess.)</th>
-                  <th class="p-4 text-center">Div 2 (Capstone)</th>
-                  <th class="p-4 text-center">Div 3 (Class Lab)</th>
-                  <th class="p-4 text-center">Div 4 (Univ Lab)</th>
-                  <th class="p-4 text-center text-blue-400 font-bold">Total Internal (/400)</th>
-                  <th class="p-4 text-center">Div 5 (Univ Exam)</th>
-                  <th class="p-4 text-center text-emerald-400 font-bold">Grand Total (/500)</th>
-                  <th class="p-4 text-center">Grade</th>
-                  <th class="p-4 text-center">Exam Status</th>
+                  <th class="p-4">Course Code & Name</th>
+                  <th class="p-4">Course Faculty</th>
+                  <th class="p-4 text-center">Division 1 (Continuous Assessments)</th>
+                  <th class="p-4 text-center">Course Launch Status</th>
+                  <th class="p-4 text-center">Hall Ticket Status</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/5 whitespace-nowrap">
                 ${grades.length === 0 ? `
-                  <tr><td colspan="11" class="p-8 text-center text-slate-500">No grades recorded yet. Enroll in courses to track marks.</td></tr>
+                  <tr><td colspan="5" class="p-8 text-center text-slate-500">No course enrollments or assessment marks recorded yet.</td></tr>
                 ` : grades.map(g => `
                   <tr class="hover:bg-white/[0.02]">
                     <td class="p-4">
                       <span class="font-mono text-purple-400 font-semibold">${g.course_code || ''}</span>
                       <div class="font-semibold text-white">${g.subject_name}</div>
                     </td>
-                    <td class="p-4 text-slate-400">${g.faculty_name || 'Faculty'}</td>
-                    <td class="p-4 text-center font-mono">${g.div1_assessments || 0}</td>
-                    <td class="p-4 text-center font-mono">${g.div2_capstone || 0}</td>
-                    <td class="p-4 text-center font-mono">${g.div3_class_lab || 0}</td>
-                    <td class="p-4 text-center font-mono">${g.div4_univ_lab || 0}</td>
-                    <td class="p-4 text-center font-mono font-bold text-blue-400 bg-blue-500/5">${g.total_internal || 0}</td>
-                    <td class="p-4 text-center font-mono">${g.div5_univ_exam || 0}</td>
-                    <td class="p-4 text-center font-mono font-bold text-emerald-400 bg-emerald-500/5">${g.grand_total || g.score || 0}</td>
-                    <td class="p-4 text-center"><span class="badge badge-purple">${g.grade_letter || 'B'}</span></td>
+                    <td class="p-4 text-slate-400">${g.faculty_name || 'Assigned Faculty'}</td>
                     <td class="p-4 text-center">
-                      <span class="badge ${g.course_is_closed ? 'badge-emerald' : 'badge-amber'} text-[10px]">
-                        ${g.course_is_closed ? '🏁 Closed for Exam' : '🟢 Course In Progress'}
+                      <span class="font-mono font-bold text-blue-400 text-sm bg-blue-500/10 px-3 py-1 rounded-lg border border-blue-500/20">
+                        ${g.div1_assessments || 0} / 100
+                      </span>
+                    </td>
+                    <td class="p-4 text-center">
+                      <span class="badge ${g.course_is_closed ? 'badge-purple' : 'badge-amber'} text-[10px]">
+                        ${g.course_is_closed ? '🔒 Launch Closed for Exams' : '🟢 Active Launch'}
+                      </span>
+                    </td>
+                    <td class="p-4 text-center">
+                      <span class="badge ${g.hall_ticket_request_status === 'approved' ? 'badge-emerald' : g.hall_ticket_request_status === 'requested' ? 'badge-amber' : 'badge-blue'} text-[10px]">
+                        ${g.hall_ticket_request_status === 'approved' ? '✅ Hall Ticket Issued' : g.hall_ticket_request_status === 'requested' ? '⏳ Request Sent to Faculty' : 'Not Requested'}
                       </span>
                     </td>
                   </tr>
@@ -3270,109 +3403,278 @@
       lucide.createIcons();
     }
 
-    // --- STUDENT UNIVERSITY EXAMINATION HALL TICKET ---
+    // --- STUDENT UNIVERSITY EXAMINATION HALL TICKET VIEW ---
     async function renderStudentHallTicket(container) {
       const ticket = await api('GET', '/grades/hall-ticket');
+      const approvedCourses = ticket.courses.filter(c => c.request_status === 'approved');
 
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in max-w-4xl mx-auto">
           <div class="flex items-center justify-between">
             <div>
               <h3 class="text-xl font-black text-white">University Examination Hall Ticket</h3>
-              <p class="text-xs text-slate-400">Official admit card for End-Semester University Examinations.</p>
+              <p class="text-xs text-slate-400">Hall ticket is generated after the course launch is closed and approved by your faculty.</p>
             </div>
-            <button onclick="window.print()" class="btn-primary flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600">
-              <i data-lucide="printer" class="w-4 h-4"></i>
-              <span>Print / Download Hall Ticket</span>
-            </button>
+            ${approvedCourses.length > 0 ? `
+              <button onclick="window.print()" class="btn-primary flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>Print / Download Hall Ticket</span>
+              </button>
+            ` : ''}
           </div>
 
-          <!-- Official Hall Ticket Card -->
-          <div id="official-hall-ticket" class="glass-panel p-8 rounded-3xl border-2 border-blue-500/30 bg-slate-900/90 text-left space-y-6 relative overflow-hidden shadow-2xl">
-            <!-- Institutional Watermark -->
-            <div class="absolute -right-16 -bottom-16 w-64 h-64 bg-blue-500/5 rounded-full pointer-events-none blur-3xl"></div>
+          <!-- Course Request Status Tracker Cards -->
+          <div class="space-y-3">
+            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Enrolled Courses & Hall Ticket Status</h4>
+            <div class="grid grid-cols-1 gap-3">
+              ${ticket.courses.length === 0 ? `
+                <div class="glass-panel p-6 text-center text-slate-500 text-xs">No registered courses found.</div>
+              ` : ticket.courses.map(c => `
+                <div class="glass-panel p-4 rounded-xl border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="font-mono text-purple-400 font-bold text-xs">${c.course_code || ''}</span>
+                      <h4 class="font-bold text-white text-sm">${c.subject_name}</h4>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-0.5">Faculty: ${c.faculty_name || 'Assigned Faculty'}</p>
+                  </div>
 
-            <!-- Header -->
-            <div class="text-center border-b border-white/10 pb-6 space-y-1">
-              <p class="text-xs font-mono uppercase tracking-[0.3em] text-blue-400 font-bold">AUTONOMOUS UNIVERSITY CAMPUS</p>
-              <h2 class="text-2xl font-black text-white tracking-tight">OFFICIAL UNIVERSITY EXAMINATION HALL TICKET</h2>
-              <p class="text-xs text-slate-400">Academic Year 2026-2027 • End-Semester Theory & Practical Examinations</p>
+                  <div class="flex items-center gap-3">
+                    ${!c.is_closed ? `
+                      <span class="badge badge-amber text-xs flex items-center gap-1">
+                        <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                        <span>Launch Active (Locked until faculty closes launch)</span>
+                      </span>
+                    ` : c.request_status === 'not_requested' ? `
+                      <button onclick="requestHallTicket(${c.subject_id})" class="btn-primary text-xs py-2 px-4 flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600">
+                        <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                        <span>Request Faculty for Hall Ticket</span>
+                      </button>
+                    ` : c.request_status === 'requested' ? `
+                      <span class="badge badge-amber text-xs flex items-center gap-1 py-1.5 px-3">
+                        <i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i>
+                        <span>Request Sent to Faculty (Pending Approval)</span>
+                      </span>
+                    ` : `
+                      <span class="badge badge-emerald text-xs flex items-center gap-1 py-1.5 px-3">
+                        <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                        <span>Hall Ticket Approved & Generated</span>
+                      </span>
+                    `}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Official Hall Ticket Card (Rendered if approved courses exist) -->
+          ${approvedCourses.length === 0 ? `
+            <div class="glass-panel p-10 rounded-3xl border border-white/10 text-center space-y-3">
+              <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center mx-auto">
+                <i data-lucide="ticket" class="w-6 h-6"></i>
+              </div>
+              <h4 class="text-base font-bold text-white">No Approved Hall Tickets Ready</h4>
+              <p class="text-xs text-slate-400 max-w-md mx-auto">
+                Once the course launch is closed by the faculty and you submit a Hall Ticket Request, your faculty will approve and generate your official Examination Admit Card.
+              </p>
+            </div>
+          ` : `
+            <div id="official-hall-ticket" class="glass-panel p-8 rounded-3xl border-2 border-blue-500/30 bg-slate-900/90 text-left space-y-6 relative overflow-hidden shadow-2xl">
+              <!-- Institutional Watermark -->
+              <div class="absolute -right-16 -bottom-16 w-64 h-64 bg-blue-500/5 rounded-full pointer-events-none blur-3xl"></div>
+
+              <!-- Header -->
+              <div class="text-center border-b border-white/10 pb-6 space-y-1">
+                <p class="text-xs font-mono uppercase tracking-[0.3em] text-blue-400 font-bold">AUTONOMOUS UNIVERSITY CAMPUS</p>
+                <h2 class="text-2xl font-black text-white tracking-tight">OFFICIAL UNIVERSITY EXAMINATION HALL TICKET</h2>
+                <p class="text-xs text-slate-400">Academic Year 2026-2027 • End-Semester Theory & Practical Examinations</p>
+              </div>
+
+              <!-- Candidate Profile Info -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 p-5 rounded-2xl bg-white/5 border border-white/10 text-xs">
+                <div class="space-y-1">
+                  <span class="text-slate-400 uppercase font-semibold text-[10px]">Candidate Full Name</span>
+                  <p class="font-bold text-white text-sm">${ticket.student.name}</p>
+                </div>
+                <div class="space-y-1">
+                  <span class="text-slate-400 uppercase font-semibold text-[10px]">Register / Roll Number</span>
+                  <p class="font-mono font-bold text-blue-400 text-sm">${ticket.student.admin_id}</p>
+                </div>
+                <div class="space-y-1">
+                  <span class="text-slate-400 uppercase font-semibold text-[10px]">Branch / Department</span>
+                  <p class="font-semibold text-white">${ticket.student.department || 'B.E. Computer Science & Engineering'}</p>
+                </div>
+                <div class="space-y-1">
+                  <span class="text-slate-400 uppercase font-semibold text-[10px]">Attendance Standing</span>
+                  <p class="font-mono font-bold ${ticket.attendancePct >= 75 ? 'text-emerald-400' : 'text-rose-400'}">${ticket.attendancePct}% (${ticket.attendancePct >= 75 ? 'Eligible' : 'Shortage'})</p>
+                </div>
+                <div class="space-y-1">
+                  <span class="text-slate-400 uppercase font-semibold text-[10px]">Faculty Approval</span>
+                  <p class="font-bold text-emerald-400">✅ Approved by Course Faculty</p>
+                </div>
+                <div class="space-y-1">
+                  <span class="text-slate-400 uppercase font-semibold text-[10px]">Hall Ticket UUID</span>
+                  <p class="font-mono text-purple-400 font-bold">${ticket.qrVerificationCode}</p>
+                </div>
+              </div>
+
+              <!-- Approved Exam Courses Table -->
+              <div class="space-y-2">
+                <h4 class="text-xs font-bold text-blue-400 uppercase tracking-wider">Scheduled Examination Courses</h4>
+                <div class="rounded-xl border border-white/10 overflow-hidden">
+                  <table class="w-full text-left text-xs text-slate-300">
+                    <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10">
+                      <tr>
+                        <th class="p-3">Course Code</th>
+                        <th class="p-3">Subject Name</th>
+                        <th class="p-3">Exam Date</th>
+                        <th class="p-3">Session</th>
+                        <th class="p-3">Exam Hall</th>
+                        <th class="p-3 text-center">Invigilator Sign</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                      ${approvedCourses.map(c => `
+                        <tr>
+                          <td class="p-3 font-mono text-blue-400 font-bold">${c.course_code}</td>
+                          <td class="p-3 font-semibold text-white">${c.subject_name}</td>
+                          <td class="p-3 font-mono">${c.exam_date || 'TBA'}</td>
+                          <td class="p-3 font-medium text-purple-400">${c.exam_session || 'FN'}</td>
+                          <td class="p-3 font-semibold text-emerald-400">${c.exam_hall || 'Exam Hall A'}</td>
+                          <td class="p-3 text-center text-slate-500 font-mono">_______________</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Controller of Examination Seal -->
+              <div class="pt-6 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
+                <div class="space-y-1">
+                  <p class="text-slate-400">1. Candidate must bring this Hall Ticket & Institutional ID Card to every exam.</p>
+                  <p class="text-slate-400">2. Electronic devices & smart watches are strictly prohibited in the exam hall.</p>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="font-serif italic font-bold text-white text-base">K. Raghavan, Ph.D.</div>
+                  <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Controller of Examinations</p>
+                  <span class="badge badge-emerald text-[9px] mt-1">SEAL VERIFIED</span>
+                </div>
+              </div>
+            </div>
+          `}
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    async function requestHallTicket(subjectId) {
+      try {
+        await api('POST', '/grades/hall-ticket/request', { subjectId });
+        toast('Hall ticket request sent directly to faculty! 🎟️', 'success');
+        renderPage();
+      } catch(e) {}
+    }
+
+    // --- STUDENT OFFICIAL SEMESTER RESULTS & GRADE SHEET ---
+    async function renderStudentResults(container) {
+      const data = await api('GET', '/grades/results');
+      const results = data.results || [];
+
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in max-w-4xl mx-auto">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-xl font-black text-white">Official Semester Examination Results</h3>
+              <p class="text-xs text-slate-400">Official statement of grades published by the Autonomous Examination Cell.</p>
+            </div>
+            ${results.length > 0 ? `
+              <button onclick="window.print()" class="btn-primary flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>Print Official Results Card</span>
+              </button>
+            ` : ''}
+          </div>
+
+          ${results.length === 0 ? `
+            <div class="glass-panel p-12 rounded-3xl border border-white/10 text-center space-y-3">
+              <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto">
+                <i data-lucide="file-text" class="w-6 h-6"></i>
+              </div>
+              <h4 class="text-base font-bold text-white">No Results Published Yet</h4>
+              <p class="text-xs text-slate-400 max-w-md mx-auto">
+                Your course faculty has not published final semester examination results yet. Once Phase 3 (Main University Exam) marks are evaluated, your official results card will be generated here.
+              </p>
+            </div>
+          ` : `
+            <!-- Results Summary KPI Banner -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="glass-panel p-5 rounded-2xl border border-emerald-500/20">
+                <p class="text-xs text-slate-400 uppercase font-semibold">Semester GPA (SGPA)</p>
+                <h3 class="text-3xl font-black text-emerald-400 font-mono mt-1">${data.gpa || '0.00'} / 10</h3>
+              </div>
+              <div class="glass-panel p-5 rounded-2xl border border-blue-500/20">
+                <p class="text-xs text-slate-400 uppercase font-semibold">Total Courses Passed</p>
+                <h3 class="text-3xl font-black text-blue-400 font-mono mt-1">${data.totalPassed || 0}</h3>
+              </div>
+              <div class="glass-panel p-5 rounded-2xl border border-purple-500/20">
+                <p class="text-xs text-slate-400 uppercase font-semibold">Arrears / RA</p>
+                <h3 class="text-3xl font-black ${data.totalArrears > 0 ? 'text-rose-400' : 'text-emerald-400'} font-mono mt-1">${data.totalArrears || 0}</h3>
+              </div>
             </div>
 
-            <!-- Candidate Profile Info -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 p-5 rounded-2xl bg-white/5 border border-white/10 text-xs">
-              <div class="space-y-1">
-                <span class="text-slate-400 uppercase font-semibold text-[10px]">Candidate Full Name</span>
-                <p class="font-bold text-white text-sm">${ticket.student.name}</p>
+            <!-- Printable Statement of Marks -->
+            <div class="glass-panel p-8 rounded-3xl border-2 border-emerald-500/30 bg-slate-900/90 space-y-6">
+              <div class="text-center border-b border-white/10 pb-4">
+                <p class="text-xs font-mono uppercase tracking-[0.3em] text-emerald-400 font-bold">AUTONOMOUS UNIVERSITY OF TECHNOLOGY</p>
+                <h2 class="text-xl font-black text-white">CONSOLIDATED SEMESTER STATEMENT OF GRADES</h2>
+                <p class="text-xs text-slate-400">Academic Year 2026-2027 • 5-Division Evaluation Model</p>
               </div>
-              <div class="space-y-1">
-                <span class="text-slate-400 uppercase font-semibold text-[10px]">Register / Roll Number</span>
-                <p class="font-mono font-bold text-blue-400 text-sm">${ticket.student.admin_id}</p>
-              </div>
-              <div class="space-y-1">
-                <span class="text-slate-400 uppercase font-semibold text-[10px]">Branch / Department</span>
-                <p class="font-semibold text-white">${ticket.student.department || 'B.E. Computer Science & Engineering'}</p>
-              </div>
-              <div class="space-y-1">
-                <span class="text-slate-400 uppercase font-semibold text-[10px]">Attendance Standing</span>
-                <p class="font-mono font-bold ${ticket.attendancePct >= 75 ? 'text-emerald-400' : 'text-rose-400'}">${ticket.attendancePct}% (${ticket.attendancePct >= 75 ? 'Eligible' : 'Shortage'})</p>
-              </div>
-              <div class="space-y-1">
-                <span class="text-slate-400 uppercase font-semibold text-[10px]">Internal Marks Status</span>
-                <p class="font-bold text-emerald-400">✅ Verified by Faculty</p>
-              </div>
-              <div class="space-y-1">
-                <span class="text-slate-400 uppercase font-semibold text-[10px]">Hall Ticket Verification UUID</span>
-                <p class="font-mono text-purple-400 font-bold">${ticket.qrVerificationCode}</p>
-              </div>
-            </div>
 
-            <!-- Enrolled Exam Courses Table -->
-            <div class="space-y-2">
-              <h4 class="text-xs font-bold text-blue-400 uppercase tracking-wider">Scheduled Examination Courses</h4>
-              <div class="rounded-xl border border-white/10 overflow-hidden">
+              <div class="rounded-xl border border-white/10 overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-300">
-                  <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10">
+                  <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
                     <tr>
-                      <th class="p-3">Course Code</th>
-                      <th class="p-3">Subject Name</th>
-                      <th class="p-3">Exam Date</th>
-                      <th class="p-3">Session</th>
-                      <th class="p-3">Exam Hall</th>
-                      <th class="p-3 text-center">Invigilator Sign</th>
+                      <th class="p-3">Course</th>
+                      <th class="p-3 text-center">Div 1 (Assess.)</th>
+                      <th class="p-3 text-center">Div 2 (Capstone)</th>
+                      <th class="p-3 text-center">Div 3 (Class Lab)</th>
+                      <th class="p-3 text-center">Div 4 (Univ Lab)</th>
+                      <th class="p-3 text-center text-blue-400 font-bold">Total Internal (/400)</th>
+                      <th class="p-3 text-center">Div 5 (Univ Exam /100)</th>
+                      <th class="p-3 text-center text-emerald-400 font-bold">Grand Total (/500)</th>
+                      <th class="p-3 text-center">Grade</th>
+                      <th class="p-3 text-center">Result</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-white/5">
-                    ${ticket.courses.length === 0 ? `
-                      <tr><td colspan="6" class="p-6 text-center text-slate-500">No closed examination courses available yet.</td></tr>
-                    ` : ticket.courses.map(c => `
-                      <tr>
-                        <td class="p-3 font-mono text-blue-400 font-bold">${c.course_code}</td>
-                        <td class="p-3 font-semibold text-white">${c.subject_name}</td>
-                        <td class="p-3 font-mono">${c.exam_date || 'TBA'}</td>
-                        <td class="p-3 font-medium text-purple-400">${c.exam_session || 'FN'}</td>
-                        <td class="p-3 font-semibold text-emerald-400">${c.exam_hall || 'Exam Hall A'}</td>
-                        <td class="p-3 text-center text-slate-500 font-mono">_______________</td>
+                  <tbody class="divide-y divide-white/5 whitespace-nowrap">
+                    ${results.map(r => `
+                      <tr class="hover:bg-white/[0.02]">
+                        <td class="p-3">
+                          <span class="font-mono text-purple-400 font-semibold">${r.course_code || ''}</span>
+                          <div class="font-semibold text-white">${r.subject_name}</div>
+                        </td>
+                        <td class="p-3 text-center font-mono">${r.div1_assessments || 0}</td>
+                        <td class="p-3 text-center font-mono">${r.div2_capstone || 0}</td>
+                        <td class="p-3 text-center font-mono">${r.div3_class_lab || 0}</td>
+                        <td class="p-3 text-center font-mono">${r.div4_univ_lab || 0}</td>
+                        <td class="p-3 text-center font-mono font-bold text-blue-400 bg-blue-500/5">${r.total_internal || 0}</td>
+                        <td class="p-3 text-center font-mono">${r.div5_univ_exam || 0}</td>
+                        <td class="p-3 text-center font-mono font-bold text-emerald-400 bg-emerald-500/5">${r.grand_total || 0}</td>
+                        <td class="p-3 text-center"><span class="badge ${r.grade_letter === 'RA' ? 'badge-rose' : 'badge-emerald'} text-xs">${r.grade_letter}</span></td>
+                        <td class="p-3 text-center font-bold ${r.grade_letter === 'RA' ? 'text-rose-400' : 'text-emerald-400'}">${r.grade_letter === 'RA' ? 'RE-APPEAR' : 'PASS'}</td>
                       </tr>
                     `).join('')}
                   </tbody>
                 </table>
               </div>
-            </div>
 
-            <!-- Controller of Examination Seal -->
-            <div class="pt-6 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
-              <div class="space-y-1">
-                <p class="text-slate-400">1. Candidate must bring this Hall Ticket & Institutional ID Card to every exam.</p>
-                <p class="text-slate-400">2. Electronic devices & smart watches are strictly prohibited in the exam hall.</p>
-              </div>
-              <div class="text-right shrink-0">
-                <div class="font-serif italic font-bold text-white text-base">K. Raghavan, Ph.D.</div>
-                <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Controller of Examinations</p>
-                <span class="badge badge-emerald text-[9px] mt-1">SEAL VERIFIED</span>
+              <div class="pt-4 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
+                <span>Result Publication Date: ${new Date().toLocaleDateString()}</span>
+                <span class="font-mono font-bold text-emerald-400">AUTHENTICATED DIGITAL TRANSCRIPT</span>
               </div>
             </div>
-          </div>
+          `}
         </div>
       `;
       lucide.createIcons();
