@@ -708,85 +708,307 @@
       `;
     }
 
+    let allStudentsCache = [];
+
     async function renderStudentsDirectory(container) {
       const students = await api('GET', '/students');
+      allStudentsCache = students.filter(u => u.role === 'student');
 
       container.innerHTML = `
         <div class="space-y-6 animate-fade-in">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-bold text-white">All Enrolled Students</h3>
-            <button onclick="openAddStudentModal()" class="btn-primary">
+          <!-- Header Bar -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-xl font-extrabold text-white tracking-tight">Engineering Students Directory</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Manage student admissions, auto-assigned Reg Nos, and class batches.</p>
+            </div>
+            <button onclick="openAddStudentModal()" class="btn-primary flex items-center gap-2">
               <i data-lucide="user-plus" class="w-4 h-4"></i>
               <span>Add New Student</span>
             </button>
           </div>
 
-          <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
-            <div class="p-4 border-b border-white/10 flex items-center gap-4">
-              <input type="text" id="search-student" onkeyup="filterStudentTable()" placeholder="Search by name or Admin ID..." class="glass-input text-sm w-full max-w-sm">
+          <!-- Search & Filter Controls -->
+          <div class="glass-panel p-4 rounded-2xl border border-white/10 space-y-4">
+            <div class="flex flex-col sm:flex-row items-center gap-4 justify-between">
+              <!-- Search by Reg No / Name / Class -->
+              <div class="relative w-full sm:max-w-md">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                <input type="text" id="search-student" onkeyup="filterStudentTable()" 
+                       placeholder="Search by Register Number (e.g. 2024CSE001) or Name..." 
+                       class="glass-input pl-10 pr-10 text-sm w-full font-medium">
+                <button onclick="clearStudentSearch()" id="btn-clear-search" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs p-1">
+                  ✕
+                </button>
+              </div>
+
+              <!-- Student Count Badge -->
+              <div class="flex items-center gap-3">
+                <span id="student-count-badge" class="badge badge-blue text-xs font-semibold py-1.5 px-3">
+                  ${allStudentsCache.length} Students Enrolled
+                </span>
+              </div>
             </div>
+
+            <!-- Course Filter Chips -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+              <span class="text-slate-500 font-semibold uppercase text-[10px] tracking-wider shrink-0 mr-1">Filter Course:</span>
+              <button onclick="filterByCourse('ALL')" class="course-chip active py-1 px-3 rounded-lg bg-blue-600/30 text-blue-400 border border-blue-500/40 font-semibold transition-all">All Courses</button>
+              <button onclick="filterByCourse('CSE')" class="course-chip py-1 px-3 rounded-lg bg-white/5 text-slate-400 hover:text-white border border-white/10 font-medium transition-all">CSE</button>
+              <button onclick="filterByCourse('IT')" class="course-chip py-1 px-3 rounded-lg bg-white/5 text-slate-400 hover:text-white border border-white/10 font-medium transition-all">IT</button>
+              <button onclick="filterByCourse('AIDS')" class="course-chip py-1 px-3 rounded-lg bg-white/5 text-slate-400 hover:text-white border border-white/10 font-medium transition-all">AI&DS</button>
+              <button onclick="filterByCourse('ECE')" class="course-chip py-1 px-3 rounded-lg bg-white/5 text-slate-400 hover:text-white border border-white/10 font-medium transition-all">ECE</button>
+              <button onclick="filterByCourse('EEE')" class="course-chip py-1 px-3 rounded-lg bg-white/5 text-slate-400 hover:text-white border border-white/10 font-medium transition-all">EEE</button>
+              <button onclick="filterByCourse('MECH')" class="course-chip py-1 px-3 rounded-lg bg-white/5 text-slate-400 hover:text-white border border-white/10 font-medium transition-all">MECH</button>
+              <button onclick="filterByCourse('CIVIL')" class="course-chip py-1 px-3 rounded-lg bg-white/5 text-slate-400 hover:text-white border border-white/10 font-medium transition-all">CIVIL</button>
+              <button onclick="filterByCourse('CSBS')" class="course-chip py-1 px-3 rounded-lg bg-white/5 text-slate-400 hover:text-white border border-white/10 font-medium transition-all">CSBS</button>
+            </div>
+          </div>
+
+          <!-- Students Table -->
+          <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
             <div class="overflow-x-auto">
               <table class="w-full text-left text-sm text-slate-300">
                 <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
                   <tr>
+                    <th class="p-4">Register Number (Reg No)</th>
                     <th class="p-4">Student Name</th>
-                    <th class="p-4">Register ID</th>
-                    <th class="p-4">Class Batch</th>
+                    <th class="p-4">Class / Batch</th>
                     <th class="p-4">Email Address</th>
                     <th class="p-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="student-table-body" class="divide-y divide-white/5">
-                  ${students.map(s => `
-                    <tr class="hover:bg-white/[0.02]">
+                  ${allStudentsCache.map(s => `
+                    <tr class="hover:bg-white/[0.02] transition-colors" data-reg="${(s.admin_id || '').toLowerCase()}" data-name="${(s.name || '').toLowerCase()}" data-class="${(s.class_name || '').toLowerCase()}" data-email="${(s.email || '').toLowerCase()}">
+                      <td class="p-4">
+                        <span class="inline-flex items-center gap-1.5 font-mono text-xs font-bold text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-lg border border-blue-500/20">
+                          <i data-lucide="hash" class="w-3 h-3 text-blue-400"></i>
+                          <span class="reg-no-text">${s.admin_id || 'N/A'}</span>
+                        </span>
+                      </td>
                       <td class="p-4 font-semibold text-white">${s.name}</td>
-                      <td class="p-4 font-mono text-xs text-blue-400">${s.admin_id || 'N/A'}</td>
                       <td class="p-4"><span class="badge badge-purple">${s.class_name || 'Unassigned'}</span></td>
-                      <td class="p-4 text-slate-400">${s.email || 'N/A'}</td>
+                      <td class="p-4 text-slate-400 text-xs">${s.email || 'N/A'}</td>
                       <td class="p-4 text-right">
-                        <button onclick="deleteStudent(${s.id})" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-white/5"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <button onclick="deleteStudent(${s.id})" title="Delete Student" class="text-slate-400 hover:text-rose-400 p-2 rounded-lg hover:bg-white/5 transition-colors">
+                          <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
                       </td>
                     </tr>
                   `).join('')}
                 </tbody>
               </table>
+              <div id="no-students-found" class="hidden p-12 text-center text-slate-400">
+                <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2 text-slate-500"></i>
+                <p class="text-sm font-semibold text-white">No students found matching your search</p>
+                <p class="text-xs text-slate-500 mt-1">Try searching with a different Register Number, Name, or Department.</p>
+              </div>
             </div>
           </div>
         </div>
       `;
+      lucide.createIcons();
+    }
+
+    let currentCourseFilter = 'ALL';
+
+    function filterByCourse(course) {
+      currentCourseFilter = course;
+      document.querySelectorAll('.course-chip').forEach(btn => {
+        if (btn.innerText.includes(course) || (course === 'ALL' && btn.innerText.includes('All'))) {
+          btn.className = 'course-chip active py-1 px-3 rounded-lg bg-blue-600/30 text-blue-400 border border-blue-500/40 font-semibold transition-all';
+        } else {
+          btn.className = 'course-chip py-1 px-3 rounded-lg bg-white/5 text-slate-400 hover:text-white border border-white/10 font-medium transition-all';
+        }
+      });
+      filterStudentTable();
     }
 
     function filterStudentTable() {
-      const query = document.getElementById('search-student').value.toLowerCase();
+      const query = (document.getElementById('search-student')?.value || '').trim().toLowerCase();
+      const clearBtn = document.getElementById('btn-clear-search');
+      if (clearBtn) {
+        if (query.length > 0) clearBtn.classList.remove('hidden');
+        else clearBtn.classList.add('hidden');
+      }
+
       const rows = document.querySelectorAll('#student-table-body tr');
+      let visibleCount = 0;
+
       rows.forEach(row => {
-        const text = row.innerText.toLowerCase();
-        row.style.display = text.includes(query) ? '' : 'none';
+        const reg = row.getAttribute('data-reg') || '';
+        const name = row.getAttribute('data-name') || '';
+        const cls = row.getAttribute('data-class') || '';
+        const email = row.getAttribute('data-email') || '';
+
+        const matchesQuery = !query || reg.includes(query) || name.includes(query) || cls.includes(query) || email.includes(query);
+        const matchesCourse = currentCourseFilter === 'ALL' || reg.includes(currentCourseFilter.toLowerCase()) || cls.includes(currentCourseFilter.toLowerCase());
+
+        if (matchesQuery && matchesCourse) {
+          row.style.display = '';
+          visibleCount++;
+        } else {
+          row.style.display = 'none';
+        }
       });
+
+      const badge = document.getElementById('student-count-badge');
+      if (badge) {
+        badge.innerText = `Showing ${visibleCount} of ${rows.length} Students`;
+      }
+
+      const noResult = document.getElementById('no-students-found');
+      if (noResult) {
+        if (visibleCount === 0 && rows.length > 0) noResult.classList.remove('hidden');
+        else noResult.classList.add('hidden');
+      }
     }
 
-    function openAddStudentModal() {
-      openModal('Add New Student', `
-        <div class="space-y-4">
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Full Name</label><input type="text" id="m-s-name" class="glass-input w-full" required></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Student Register / Admin ID</label><input type="text" id="m-s-id" class="glass-input w-full" required></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Password</label><input type="password" id="m-s-pass" class="glass-input w-full" required></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Email</label><input type="email" id="m-s-email" class="glass-input w-full"></div>
+    function clearStudentSearch() {
+      const input = document.getElementById('search-student');
+      if (input) {
+        input.value = '';
+        filterStudentTable();
+        input.focus();
+      }
+    }
+
+    async function openAddStudentModal() {
+      const classes = await api('GET', '/classes');
+      const currentYear = new Date().getFullYear();
+
+      openModal('Add New Student — Engineering Admissions', `
+        <div class="space-y-4 text-left">
+          <!-- 1. Engineering Course / Department -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+              <span>1. Engineering Course / Branch</span>
+              <span class="text-[11px] text-blue-400 font-normal">Auto-Generates Reg. No</span>
+            </label>
+            <select id="m-s-course" onchange="autoGenerateRegNo()" class="glass-input w-full font-medium">
+              <option value="CSE" selected>B.E. Computer Science & Engineering (CSE)</option>
+              <option value="IT">B.Tech Information Technology (IT)</option>
+              <option value="AIDS">B.Tech Artificial Intelligence & Data Science (AI&DS)</option>
+              <option value="AIML">B.Tech AI & Machine Learning (AI&ML)</option>
+              <option value="ECE">B.E. Electronics & Communication Engineering (ECE)</option>
+              <option value="EEE">B.E. Electrical & Electronics Engineering (EEE)</option>
+              <option value="MECH">B.E. Mechanical Engineering (MECH)</option>
+              <option value="CIVIL">B.E. Civil Engineering (CIVIL)</option>
+              <option value="CSBS">B.Tech Computer Science & Business Systems (CSBS)</option>
+              <option value="BME">B.E. Biomedical Engineering (BME)</option>
+              <option value="CYBER">B.E. Cyber Security (CYBER)</option>
+              <option value="AERO">B.E. Aeronautical Engineering (AERO)</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <!-- Admission Year -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Admission Year</label>
+              <select id="m-s-year" onchange="autoGenerateRegNo()" class="glass-input w-full font-medium">
+                <option value="${currentYear}" selected>${currentYear} (Current)</option>
+                <option value="${currentYear - 1}">${currentYear - 1}</option>
+                <option value="${currentYear + 1}">${currentYear + 1}</option>
+              </select>
+            </div>
+
+            <!-- Class / Batch Selection -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Class / Batch</label>
+              <select id="m-s-class" class="glass-input w-full font-medium">
+                <option value="">-- Select Class --</option>
+                ${classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+
+          <!-- 2. Auto-Generated Register Number -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+              <span>2. Register Number (Auto-Generated)</span>
+              <button type="button" onclick="autoGenerateRegNo()" class="text-[11px] text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1">
+                <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                <span>Regenerate</span>
+              </button>
+            </label>
+            <div class="relative">
+              <input type="text" id="m-s-id" required 
+                     class="glass-input w-full font-mono text-base font-bold text-blue-400 tracking-wider bg-blue-500/10 border-blue-500/30">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 badge badge-blue text-[10px]">Auto-Assigned</span>
+            </div>
+          </div>
+
+          <!-- 3. Student Personal Details -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">3. Full Name</label>
+            <input type="text" id="m-s-name" placeholder="e.g. Alex Johnson" class="glass-input w-full font-medium" required>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Student Password</label>
+              <input type="text" id="m-s-pass" value="Student@123" class="glass-input w-full font-mono text-sm" required>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Email Address</label>
+              <input type="email" id="m-s-email" placeholder="student@eduportal.com" class="glass-input w-full font-medium">
+            </div>
+          </div>
         </div>
       `, `
-        <button onclick="saveStudent()" class="btn-primary w-full">Create Student</button>
+        <button onclick="saveStudent()" class="btn-primary w-full flex items-center justify-center gap-2">
+          <i data-lucide="user-check" class="w-4 h-4"></i>
+          <span>Enroll Student with Reg. No</span>
+        </button>
       `);
+
+      lucide.createIcons();
+      // Generate initial Reg. No for default course
+      autoGenerateRegNo();
+    }
+
+    async function autoGenerateRegNo() {
+      const course = document.getElementById('m-s-course')?.value || 'CSE';
+      const year = document.getElementById('m-s-year')?.value || new Date().getFullYear();
+      const regInput = document.getElementById('m-s-id');
+      const emailInput = document.getElementById('m-s-email');
+
+      if (!regInput) return;
+
+      try {
+        const res = await api('GET', `/students/next-regno?course=${course}&year=${year}`);
+        if (res && res.regNo) {
+          regInput.value = res.regNo;
+          if (emailInput && (!emailInput.value || emailInput.value.includes('@eduportal.com'))) {
+            emailInput.value = `${res.regNo.toLowerCase()}@eduportal.com`;
+          }
+        }
+      } catch (err) {
+        // Fallback generator on client
+        const fallback = `${year}${course}001`;
+        regInput.value = fallback;
+        if (emailInput && (!emailInput.value || emailInput.value.includes('@eduportal.com'))) {
+          emailInput.value = `${fallback.toLowerCase()}@eduportal.com`;
+        }
+      }
     }
 
     async function saveStudent() {
-      const name = document.getElementById('m-s-name').value;
-      const adminId = document.getElementById('m-s-id').value;
-      const password = document.getElementById('m-s-pass').value;
-      const email = document.getElementById('m-s-email').value;
+      const name = document.getElementById('m-s-name')?.value.trim();
+      const adminId = document.getElementById('m-s-id')?.value.trim();
+      const password = document.getElementById('m-s-pass')?.value.trim();
+      const email = document.getElementById('m-s-email')?.value.trim();
+      const classId = document.getElementById('m-s-class')?.value || null;
+      const course = document.getElementById('m-s-course')?.value || 'CSE';
+
+      if (!name) return toast('Student name is required', 'warning');
+      if (!adminId) return toast('Register Number is required', 'warning');
+      if (!password) return toast('Password is required', 'warning');
 
       try {
-        await api('POST', '/students', { name, adminId, password, email });
-        toast('Student created successfully', 'success');
+        await api('POST', '/students', { name, adminId, password, email, classId, course });
+        toast(`Student enrolled with Reg No: ${adminId}!`, 'success');
         closeModal();
         renderPage();
       } catch(e) {}
@@ -796,7 +1018,7 @@
       if (!confirm('Are you sure you want to remove this student?')) return;
       try {
         await api('DELETE', `/students/${id}`);
-        toast('Student deleted', 'success');
+        toast('Student removed from directory', 'success');
         renderPage();
       } catch(e) {}
     }

@@ -4,6 +4,55 @@ const { authenticate, requireFaculty } = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
 const { logAction } = require('../services/audit');
 
+// Engineering Course Map
+const COURSE_CODES = {
+  'CSE': 'CSE',
+  'IT': 'IT',
+  'AIDS': 'AIDS',
+  'AIML': 'AIML',
+  'ECE': 'ECE',
+  'EEE': 'EEE',
+  'MECH': 'MECH',
+  'CIVIL': 'CIVIL',
+  'CSBS': 'CSBS',
+  'BME': 'BME',
+  'CYBER': 'CYBER',
+  'AERO': 'AERO'
+};
+
+// GET /next-regno - Calculate next available Register Number based on engineering course and year
+router.get('/next-regno', authenticate, requireFaculty, async (req, res) => {
+  try {
+    const course = (req.query.course || 'CSE').toUpperCase().trim();
+    const year = req.query.year || new Date().getFullYear().toString();
+    const prefix = `${year}${course}`;
+
+    // Find all existing admin_ids matching this pattern
+    const result = await pool.query(
+      `SELECT admin_id FROM users WHERE role='student' AND admin_id LIKE $1 ORDER BY admin_id DESC`,
+      [`${prefix}%`]
+    );
+
+    let nextNum = 1;
+    if (result.rows.length > 0) {
+      for (const row of result.rows) {
+        const idStr = row.admin_id || '';
+        const numPart = idStr.replace(prefix, '');
+        const parsed = parseInt(numPart, 10);
+        if (!isNaN(parsed) && parsed >= nextNum) {
+          nextNum = parsed + 1;
+        }
+      }
+    }
+
+    const regNo = `${prefix}${String(nextNum).padStart(3, '0')}`;
+    res.json({ regNo, course, year, sequence: nextNum });
+  } catch (err) {
+    console.error('[Next RegNo] Error:', err);
+    res.status(500).json({ error: 'Failed to generate register number' });
+  }
+});
+
 // GET all students (faculty) or own profile (student)
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -15,7 +64,7 @@ router.get('/', authenticate, async (req, res) => {
         FROM users u
         LEFT JOIN classes c ON u.class_id = c.id
         WHERE u.deleted_at IS NULL
-        ORDER BY u.role, u.name
+        ORDER BY u.role, u.admin_id, u.name
       `);
       res.json(r.rows);
     } else {
@@ -46,19 +95,41 @@ router.get('/:id', authenticate, requireFaculty, async (req, res) => {
 
 // POST create student (faculty)
 router.post('/', authenticate, requireFaculty, async (req, res) => {
-  const { name, email, adminId, password, parentEmail, parentPhone, dob, aadhar, classId } = req.body;
+  let { name, email, adminId, password, parentEmail, parentPhone, dob, aadhar, classId, course } = req.body;
   if (!name || !password) return res.status(400).json({ error: 'Name and password required' });
+
   try {
+    // If adminId (Reg No) is not supplied, auto-generate it based on course
+    if (!adminId || !adminId.trim()) {
+      const courseCode = (course || 'CSE').toUpperCase().trim();
+      const year = new Date().getFullYear().toString();
+      const prefix = `${year}${courseCode}`;
+      const existing = await pool.query(
+        `SELECT admin_id FROM users WHERE role='student' AND admin_id LIKE $1 ORDER BY admin_id DESC`,
+        [`${prefix}%`]
+      );
+      let nextNum = 1;
+      if (existing.rows.length > 0) {
+        for (const row of existing.rows) {
+          const numPart = (row.admin_id || '').replace(prefix, '');
+          const parsed = parseInt(numPart, 10);
+          if (!isNaN(parsed) && parsed >= nextNum) nextNum = parsed + 1;
+        }
+      }
+      adminId = `${prefix}${String(nextNum).padStart(3, '0')}`;
+    }
+
     const hash = await bcrypt.hash(password, 10);
     const r = await pool.query(
       `INSERT INTO users (role,name,email,admin_id,password_hash,parent_email,parent_phone,dob,aadhar,class_id)
        VALUES ('student',$1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id,name,email,admin_id,class_id,role`,
-      [name, email, adminId, hash, parentEmail, parentPhone, dob, aadhar, classId || null]
+      [name, email || `${adminId.toLowerCase()}@eduportal.com`, adminId, hash, parentEmail, parentPhone, dob, aadhar, classId || null]
     );
-    await logAction(req.user.id, req.user.name, 'faculty', 'create_student', 'users', r.rows[0].id, null, { name });
+    await logAction(req.user.id, req.user.name, 'faculty', 'create_student', 'users', r.rows[0].id, null, { name, adminId });
     res.status(201).json(r.rows[0]);
   } catch (err) {
-    if (err.code === '23505') return res.status(409).json({ error: 'Student ID already exists' });
+    if (err.code === '23505') return res.status(409).json({ error: 'Student Register ID already exists' });
+    console.error('[Create Student] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -82,14 +153,13 @@ router.post('/faculty', authenticate, requireFaculty, async (req, res) => {
   }
 });
 
-// PUT update student or faculty (faculty updates others, students update own)
+// PUT update student or faculty
 router.put('/:id', authenticate, async (req, res) => {
   const targetId = req.params.id;
-  // Students can only update their own password
   if (req.user.role === 'student' && String(req.user.id) !== String(targetId)) {
     return res.status(403).json({ error: 'Not authorized' });
   }
-  const { name, email, parentEmail, parentPhone, dob, aadhar, classId, password } = req.body;
+  const { name, email, parentEmail, parentPhone, dob, aadhar, classId, password, adminId } = req.body;
   try {
     let updateQuery;
     let values;
@@ -102,9 +172,10 @@ router.put('/:id', authenticate, async (req, res) => {
         name=COALESCE($1,name), email=COALESCE($2,email),
         parent_email=COALESCE($3,parent_email), parent_phone=COALESCE($4,parent_phone),
         dob=COALESCE($5,dob), aadhar=COALESCE($6,aadhar),
-        class_id=COALESCE($7::integer,class_id)
-       WHERE id=$8 AND deleted_at IS NULL RETURNING id,name,email,class_id,role`;
-      values = [name, email, parentEmail, parentPhone, dob, aadhar, classId || null, targetId];
+        class_id=COALESCE($7::integer,class_id),
+        admin_id=COALESCE($8,admin_id)
+       WHERE id=$9 AND deleted_at IS NULL RETURNING id,name,email,class_id,admin_id,role`;
+      values = [name, email, parentEmail, parentPhone, dob, aadhar, classId || null, adminId || null, targetId];
     }
     const r = await pool.query(updateQuery, values);
     if (!r.rows[0]) return res.status(404).json({ error: 'User not found' });
