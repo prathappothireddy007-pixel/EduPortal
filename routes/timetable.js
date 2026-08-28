@@ -1,13 +1,13 @@
 const router = require('express').Router();
 const { pool } = require('../db');
-const { authenticate, requireFaculty } = require('../middleware/auth');
+const { authenticate, requireFaculty, requireAdmin } = require('../middleware/auth');
 const { logAction, notify } = require('../services/audit');
-const { checkConflicts, autoGenerate } = require('../services/timetable');
+const { checkConflicts, autoGenerate, autoGenerateLiveCoursesTimetable } = require('../services/timetable');
 
 // GET / - list timetable entries with full joins
 router.get('/', authenticate, async (req, res) => {
   try {
-    const { class_id, day_of_week, classroom_id } = req.query;
+    const { class_id, day_of_week, classroom_id, faculty_id } = req.query;
     const params = [];
     let idx = 1;
     let whereClause = 'WHERE 1=1';
@@ -24,21 +24,41 @@ router.get('/', authenticate, async (req, res) => {
       whereClause += ` AND te.classroom_id = $${idx++}`;
       params.push(classroom_id);
     }
+    if (faculty_id) {
+      whereClause += ` AND te.faculty_id = $${idx++}`;
+      params.push(faculty_id);
+    }
 
     const result = await pool.query(
       `SELECT
          te.*,
          c.name AS class_name,
          s.name AS subject_name,
-         cr.name AS classroom_name, cr.name AS room_name, cr.building, cr.floor,
-         u.name AS faculty_name
+         s.code AS subject_code,
+         s.slot AS slot,
+         s.subject_type,
+         s.is_launched,
+         s.target_dept,
+         cr.name AS classroom_name, cr.name AS room_name, cr.building, cr.floor, cr.capacity, cr.room_type,
+         u.name AS faculty_name, u.admin_id AS faculty_admin_id, u.email AS faculty_email,
+         (SELECT COUNT(*) FROM enrollment_requests er WHERE er.subject_id = te.subject_id AND er.status = 'enrolled') AS enrolled_students_count
        FROM timetable_entries te
        LEFT JOIN classes c ON te.class_id = c.id
        LEFT JOIN subjects s ON te.subject_id = s.id
        LEFT JOIN classrooms cr ON te.classroom_id = cr.id
        LEFT JOIN users u ON te.faculty_id = u.id
        ${whereClause}
-       ORDER BY te.day_of_week, te.start_time`,
+       ORDER BY
+         CASE te.day_of_week
+           WHEN 'Monday' THEN 1
+           WHEN 'Tuesday' THEN 2
+           WHEN 'Wednesday' THEN 3
+           WHEN 'Thursday' THEN 4
+           WHEN 'Friday' THEN 5
+           WHEN 'Saturday' THEN 6
+           ELSE 7
+         END,
+         te.start_time`,
       params
     );
 
@@ -50,7 +70,7 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // GET /conflicts - check conflicts on all existing entries
-router.get('/conflicts', authenticate, requireFaculty, async (req, res) => {
+router.get('/conflicts', authenticate, async (req, res) => {
   try {
     const entriesResult = await pool.query('SELECT * FROM timetable_entries');
     const conflicts = [];
@@ -77,47 +97,69 @@ router.get('/student/current-class', authenticate, async (req, res) => {
       'SELECT class_id FROM users WHERE id = $1',
       [req.user.id]
     );
+    const classId = studentResult.rows[0]?.class_id || null;
 
-    if (studentResult.rows.length === 0 || !studentResult.rows[0].class_id) {
+    // Get subjects the student is actively enrolled in
+    const enrolledSubs = await pool.query(
+      `SELECT subject_id FROM enrollment_requests WHERE student_id = $1 AND status = 'enrolled'`,
+      [req.user.id]
+    );
+    const enrolledSubjectIds = enrolledSubs.rows.map(r => r.subject_id);
+
+    let matchCondition = '';
+    const queryParams = [currentDay, currentTime];
+
+    if (classId && enrolledSubjectIds.length > 0) {
+      matchCondition = `(te.class_id = $3 OR te.subject_id = ANY($4::int[]))`;
+      queryParams.push(classId, enrolledSubjectIds);
+    } else if (enrolledSubjectIds.length > 0) {
+      matchCondition = `te.subject_id = ANY($3::int[])`;
+      queryParams.push(enrolledSubjectIds);
+    } else if (classId) {
+      matchCondition = `te.class_id = $3`;
+      queryParams.push(classId);
+    } else {
       return res.json({ current: null, next: null });
     }
-
-    const classId = studentResult.rows[0].class_id;
 
     const currentResult = await pool.query(
       `SELECT
          te.*,
          s.name AS subject_name,
+         s.code AS subject_code,
+         s.slot AS slot,
          cr.name AS room_name, cr.building, cr.floor,
          u.name AS faculty_name
        FROM timetable_entries te
        LEFT JOIN subjects s ON te.subject_id = s.id
        LEFT JOIN classrooms cr ON te.classroom_id = cr.id
        LEFT JOIN users u ON te.faculty_id = u.id
-       WHERE te.class_id = $1
-         AND te.day_of_week = $2
-         AND te.start_time <= $3
-         AND te.end_time > $3
+       WHERE ${matchCondition}
+         AND te.day_of_week = $1
+         AND te.start_time <= $2
+         AND te.end_time > $2
        LIMIT 1`,
-      [classId, currentDay, currentTime]
+      queryParams
     );
 
     const nextResult = await pool.query(
       `SELECT
          te.*,
          s.name AS subject_name,
+         s.code AS subject_code,
+         s.slot AS slot,
          cr.name AS room_name, cr.building, cr.floor,
          u.name AS faculty_name
        FROM timetable_entries te
        LEFT JOIN subjects s ON te.subject_id = s.id
        LEFT JOIN classrooms cr ON te.classroom_id = cr.id
        LEFT JOIN users u ON te.faculty_id = u.id
-       WHERE te.class_id = $1
-         AND te.day_of_week = $2
-         AND te.start_time > $3
+       WHERE ${matchCondition}
+         AND te.day_of_week = $1
+         AND te.start_time > $2
        ORDER BY te.start_time ASC
        LIMIT 1`,
-      [classId, currentDay, currentTime]
+      queryParams
     );
 
     res.json({
@@ -130,42 +172,27 @@ router.get('/student/current-class', authenticate, async (req, res) => {
   }
 });
 
-// POST /generate - auto-generate timetable
-router.post('/generate', authenticate, requireFaculty, async (req, res) => {
+// POST /generate - auto-generate timetable for all live/running courses and broadcast to faculties
+router.post('/generate', authenticate, async (req, res) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'faculty') {
+    return res.status(403).json({ error: 'Access denied: Admin or Faculty authorization required.' });
+  }
+
   try {
-    const { classIds, days, slots, replaceExisting } = req.body;
+    const result = await autoGenerateLiveCoursesTimetable(pool, notify);
+    await logAction(req.user.id, req.user.name, req.user.role, 'generate_timetable_live', 'timetable_entries', null);
 
-    if (!classIds || !days || !slots) {
-      return res.status(400).json({ error: 'classIds, days, and slots are required' });
-    }
-
-    if (replaceExisting) {
-      const placeholders = classIds.map((_, i) => `$${i + 1}`).join(', ');
-      await pool.query(
-        `DELETE FROM timetable_entries WHERE class_id IN (${placeholders})`,
-        classIds
-      );
-    }
-
-    const { allocated, unallocated } = await autoGenerate(pool, classIds, days, slots);
-
-    if (allocated && allocated.length > 0) {
-      for (const entry of allocated) {
-        await pool.query(
-          `INSERT INTO timetable_entries
-             (class_id, subject_id, faculty_id, classroom_id, day_of_week, start_time, end_time)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [entry.class_id, entry.subject_id, entry.faculty_id, entry.classroom_id,
-           entry.day_of_week, entry.start_time, entry.end_time]
-        );
-      }
-    }
-
-    await logAction(req.user.id, req.user.name, 'faculty', 'generate_timetable', 'timetable_entries', null);
-    res.json({ allocated, unallocated, conflicts: [] });
+    res.json({
+      message: result.message || `Timetable generated for ${result.liveCourseCount} live courses! Room allocations dispatched to ${result.facultyNotifiedCount} faculty members. 🗓️⚡`,
+      allocated: result.allocated,
+      unallocated: result.unallocated,
+      liveCourseCount: result.liveCourseCount,
+      facultyNotifiedCount: result.facultyNotifiedCount,
+      studentNotifiedCount: result.studentNotifiedCount
+    });
   } catch (err) {
     console.error('[Timetable Generate] Error:', err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: err.message || 'Server error' });
   }
 });
 
