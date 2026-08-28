@@ -85,9 +85,9 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 
 /* Glassmorphism Classes */
 .glass-panel {
-  background: rgba(10, 14, 18, 0.78) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
+  background: rgba(10, 14, 18, 0.65) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
   border: 1px solid rgba(223, 231, 224, 0.08) !important;
 }
 .glass-card {
@@ -360,22 +360,22 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 
 /* ============================================================ UNIVERSAL EDU OS THEME (POST-LOGIN) */
 #app-screen {
-  background: rgba(5, 7, 10, 0.76) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  background: rgba(5, 7, 10, 0.35) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
   color: var(--bone);
   font-family: 'Onest', 'Inter', sans-serif;
 }
 
 #app-screen aside#sidebar {
-  background: rgba(10, 14, 18, 0.88) !important;
+  background: rgba(8, 12, 16, 0.72) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
   border-right: 1px solid rgba(223, 231, 224, 0.1) !important;
 }
 
 #app-screen header {
-  background: rgba(10, 14, 18, 0.80) !important;
+  background: rgba(8, 12, 16, 0.65) !important;
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
   border-bottom: 1px solid rgba(223, 231, 224, 0.08) !important;
@@ -391,9 +391,9 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 #app-screen .bg-slate-800/50,
 #app-screen .bg-slate-800/80,
 #app-screen .glass-panel {
-  background: rgba(10, 14, 18, 0.75) !important;
-  backdrop-filter: blur(18px) !important;
-  -webkit-backdrop-filter: blur(18px) !important;
+  background: rgba(10, 14, 18, 0.58) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
   border: 1px solid rgba(223, 231, 224, 0.09) !important;
   border-radius: 1.25rem !important;
 }
@@ -404,7 +404,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 #app-screen .bg-white/5,
 #app-screen .glass-card,
 #app-screen .stat-card {
-  background: rgba(223, 231, 224, 0.035) !important;
+  background: rgba(223, 231, 224, 0.04) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
   border: 1px solid rgba(223, 231, 224, 0.08) !important;
@@ -415,7 +415,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 #app-screen .glass-card:hover,
 #app-screen .bg-slate-800/40:hover,
 #app-screen .stat-card:hover {
-  background: rgba(223, 231, 224, 0.07) !important;
+  background: rgba(223, 231, 224, 0.08) !important;
   border-color: rgba(224, 35, 28, 0.4) !important;
   transform: translateY(-2px);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(224, 35, 28, 0.15) !important;
@@ -440,7 +440,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 }
 
 #app-screen table tbody tr:hover {
-  background: rgba(224, 35, 28, 0.06) !important;
+  background: rgba(224, 35, 28, 0.08) !important;
 }
 
 /* Force inputs and dropdowns to have Kage glass focus styling */
@@ -448,7 +448,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 #app-screen select,
 #app-screen textarea,
 #app-screen .glass-input {
-  background: rgba(223, 231, 224, 0.04) !important;
+  background: rgba(223, 231, 224, 0.05) !important;
   border: 1px solid rgba(223, 231, 224, 0.14) !important;
   color: #F8FAFC !important;
   border-radius: 0.75rem !important;
@@ -881,9 +881,9 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 </div><!-- /#landing-container -->
 
 <!-- ============================================================ AUTHENTICATED APP SCREEN (EDU OS INTEGRATED) -->
-<div id="app-screen" class="hidden flex min-h-screen relative z-30 bg-[#05070a]/80 backdrop-blur-xl">
+<div id="app-screen" class="hidden flex min-h-screen relative z-30 bg-transparent">
   <!-- SIDEBAR -->
-  <aside id="sidebar" class="w-64 glass-panel border-r border-white/10 flex flex-col justify-between transition-all duration-300 z-30 shrink-0 bg-[#070b0e]/90 backdrop-blur-2xl">
+  <aside id="sidebar" class="w-64 glass-panel border-r border-white/10 flex flex-col justify-between transition-all duration-300 z-30 shrink-0 bg-[#070b0e]/75 backdrop-blur-2xl">
     <div>
       <!-- Brand Header with EDU OS -->
       <div class="h-16 flex items-center justify-between px-6 border-b border-white/10">
@@ -930,16 +930,16 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
   <!-- CONTENT WRAPPER -->
   <div class="flex-1 flex flex-col min-w-0 bg-transparent">
     <!-- TOP HEADER BAR -->
-    <header class="h-16 glass-panel border-b border-white/10 flex items-center justify-between px-8 sticky top-0 z-20 bg-[#070b0e]/75 backdrop-blur-xl">
+    <header class="h-16 glass-panel border-b border-white/10 flex items-center justify-between px-8 sticky top-0 z-20 bg-[#070b0e]/65 backdrop-blur-xl">
       <div class="flex items-center gap-4">
         <h2 id="page-title" class="text-xl font-bold text-white tracking-tight">Dashboard Overview</h2>
       </div>
 
       <div class="flex items-center gap-4">
-        <!-- Return to 3D Temple Experience Button -->
-        <button onclick="toggleLandingView()" class="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 border-[#e0231c]/40 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 transition-all shadow-sm">
-          <span class="w-2 h-2 rounded-full bg-[#e0231c] animate-pulse"></span>
-          <span>⛩️ Kyoto Sanctuary 3D</span>
+        <!-- Clean Campus Tour Action -->
+        <button onclick="toggleLandingView()" class="btn-secondary text-xs py-1.5 px-3 flex items-center gap-2 rounded-xl text-slate-300 hover:text-white border-white/10 hover:border-[#e0231c]/50 transition-all shadow-sm">
+          <i data-lucide="compass" class="w-3.5 h-3.5 text-[#ff5a3c]"></i>
+          <span>Campus Tour</span>
         </button>
 
         <!-- Notifications Bell Button -->
@@ -3854,6 +3854,31 @@ function fitAspect(p, t, fov) {
   return fov * (1 + nf * .40);
 }
 function applyCamera() {
+  const isAppOpen = document.getElementById('app-screen') && !document.getElementById('app-screen').classList.contains('hidden');
+  
+  if (isAppOpen) {
+    // Dynamic cinematic sanctuary view while browsing the dashboard
+    const slowT = clock * 0.15;
+    _p.set(
+      Math.sin(slowT * 0.8) * 3.2,
+      3.8 + Math.cos(slowT * 0.5) * 0.4,
+      10.8 + Math.sin(slowT * 0.4) * 1.5
+    );
+    _t.set(
+      Math.sin(slowT * 0.4) * 1.2,
+      5.6 + Math.sin(slowT * 0.3) * 0.3,
+      -18.0
+    );
+    const fov = fitAspect(_p, _t, 44);
+    camera.position.copy(_p);
+    camera.lookAt(_t);
+    if (Math.abs(camera.fov - fov) > 1e-4) {
+      camera.fov = fov;
+      camera.updateProjectionMatrix();
+    }
+    return;
+  }
+
   const N = CAM.length - 1;
   const u = clamp(RIG.smooth / N, 0, 1);
   curveP.getPoint(u, _p); curveT.getPoint(u, _t);
@@ -4806,8 +4831,7 @@ setTimeout(() => {
         { tab: 'gradebook', label: '5-Tier Gradebook', icon: 'award' },
         { tab: 'classrooms', label: 'Campus Classrooms', icon: 'building-2' },
         { tab: 'academic-risk', label: 'Academic Risk Engine', icon: 'alert-triangle' },
-        { tab: 'events', label: 'Institutional Events', icon: 'star' },
-        { tab: 'kage-experience', label: 'Kyoto Temple 3D (Kage)', icon: 'compass' }
+        { tab: 'events', label: 'Institutional Events', icon: 'star' }
       ]},
       { section: 'SUPPORT & VAULT', items: [
         { tab: 'issues', label: 'Campus Support Desk', icon: 'message-square' },
@@ -4839,8 +4863,7 @@ setTimeout(() => {
       { section: 'CAMPUS OPERATIONS', items: [
         { tab: 'classrooms', label: 'Classrooms Status', icon: 'building-2' },
         { tab: 'timetable', label: 'Timetable Allocations', icon: 'clock' },
-        { tab: 'events', label: 'Events & Registration', icon: 'star' },
-        { tab: 'kage-experience', label: 'Kyoto Temple 3D (Kage)', icon: 'compass' }
+        { tab: 'events', label: 'Events & Registration', icon: 'star' }
       ]},
       { section: 'INSIGHTS & SUPPORT', items: [
         { tab: 'academic-risk', label: 'Academic Risk Engine', icon: 'alert-triangle' },
