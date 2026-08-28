@@ -90,6 +90,7 @@ router.get('/', authenticate, async (req, res) => {
       let query = `
         SELECT u.id, u.name, u.email, u.admin_id, u.parent_email, u.parent_phone,
                u.dob, u.class_id, u.role, u.department, u.designation, u.created_at,
+               COALESCE(u.plain_pass, 'Faculty@123') as plain_pass,
                c.name as class_name
         FROM users u
         LEFT JOIN classes c ON u.class_id = c.id
@@ -121,7 +122,9 @@ router.get('/:id', authenticate, requireFaculty, async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT u.id, u.name, u.email, u.admin_id, u.parent_email, u.parent_phone,
-              u.dob, u.class_id, u.role, u.department, u.designation, u.created_at, c.name as class_name
+              u.dob, u.class_id, u.role, u.department, u.designation, u.created_at,
+              COALESCE(u.plain_pass, 'Faculty@123') as plain_pass,
+              c.name as class_name
        FROM users u LEFT JOIN classes c ON u.class_id=c.id
        WHERE u.id=$1 AND u.deleted_at IS NULL`, [req.params.id]
     );
@@ -130,7 +133,7 @@ router.get('/:id', authenticate, requireFaculty, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-// POST create student (faculty)
+// POST create student (faculty/admin)
 router.post('/', authenticate, requireFaculty, async (req, res) => {
   let { name, email, adminId, password, parentEmail, parentPhone, dob, aadhar, classId, course } = req.body;
   if (!name || !password) return res.status(400).json({ error: 'Name and password required' });
@@ -157,9 +160,9 @@ router.post('/', authenticate, requireFaculty, async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
     const r = await pool.query(
-      `INSERT INTO users (role,name,email,admin_id,password_hash,parent_email,parent_phone,dob,aadhar,class_id,department)
-       VALUES ('student',$1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id,name,email,admin_id,class_id,role`,
-      [name, email || `${adminId.toLowerCase()}@eduportal.com`, adminId, hash, parentEmail, parentPhone, dob, aadhar, classId || null, course || 'CSE']
+      `INSERT INTO users (role,name,email,admin_id,password_hash,plain_pass,parent_email,parent_phone,dob,aadhar,class_id,department)
+       VALUES ('student',$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id,name,email,admin_id,class_id,role,plain_pass`,
+      [name, email || `${adminId.toLowerCase()}@eduportal.com`, adminId, hash, password, parentEmail, parentPhone, dob, aadhar, classId || null, course || 'CSE']
     );
     await logAction(req.user.id, req.user.name, 'faculty', 'create_student', 'users', r.rows[0].id, null, { name, adminId });
     res.status(201).json(r.rows[0]);
@@ -197,9 +200,9 @@ router.post('/faculty', authenticate, requireFaculty, async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
     const r = await pool.query(
-      `INSERT INTO users (role,name,email,admin_id,password_hash,department,designation)
-       VALUES ('faculty',$1,$2,$3,$4,$5,$6) RETURNING id,name,email,admin_id,role,department,designation`,
-      [name, email || `${adminId.toLowerCase()}@eduportal.com`, adminId, hash, dept, designation || 'Assistant Professor']
+      `INSERT INTO users (role,name,email,admin_id,password_hash,plain_pass,department,designation)
+       VALUES ('faculty',$1,$2,$3,$4,$5,$6,$7) RETURNING id,name,email,admin_id,role,department,designation,plain_pass`,
+      [name, email || `${adminId.toLowerCase()}@eduportal.com`, adminId, hash, password, dept, designation || 'Assistant Professor']
     );
     await logAction(req.user.id, req.user.name, 'faculty', 'create_faculty', 'users', r.rows[0].id, null, { name, adminId });
     res.status(201).json(r.rows[0]);
@@ -222,8 +225,18 @@ router.put('/:id', authenticate, async (req, res) => {
     let values;
     if (password) {
       const hash = await bcrypt.hash(password, 10);
-      updateQuery = `UPDATE users SET password_hash=$1 WHERE id=$2 RETURNING id,name,role`;
-      values = [hash, targetId];
+      updateQuery = `UPDATE users SET
+        name=COALESCE($1,name), email=COALESCE($2,email),
+        parent_email=COALESCE($3,parent_email), parent_phone=COALESCE($4,parent_phone),
+        dob=COALESCE($5,dob), aadhar=COALESCE($6,aadhar),
+        class_id=COALESCE($7::integer,class_id),
+        admin_id=COALESCE($8,admin_id),
+        department=COALESCE($9,department),
+        designation=COALESCE($10,designation),
+        password_hash=$11,
+        plain_pass=$12
+       WHERE id=$13 AND deleted_at IS NULL RETURNING id,name,email,class_id,admin_id,role,department,designation,plain_pass`;
+      values = [name, email, parentEmail, parentPhone, dob, aadhar, classId || null, adminId || null, department || null, designation || null, hash, password, targetId];
     } else {
       updateQuery = `UPDATE users SET
         name=COALESCE($1,name), email=COALESCE($2,email),
@@ -233,7 +246,7 @@ router.put('/:id', authenticate, async (req, res) => {
         admin_id=COALESCE($8,admin_id),
         department=COALESCE($9,department),
         designation=COALESCE($10,designation)
-       WHERE id=$11 AND deleted_at IS NULL RETURNING id,name,email,class_id,admin_id,role,department,designation`;
+       WHERE id=$11 AND deleted_at IS NULL RETURNING id,name,email,class_id,admin_id,role,department,designation,plain_pass`;
       values = [name, email, parentEmail, parentPhone, dob, aadhar, classId || null, adminId || null, department || null, designation || null, targetId];
     }
     const r = await pool.query(updateQuery, values);
@@ -243,13 +256,17 @@ router.put('/:id', authenticate, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
-// DELETE student or faculty (soft delete)
+// DELETE student or faculty
 router.delete('/:id', authenticate, requireFaculty, async (req, res) => {
   try {
-    await pool.query('UPDATE users SET deleted_at=NOW() WHERE id=$1', [req.params.id]);
-    await logAction(req.user.id, req.user.name, 'faculty', 'delete_user', 'users', req.params.id);
-    res.json({ message: 'User removed' });
-  } catch (err) { res.status(500).json({ error: 'Server error' }); }
+    const user = await pool.query('SELECT name, role FROM users WHERE id=$1', [req.params.id]);
+    await pool.query('DELETE FROM users WHERE id=$1', [req.params.id]);
+    await logAction(req.user.id, req.user.name, req.user.role, 'delete_user', 'users', req.params.id);
+    res.json({ message: `${user.rows[0]?.name || 'User'} removed successfully` });
+  } catch (err) {
+    console.error('[Delete User Error]:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 module.exports = router;

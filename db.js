@@ -355,6 +355,7 @@ const initDB = async () => {
       `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS attendance_marked_at TIMESTAMP`,
       `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS geo_deadline TIMESTAMP`,
       `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS is_expired BOOLEAN DEFAULT FALSE`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS plain_pass VARCHAR(255)`,
       `CREATE TABLE IF NOT EXISTS hall_ticket_requests (
         id SERIAL PRIMARY KEY,
         student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -410,14 +411,14 @@ const initDB = async () => {
     if (adminCheck.rows.length === 0) {
       const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'katam@123', 10);
       await client.query(
-        `INSERT INTO users (role, name, email, admin_id, password_hash, designation)
-         VALUES ($1,$2,$3,$4,$5,$6)`,
+        `INSERT INTO users (role, name, email, admin_id, password_hash, designation, plain_pass)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
         ['admin', 'Principal / Administrator', 'admin@eduportal.com',
-         process.env.ADMIN_ID || '192411184', hash, 'Institutional Administrator']
+         process.env.ADMIN_ID || '192411184', hash, 'Institutional Administrator', process.env.ADMIN_PASSWORD || 'katam@123']
       );
       console.log('✅ Default admin seeded with role=admin');
     } else if (adminCheck.rows[0].role !== 'admin') {
-      await client.query("UPDATE users SET role='admin' WHERE id=$1", [adminCheck.rows[0].id]);
+      await client.query("UPDATE users SET role='admin', plain_pass=COALESCE(plain_pass, 'katam@123') WHERE id=$1", [adminCheck.rows[0].id]);
     }
 
     // ── Seed default faculty ─────────────────────────────────────────────────
@@ -427,13 +428,17 @@ const initDB = async () => {
     if (facultyCheck.rows.length === 0) {
       const facHash = await bcrypt.hash('faculty@123', 10);
       await client.query(
-        `INSERT INTO users (role, name, email, admin_id, password_hash, department, designation)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        `INSERT INTO users (role, name, email, admin_id, password_hash, department, designation, plain_pass)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
         ['faculty', 'Prof. Sarah Jenkins (CSE)', 'faculty@eduportal.com',
-         'FAC101', facHash, 'CSE', 'Professor & Course Coordinator']
+         'FAC101', facHash, 'CSE', 'Professor & Course Coordinator', 'faculty@123']
       );
       console.log('✅ Default faculty seeded (ID: FAC101, Password: faculty@123)');
     }
+
+    // Backfill plain_pass for any existing faculty or student missing it
+    await client.query("UPDATE users SET plain_pass = 'Faculty@123' WHERE role='faculty' AND (plain_pass IS NULL OR plain_pass = '')");
+    await client.query("UPDATE users SET plain_pass = 'katam@123' WHERE role='admin' AND (plain_pass IS NULL OR plain_pass = '')");
 
     console.log('✅ Database initialized (v3.0 — full platform)');
   } catch (err) {

@@ -10208,6 +10208,157 @@ async function saveAllPhase3Grades(subjectId) {
   }
 }
 
+// ── 5. ADMIN FACULTY APPOINTMENTS & CREDENTIALS VAULT ────────────────────
+async function renderFacultyUsers(container) {
+  const allUsers = await api('GET', '/students');
+  const facultyList = allUsers.filter(u => u.role === 'faculty');
+
+  container.innerHTML = `
+    <div class="space-y-6 animate-fade-in">
+      <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-purple-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="badge badge-purple text-[10px] uppercase tracking-[0.2em]">FACULTY DIRECTORY & VAULT</span>
+            <span class="text-xs text-purple-400 font-mono">${facultyList.length} Appointed Staff</span>
+          </div>
+          <h3 class="text-2xl font-normal text-white tracking-wide mt-1">Faculty Appointments & Credential Management</h3>
+          <p class="text-xs text-slate-300">View faculty profiles, reveal login passwords, update credentials, and manage staff appointments.</p>
+        </div>
+        <button onclick="openAddFacultyModal()" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase shadow-md">
+          <i data-lucide="user-plus" class="w-4 h-4"></i>
+          <span>Appoint New Faculty</span>
+        </button>
+      </div>
+
+      <div class="glass-panel rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
+              <tr>
+                <th class="p-4">Faculty ID</th>
+                <th class="p-4">Faculty Name</th>
+                <th class="p-4">Department</th>
+                <th class="p-4">Designation</th>
+                <th class="p-4">Email Address</th>
+                <th class="p-4">Login Password</th>
+                <th class="p-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 whitespace-nowrap">
+              ${facultyList.length === 0 ? `
+                <tr><td colspan="7" class="p-8 text-center text-slate-500">No faculty members appointed yet. Click "Appoint New Faculty" to add one.</td></tr>
+              ` : facultyList.map(f => `
+                <tr class="hover:bg-white/[0.02] transition-colors" id="fac-row-${f.id}">
+                  <td class="p-4">
+                    <span class="inline-flex items-center gap-1.5 font-mono text-xs font-bold text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded-lg border border-purple-500/20">
+                      <i data-lucide="shield" class="w-3 h-3 text-purple-400"></i>
+                      <span>${f.admin_id}</span>
+                    </span>
+                  </td>
+                  <td class="p-4 font-medium text-white text-sm">${f.name}</td>
+                  <td class="p-4"><span class="badge badge-purple font-mono font-semibold">${f.department || 'CSE'}</span></td>
+                  <td class="p-4 text-slate-300 text-xs">${f.designation || 'Assistant Professor'}</td>
+                  <td class="p-4 text-slate-400 font-mono text-xs">${f.email || 'N/A'}</td>
+                  <td class="p-4">
+                    <div class="flex items-center gap-2">
+                      <span id="fac-pass-${f.id}" class="font-mono text-xs font-bold text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20 tracking-wider">
+                        ••••••••
+                      </span>
+                      <button type="button" onclick="togglePassVisibility(${f.id}, '${f.plain_pass || 'Faculty@123'}')" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5" title="Show/Hide Password">
+                        <i data-lucide="eye" class="w-3.5 h-3.5" id="fac-eye-${f.id}"></i>
+                      </button>
+                      <button type="button" onclick="openChangeFacultyPasswordModal(${f.id}, '${f.name}', '${f.plain_pass || 'Faculty@123'}')" class="p-1.5 rounded-lg text-slate-400 hover:text-purple-400 hover:bg-white/5" title="Change Password">
+                        <i data-lucide="key" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
+                  </td>
+                  <td class="p-4 text-right">
+                    <button onclick="deleteFacultyUser(${f.id}, '${f.name}')" class="btn-secondary text-xs py-1.5 px-3 rounded-lg border-rose-500/30 text-rose-400 hover:bg-rose-500/10 flex items-center gap-1.5 ml-auto transition-all">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      <span>Delete</span>
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+  lucide.createIcons();
+}
+
+function togglePassVisibility(id, pass) {
+  const el = document.getElementById(`fac-pass-${id}`);
+  const eye = document.getElementById(`fac-eye-${id}`);
+  if (!el) return;
+
+  if (el.innerText === '••••••••') {
+    el.innerText = pass;
+    el.classList.remove('text-amber-300');
+    el.classList.add('text-emerald-400', 'bg-emerald-500/10', 'border-emerald-500/20');
+    if (eye) eye.setAttribute('data-lucide', 'eye-off');
+  } else {
+    el.innerText = '••••••••';
+    el.classList.remove('text-emerald-400', 'bg-emerald-500/10', 'border-emerald-500/20');
+    el.classList.add('text-amber-300');
+    if (eye) eye.setAttribute('data-lucide', 'eye');
+  }
+  lucide.createIcons();
+}
+
+function openChangeFacultyPasswordModal(id, name, currentPass) {
+  openModal(`Change Password — ${name}`, `
+    <div class="space-y-4 text-left">
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Faculty Member</label>
+        <input type="text" value="${name}" disabled class="glass-input w-full font-medium opacity-75">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Current Password</label>
+        <input type="text" value="${currentPass}" disabled class="glass-input w-full font-mono text-amber-300 opacity-75">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">New Password <span class="text-[#e0231c]">*</span></label>
+        <input type="text" id="m-new-fac-pass" placeholder="Enter new password" class="glass-input w-full font-mono font-bold text-emerald-400" required>
+      </div>
+    </div>
+  `, `
+    <button onclick="saveNewFacultyPassword(${id})" class="btn-primary text-xs py-2.5 px-6 rounded-xl uppercase tracking-wider flex items-center gap-2">
+      <i data-lucide="check" class="w-4 h-4"></i>
+      <span>Update Password</span>
+    </button>
+  `);
+  lucide.createIcons();
+}
+
+async function saveNewFacultyPassword(id) {
+  const newPass = document.getElementById('m-new-fac-pass')?.value.trim();
+  if (!newPass) return toast('Please enter a new password', 'warning');
+
+  try {
+    await api('PUT', `/students/${id}`, { password: newPass });
+    toast('Faculty password updated successfully! 🔑', 'success');
+    closeModal();
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to update password', 'error');
+  }
+}
+
+async function deleteFacultyUser(id, name) {
+  if (!confirm(`Are you sure you want to remove faculty member "${name}"? This action cannot be undone.`)) return;
+
+  try {
+    await api('DELETE', `/students/${id}`);
+    toast(`Faculty member "${name}" removed successfully!`, 'info');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to delete faculty', 'error');
+  }
+}
+
 </script>
 </body>
 </html>
