@@ -213,6 +213,33 @@ router.post('/submit-phase1-individual', authenticate, requireFaculty, async (re
   }
 });
 
+// ── 1C. GET ENROLLED STUDENTS FOR A COURSE ──
+router.get('/enrolled-students/:subjectId', authenticate, requireFaculty, async (req, res) => {
+  const { subjectId } = req.params;
+  try {
+    const subject = await pool.query('SELECT * FROM subjects WHERE id=$1', [subjectId]);
+    if (!subject.rows[0]) return res.status(404).json({ error: 'Course not found' });
+
+    if (req.user.role === 'faculty' && subject.rows[0].faculty_id && subject.rows[0].faculty_id !== req.user.id) {
+      return res.status(403).json({ error: 'You are only authorized to view students in your own courses.' });
+    }
+
+    const studentsRes = await pool.query(
+      `SELECT u.id, u.name, u.admin_id, u.email, u.department, er.created_at as enrolled_at
+       FROM enrollment_requests er
+       JOIN users u ON er.student_id = u.id
+       WHERE er.subject_id = $1 AND er.status = 'enrolled' AND u.deleted_at IS NULL
+       ORDER BY u.admin_id ASC, u.name ASC`,
+      [subjectId]
+    );
+
+    res.json(studentsRes.rows);
+  } catch (err) {
+    console.error('[Enrolled Students GET] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ── 2. CLOSE COURSE / CLOSE LAUNCH: Locks enrollments & finalizes Phase 1 ──
 router.post('/close-course/:subjectId', authenticate, requireFaculty, async (req, res) => {
   const { subjectId } = req.params;
@@ -227,8 +254,8 @@ router.post('/close-course/:subjectId', authenticate, requireFaculty, async (req
     }
 
     const finalExamDate = (examDate && String(examDate).trim()) ? String(examDate).trim() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const finalExamSession = examSession || 'FN (09:30 AM - 12:30 PM)';
-    const finalExamHall = examHall || 'University Exam Block - Hall A';
+    const finalExamSession = String(examSession || 'FN (09:30 AM - 12:30 PM)').slice(0, 100);
+    const finalExamHall = String(examHall || 'University Exam Block - Hall A').slice(0, 255);
 
     const r = await pool.query(
       `UPDATE subjects SET
@@ -244,26 +271,30 @@ router.post('/close-course/:subjectId', authenticate, requireFaculty, async (req
     );
 
     // Notify all enrolled students that course is closed and they must request hall ticket from faculty
-    const enrolledStudents = await pool.query(
-      `SELECT student_id FROM enrollment_requests WHERE subject_id=$1 AND status='enrolled'`,
-      [subjectId]
-    );
-
-    for (const stu of enrolledStudents.rows) {
-      await notify(
-        stu.student_id,
-        'course_closed_for_exam',
-        '📢 Course Closed for University Exams',
-        `"${subject.rows[0].name}" is closed for university exams. Please submit your Hall Ticket Request to the faculty.`,
-        subjectId
+    try {
+      const enrolledStudents = await pool.query(
+        `SELECT student_id FROM enrollment_requests WHERE subject_id=$1 AND status='enrolled'`,
+        [subjectId]
       );
+
+      for (const stu of enrolledStudents.rows) {
+        await notify(
+          stu.student_id,
+          'course_closed_for_exam',
+          '📢 Course Closed for University Exams',
+          `"${subject.rows[0].name}" is closed for university exams. Please submit your Hall Ticket Request to the faculty.`,
+          subjectId
+        );
+      }
+    } catch (notifErr) {
+      console.warn('[Close Course Notify Warn]:', notifErr.message);
     }
 
     await logAction(req.user.id, req.user.name, req.user.role, 'close_course', 'subjects', subjectId);
-    res.json({ message: 'Course launch closed successfully! Students can now request Hall Tickets.', subject: r.rows[0] });
+    res.json({ message: 'Course launch closed successfully! Students can now request Hall Tickets. 🎟️', subject: r.rows[0] });
   } catch (err) {
     console.error('[Close Course] Error:', err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: err.message || 'Server error' });
   }
 });
 
