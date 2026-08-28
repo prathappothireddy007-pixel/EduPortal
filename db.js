@@ -420,6 +420,21 @@ const initDB = async () => {
       await client.query("UPDATE users SET role='admin' WHERE id=$1", [adminCheck.rows[0].id]);
     }
 
+    // ── Seed default faculty ─────────────────────────────────────────────────
+    const facultyCheck = await client.query(
+      "SELECT id, role FROM users WHERE admin_id='FAC101' OR email='faculty@eduportal.com' LIMIT 1"
+    );
+    if (facultyCheck.rows.length === 0) {
+      const facHash = await bcrypt.hash('faculty@123', 10);
+      await client.query(
+        `INSERT INTO users (role, name, email, admin_id, password_hash, department, designation)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        ['faculty', 'Prof. Sarah Jenkins (CSE)', 'faculty@eduportal.com',
+         'FAC101', facHash, 'CSE', 'Professor & Course Coordinator']
+      );
+      console.log('✅ Default faculty seeded (ID: FAC101, Password: faculty@123)');
+    }
+
     console.log('✅ Database initialized (v3.0 — full platform)');
   } catch (err) {
     console.error('❌ DB init error:', err.message);
