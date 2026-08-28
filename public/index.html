@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>EduPortal × Kage — Academic & Campus Operations Platform</title>
-<meta name="description" content="Autonomous Academic & Campus Management System with live 3D Kyoto Mountain Temple sanctuary.">
+<title>EDU OS — Autonomous Academic & Campus Operations Platform</title>
+<meta name="description" content="EDU OS: Autonomous Academic & Campus Management System with live 3D Kyoto Mountain Temple sanctuary.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2305070a'/%3E%3Ccircle cx='16' cy='17' r='8' fill='%23e0231c'/%3E%3Crect x='4' y='8' width='24' height='2.6' fill='%23dfe7e0'/%3E%3Crect x='7' y='13' width='18' height='2' fill='%23dfe7e0'/%3E%3C/svg%3E">
 
 <!-- Tailwind CSS, Lucide Icons, Chart.js -->
@@ -83,76 +83,77 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 ::-webkit-scrollbar-thumb { background: rgba(223, 231, 224, 0.2); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--vermilion); }
 
-/* Glassmorphism */
+/* Glassmorphism Classes */
 .glass-panel {
-  background: rgba(10, 14, 18, 0.78);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(223, 231, 224, 0.08);
+  background: rgba(10, 14, 18, 0.78) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(223, 231, 224, 0.08) !important;
 }
 .glass-card {
-  background: rgba(223, 231, 224, 0.03);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(223, 231, 224, 0.07);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(223, 231, 224, 0.035) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border: 1px solid rgba(223, 231, 224, 0.07) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 .glass-card:hover {
-  background: rgba(223, 231, 224, 0.06);
-  border-color: rgba(224, 35, 28, 0.35);
-  transform: translateY(-2px);
+  background: rgba(223, 231, 224, 0.065) !important;
+  border-color: rgba(224, 35, 28, 0.4) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(224, 35, 28, 0.15) !important;
 }
 .glass-input {
-  background: rgba(223, 231, 224, 0.04);
-  border: 1px solid rgba(223, 231, 224, 0.12);
-  color: #F8FAFC;
-  border-radius: 12px;
-  padding: 10px 14px;
-  outline: none;
-  transition: all 0.2s;
+  background: rgba(223, 231, 224, 0.04) !important;
+  border: 1px solid rgba(223, 231, 224, 0.12) !important;
+  color: #F8FAFC !important;
+  border-radius: 12px !important;
+  padding: 10px 14px !important;
+  outline: none !important;
+  transition: all 0.2s !important;
 }
 .glass-input:focus {
-  border-color: var(--vermilion);
-  background: rgba(224, 35, 28, 0.08);
-  box-shadow: 0 0 0 3px rgba(224, 35, 28, 0.2);
+  border-color: var(--vermilion) !important;
+  background: rgba(224, 35, 28, 0.08) !important;
+  box-shadow: 0 0 0 3px rgba(224, 35, 28, 0.2) !important;
 }
 select.glass-input option { background: #0a0e12; color: #F8FAFC; }
 
 /* Buttons */
 .btn-primary {
-  background: linear-gradient(135deg, #e0231c 0%, #ff5a3c 100%);
-  color: #FFFFFF;
-  font-weight: 600;
-  border-radius: 12px;
-  padding: 10px 22px;
-  transition: all 0.25s;
-  box-shadow: 0 4px 18px rgba(224, 35, 28, 0.35);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  background: linear-gradient(135deg, #e0231c 0%, #ff5a3c 100%) !important;
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+  border-radius: 12px !important;
+  padding: 10px 22px !important;
+  transition: all 0.25s !important;
+  box-shadow: 0 4px 18px rgba(224, 35, 28, 0.35) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
 }
 .btn-primary:hover {
-  opacity: 0.95;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(224, 35, 28, 0.5);
+  opacity: 0.95 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 24px rgba(224, 35, 28, 0.55) !important;
 }
 .btn-secondary {
-  background: rgba(223, 231, 224, 0.06);
-  color: #aab4ad;
-  border: 1px solid rgba(223, 231, 224, 0.12);
-  font-weight: 500;
-  border-radius: 12px;
-  padding: 10px 20px;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  background: rgba(223, 231, 224, 0.06) !important;
+  color: #aab4ad !important;
+  border: 1px solid rgba(223, 231, 224, 0.12) !important;
+  font-weight: 500 !important;
+  border-radius: 12px !important;
+  padding: 10px 20px !important;
+  transition: all 0.2s !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
 }
 .btn-secondary:hover {
-  background: rgba(223, 231, 224, 0.12);
-  color: #dfe7e0;
+  background: rgba(223, 231, 224, 0.12) !important;
+  color: #dfe7e0 !important;
 }
 .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
 .badge-vermilion { background: rgba(224, 35, 28, 0.18); color: #ff5a3c; border: 1px solid rgba(224, 35, 28, 0.35); }
@@ -356,6 +357,144 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 .toast-item { background: rgba(10, 14, 18, 0.95); border: 1px solid rgba(223, 231, 224, 0.15); border-radius: 14px; padding: 14px 18px; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); display: flex; align-items: center; gap: 12px; backdrop-filter: blur(16px); animation: fadeIn 0.3s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .animate-fade-in { animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+/* ============================================================ UNIVERSAL EDU OS THEME (POST-LOGIN) */
+#app-screen {
+  background: rgba(5, 7, 10, 0.76) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  color: var(--bone);
+  font-family: 'Onest', 'Inter', sans-serif;
+}
+
+#app-screen aside#sidebar {
+  background: rgba(10, 14, 18, 0.88) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-right: 1px solid rgba(223, 231, 224, 0.1) !important;
+}
+
+#app-screen header {
+  background: rgba(10, 14, 18, 0.80) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid rgba(223, 231, 224, 0.08) !important;
+}
+
+/* Force all dark rectangular containers inside app-screen to be frosted glass panels */
+#app-screen .bg-slate-900,
+#app-screen .bg-slate-950,
+#app-screen .bg-slate-900/50,
+#app-screen .bg-slate-900/80,
+#app-screen .bg-slate-900/90,
+#app-screen .bg-slate-800,
+#app-screen .bg-slate-800/50,
+#app-screen .bg-slate-800/80,
+#app-screen .glass-panel {
+  background: rgba(10, 14, 18, 0.75) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  border: 1px solid rgba(223, 231, 224, 0.09) !important;
+  border-radius: 1.25rem !important;
+}
+
+/* Force cards and stat boxes inside app-screen to be glowing frosted glass cards */
+#app-screen .bg-slate-800/40,
+#app-screen .bg-slate-800/60,
+#app-screen .bg-white/5,
+#app-screen .glass-card,
+#app-screen .stat-card {
+  background: rgba(223, 231, 224, 0.035) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(223, 231, 224, 0.08) !important;
+  border-radius: 1rem !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#app-screen .glass-card:hover,
+#app-screen .bg-slate-800/40:hover,
+#app-screen .stat-card:hover {
+  background: rgba(223, 231, 224, 0.07) !important;
+  border-color: rgba(224, 35, 28, 0.4) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(224, 35, 28, 0.15) !important;
+}
+
+/* Force all tables inside app-screen to have sleek glass headers and rows */
+#app-screen table thead {
+  background: rgba(223, 231, 224, 0.04) !important;
+  border-bottom: 1px solid rgba(223, 231, 224, 0.1) !important;
+}
+
+#app-screen table th {
+  color: var(--bone-dim) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+
+#app-screen table tbody tr {
+  border-bottom: 1px solid rgba(223, 231, 224, 0.05) !important;
+  transition: background 0.2s ease;
+}
+
+#app-screen table tbody tr:hover {
+  background: rgba(224, 35, 28, 0.06) !important;
+}
+
+/* Force inputs and dropdowns to have Kage glass focus styling */
+#app-screen input,
+#app-screen select,
+#app-screen textarea,
+#app-screen .glass-input {
+  background: rgba(223, 231, 224, 0.04) !important;
+  border: 1px solid rgba(223, 231, 224, 0.14) !important;
+  color: #F8FAFC !important;
+  border-radius: 0.75rem !important;
+  padding: 10px 14px !important;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+}
+
+#app-screen input:focus,
+#app-screen select:focus,
+#app-screen textarea:focus,
+#app-screen .glass-input:focus {
+  border-color: var(--vermilion) !important;
+  background: rgba(224, 35, 28, 0.08) !important;
+  box-shadow: 0 0 0 3px rgba(224, 35, 28, 0.25) !important;
+}
+
+/* Force primary action buttons to have Kyoto Vermilion Gradient */
+#app-screen .bg-blue-600,
+#app-screen .bg-gradient-to-r.from-blue-600,
+#app-screen .bg-gradient-to-r.from-purple-600,
+#app-screen .btn-primary {
+  background: linear-gradient(135deg, #e0231c 0%, #ff5a3c 100%) !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  box-shadow: 0 4px 18px rgba(224, 35, 28, 0.35) !important;
+  font-weight: 600 !important;
+  border-radius: 0.75rem !important;
+}
+
+#app-screen .bg-blue-600:hover,
+#app-screen .bg-gradient-to-r.from-blue-600:hover,
+#app-screen .bg-gradient-to-r.from-purple-600:hover,
+#app-screen .btn-primary:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 24px rgba(224, 35, 28, 0.55) !important;
+  opacity: 0.96 !important;
+}
+
+/* Modal styling */
+#modal-container .glass-panel {
+  background: rgba(7, 11, 14, 0.95) !important;
+  backdrop-filter: blur(28px) !important;
+  border: 1px solid rgba(224, 35, 28, 0.3) !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 35px rgba(224, 35, 28, 0.2) !important;
+}
 </style>
 </head>
 
@@ -379,7 +518,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
     <div class="pre-jp jp">影の道 · 学術の扉</div>
     <div class="pre-bar"><i id="pre-fill"></i></div>
     <div class="pre-meta">
-      <span>Raising the Kyoto Sanctuary & EduPortal OS</span><b><span id="pre-pct">0</span>%</b>
+      <span>Raising the Kyoto Sanctuary & EDU OS</span><b><span id="pre-pct">0</span>%</b>
     </div>
   </div>
 </div>
@@ -395,7 +534,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
         <path d="M5 13h34M9 18.4h26M22 8.5v27" stroke="#dfe7e0" stroke-width="1.5"/>
         <path d="M14 35.5h16" stroke="#dfe7e0" stroke-width="1.2" stroke-opacity=".6"/>
       </svg>
-      <span class="brand-tx"><b>KAGE</b><i>EDUPORTAL ACADEMIC OS</i></span>
+      <span class="brand-tx"><b>EDU OS</b><i>ACADEMIC SANCTUARY</i></span>
     </a>
 
     <nav class="nav-links" id="navlinks">
@@ -424,7 +563,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
           <span class="mask-line"><span>mastery.</span></span>
         </h1>
         <p class="hero-sub body" data-rv="up">
-          Enter EduPortal OS through quiet Kyoto thresholds, where automated engineering admissions, continuous academic progress, and verified hall ticket governance unite.
+          Enter EDU OS through quiet Kyoto thresholds, where automated engineering admissions, continuous academic progress, and verified hall ticket governance unite.
         </p>
         <div class="mt-6 flex items-center gap-3">
           <a href="#portal" class="btn-primary text-sm py-3 px-6 rounded-xl shadow-xl flex items-center gap-2">
@@ -482,7 +621,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
         <div class="lg:col-span-6 space-y-6" data-rv="up">
           <h2 class="display h-sec text-white">Automated Reg. No & Directory Search</h2>
           <p class="body-lg">
-            Every engineering student admitted into EduPortal receives an automated, deterministic Registration Number engineered from their branch, admission year, and batch sequence.
+            Every engineering student admitted into EDU OS receives an automated, deterministic Registration Number engineered from their branch, admission year, and batch sequence.
           </p>
           <div class="space-y-3 pt-2">
             <div class="glass-card p-4 rounded-xl flex items-center gap-3">
@@ -688,7 +827,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
     <!-- ============================================================ Chapter V: Portal Gateway -->
     <section class="sec fin" id="portal">
       <div class="sec-head" data-rv="fade">
-        <span class="k"><b>Chapter 05</b> · The Gateway to EduPortal OS</span>
+        <span class="k"><b>Chapter 05</b> · The Gateway to EDU OS</span>
         <div class="rule"></div>
       </div>
 
@@ -698,7 +837,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
             <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#e0231c] to-[#ff5a3c] mb-3 shadow-xl shadow-[#e0231c]/25">
               <i data-lucide="graduation-cap" class="w-9 h-9 text-white"></i>
             </div>
-            <h3 class="text-2xl font-extrabold text-white tracking-tight">Sign In to EduPortal OS</h3>
+            <h3 class="text-2xl font-extrabold text-white tracking-tight">Sign In to EDU OS</h3>
             <p class="text-xs text-slate-400 mt-1">Select your campus role to enter your unified operational dashboard.</p>
           </div>
 
@@ -734,19 +873,19 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 
     <!-- Footer -->
     <footer class="sec foot border-t border-white/10 py-12 text-center text-xs text-slate-500 space-y-2">
-      <p>© 2026 EduPortal OS × ThreeUI Kage — Academic & Campus Operations Platform</p>
+      <p>© 2026 EDU OS — Academic & Campus Operations Platform</p>
       <p class="jp text-[#dfe7e0]/60">静けさは一つの技である · 影の道</p>
     </footer>
 
   </div><!-- /#top -->
 </div><!-- /#landing-container -->
 
-<!-- ============================================================ AUTHENTICATED APP SCREEN (KAGE INTEGRATED) -->
+<!-- ============================================================ AUTHENTICATED APP SCREEN (EDU OS INTEGRATED) -->
 <div id="app-screen" class="hidden flex min-h-screen relative z-30 bg-[#05070a]/80 backdrop-blur-xl">
   <!-- SIDEBAR -->
-  <aside id="sidebar" class="w-64 glass-panel border-r border-white/10 flex flex-col justify-between transition-all duration-300 z-30 shrink-0 bg-[#070b0e]/85 backdrop-blur-2xl">
+  <aside id="sidebar" class="w-64 glass-panel border-r border-white/10 flex flex-col justify-between transition-all duration-300 z-30 shrink-0 bg-[#070b0e]/90 backdrop-blur-2xl">
     <div>
-      <!-- Brand Header -->
+      <!-- Brand Header with EDU OS -->
       <div class="h-16 flex items-center justify-between px-6 border-b border-white/10">
         <div class="flex items-center gap-3">
           <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#e0231c] to-[#ff5a3c] flex items-center justify-center shadow-lg shadow-[#e0231c]/30">
@@ -756,8 +895,8 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
             </svg>
           </div>
           <div class="flex flex-col">
-            <span class="font-extrabold text-sm text-white tracking-widest uppercase">KAGE <span class="text-[#ff5a3c]">OS</span></span>
-            <span class="text-[9px] font-mono text-slate-400 jp">影の道 · 学術の扉</span>
+            <span class="font-extrabold text-sm text-white tracking-widest uppercase">EDU <span class="text-[#ff5a3c]">OS</span></span>
+            <span class="text-[9px] font-mono text-slate-400 jp">学術の扉 · 自律型OS</span>
           </div>
         </div>
         <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
@@ -791,7 +930,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
   <!-- CONTENT WRAPPER -->
   <div class="flex-1 flex flex-col min-w-0 bg-transparent">
     <!-- TOP HEADER BAR -->
-    <header class="h-16 glass-panel border-b border-white/10 flex items-center justify-between px-8 sticky top-0 z-20 bg-[#070b0e]/70 backdrop-blur-xl">
+    <header class="h-16 glass-panel border-b border-white/10 flex items-center justify-between px-8 sticky top-0 z-20 bg-[#070b0e]/75 backdrop-blur-xl">
       <div class="flex items-center gap-4">
         <h2 id="page-title" class="text-xl font-bold text-white tracking-tight">Dashboard Overview</h2>
       </div>
@@ -4742,16 +4881,16 @@ setTimeout(() => {
       
       let html = '';
       navStructure.forEach(sec => {
-        html += `<div class="text-[10px] font-extrabold text-slate-500 tracking-wider uppercase px-3 mb-2">${sec.section}</div>`;
+        html += `<div class="text-[10px] font-extrabold text-[#78837c] tracking-widest uppercase px-3 mb-2">${sec.section}</div>`;
         sec.items.forEach(item => {
           const active = S.tab === item.tab;
           html += `
-            <button onclick="switchTab('${item.tab}')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            <button onclick="switchTab('${item.tab}')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
               active 
-                ? 'bg-blue-600/15 text-blue-400 border border-blue-500/30 shadow-sm font-semibold' 
+                ? 'bg-[#e0231c]/18 text-[#ff5a3c] border border-[#e0231c]/40 shadow-md font-semibold' 
                 : 'text-slate-400 hover:text-white hover:bg-white/5'
             }">
-              <i data-lucide="${item.icon}" class="w-4 h-4 ${active ? 'text-blue-400' : 'text-slate-400'}"></i>
+              <i data-lucide="${item.icon}" class="w-4 h-4 ${active ? 'text-[#ff5a3c]' : 'text-slate-400'}"></i>
               <span class="truncate">${item.label}</span>
             </button>
           `;
