@@ -534,11 +534,80 @@ router.post('/submit-phase3-results', authenticate, requireFaculty, async (req, 
     await pool.query('UPDATE subjects SET is_results_published = TRUE WHERE id = $1', [subjectId]);
     await logAction(req.user.id, req.user.name, req.user.role, 'publish_results', 'subjects', subjectId);
 
+// ── 8B. PHASE 3 INDIVIDUAL MARKS ENTRY: Faculty enters Main Univ Exam (Div 5) for a single student ──
+router.post('/submit-phase3-individual', authenticate, requireFaculty, async (req, res) => {
+  const { studentId, subjectId, div5UnivExam } = req.body;
+
+  if (!studentId || !subjectId) {
+    return res.status(400).json({ error: 'studentId and subjectId are required' });
+  }
+
+  const d5 = Math.min(100, Math.max(0, parseFloat(div5UnivExam) || 0));
+
+  try {
+    const subject = await pool.query('SELECT name, code FROM subjects WHERE id=$1', [subjectId]);
+    if (!subject.rows[0]) return res.status(404).json({ error: 'Subject not found' });
+
+    const gradeRow = await pool.query(
+      'SELECT id, div1_assessments, div2_capstone, div3_class_lab, div4_univ_lab FROM grades WHERE student_id=$1 AND subject_id=$2',
+      [studentId, subjectId]
+    );
+
+    let result;
+    if (gradeRow.rows.length > 0) {
+      const d1 = parseFloat(gradeRow.rows[0].div1_assessments) || 0;
+      const d2 = parseFloat(gradeRow.rows[0].div2_capstone) || 0;
+      const d3 = parseFloat(gradeRow.rows[0].div3_class_lab) || 0;
+      const d4 = parseFloat(gradeRow.rows[0].div4_univ_lab) || 0;
+      const totalInternal = d1 + d2 + d3 + d4;
+      const grandTotal = totalInternal + d5;
+      const gradeLetter = calculateGrade(grandTotal);
+
+      result = await pool.query(
+        `UPDATE grades SET
+           div5_univ_exam = $1,
+           total_internal = $2,
+           grand_total = $3,
+           grade_letter = $4,
+           score = $5,
+           phase3_submitted = TRUE,
+           is_results_published = TRUE,
+           is_submitted = TRUE,
+           date = NOW()
+         WHERE id = $6
+         RETURNING *`,
+        [d5, totalInternal, grandTotal, gradeLetter, String(grandTotal), gradeRow.rows[0].id]
+      );
+    } else {
+      const grandTotal = d5;
+      const gradeLetter = calculateGrade(grandTotal);
+      result = await pool.query(
+        `INSERT INTO grades (
+           student_id, subject_id, div5_univ_exam,
+           total_internal, grand_total, grade_letter, score, phase3_submitted, is_results_published, is_submitted
+         ) VALUES ($1,$2,$3,0,$4,$5,$6,TRUE,TRUE,TRUE)
+         RETURNING *`,
+        [studentId, subjectId, d5, grandTotal, gradeLetter, String(grandTotal)]
+      );
+    }
+
+    // Notify student
+    await notify(
+      studentId,
+      'results_published',
+      '🎉 University Exam Marks Recorded!',
+      `University Exam marks (${d5}/100) recorded for "${subject.rows[0].name}". Total: ${result.rows[0].grand_total}/500 (${result.rows[0].grade_letter}).`,
+      result.rows[0].id
+    );
+
+    await logAction(req.user.id, req.user.name, req.user.role, 'submit_phase3_individual', 'grades', result.rows[0].id);
+
     res.json({
-      message: 'Main University Exam marks submitted and Official Results published successfully for all students!'
+      message: 'University Exam marks recorded for student!',
+      grade: result.rows[0]
     });
   } catch (err) {
-    console.error('[Submit Phase 3 Results] Error:', err);
+    console.error('[Submit Phase 3 Individual] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

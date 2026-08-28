@@ -3,24 +3,34 @@ const { pool } = require('../db');
 const { authenticate, requireFaculty, requireStudent } = require('../middleware/auth');
 const { notify, logAction } = require('../services/audit');
 
-// GET /available - Student gets all launched courses/subjects with faculty name & enrollment status
+// GET /available - Student gets all launched courses/subjects with slot (A-Z) & department filtering
 router.get('/available', authenticate, async (req, res) => {
   try {
     const studentId = req.user.id;
+    const userRes = await pool.query('SELECT department FROM users WHERE id=$1', [studentId]);
+    const studentDept = userRes.rows[0]?.department || '';
+
     const r = await pool.query(
       `SELECT s.id, s.name as subject_name,
+              COALESCE(s.slot, 'A') as slot,
               COALESCE(s.code, CONCAT('SUB', LPAD(s.id::text, 3, '0'))) as course_code,
-              s.subject_type, s.target_dept, s.is_launched, s.description,
+              s.subject_type, COALESCE(s.target_dept, 'ALL') as target_dept, s.is_launched, s.description,
               u.name as faculty_name, u.email as faculty_email,
               EXISTS (
                 SELECT 1 FROM enrollment_requests er 
                 WHERE er.subject_id = s.id AND er.student_id = $1 AND er.status = 'enrolled'
-              ) as is_enrolled
+              ) as is_enrolled,
+              (
+                s.target_dept IS NULL 
+                OR s.target_dept = 'ALL' 
+                OR $2 = '' 
+                OR s.target_dept ILIKE CONCAT('%', $2, '%')
+              ) as is_dept_eligible
        FROM subjects s
        LEFT JOIN users u ON s.faculty_id = u.id
        WHERE (s.is_launched IS TRUE OR s.is_launched IS NULL)
-       ORDER BY is_enrolled DESC, s.name ASC`,
-      [studentId]
+       ORDER BY s.slot ASC, is_enrolled DESC, s.name ASC`,
+      [studentId, studentDept]
     );
     res.json(r.rows);
   } catch (err) {
@@ -29,13 +39,14 @@ router.get('/available', authenticate, async (req, res) => {
   }
 });
 
-// GET /my-courses - Current student gets enrolled courses
+// GET /my-courses - Current student gets enrolled courses with slot
 router.get('/my-courses', authenticate, async (req, res) => {
   try {
     const studentId = req.user.id;
     const r = await pool.query(
       `SELECT er.id as enrollment_id, er.created_at as enrolled_at,
               s.id as subject_id, s.name as subject_name,
+              COALESCE(s.slot, 'A') as slot,
               COALESCE(s.code, CONCAT('SUB', LPAD(s.id::text, 3, '0'))) as course_code,
               s.subject_type, s.target_dept,
               u.name as faculty_name, u.email as faculty_email
@@ -43,7 +54,7 @@ router.get('/my-courses', authenticate, async (req, res) => {
        JOIN subjects s ON er.subject_id = s.id
        LEFT JOIN users u ON s.faculty_id = u.id
        WHERE er.student_id = $1 AND er.status = 'enrolled'
-       ORDER BY s.name ASC`,
+       ORDER BY s.slot ASC, s.name ASC`,
       [studentId]
     );
     res.json(r.rows);

@@ -32,11 +32,14 @@ router.get('/', authenticate, async (req, res) => {
 
 // POST submit OD request (student)
 router.post('/', authenticate, requireStudent, async (req, res) => {
-  const { eventId, eventName, letterB64 } = req.body;
-  if (!letterB64) return res.status(400).json({ error: 'Letter photo required' });
+  const { eventId, eventName, slot, lat, lng, locationName, letterB64 } = req.body;
+  if (!letterB64) return res.status(400).json({ error: 'Letter photo or document required' });
+
   try {
     const today = new Date().toISOString().split('T')[0];
-    // Verify student is registered for the event
+    const odSlot = (slot || 'A').toUpperCase().trim().slice(0, 1);
+
+    // Verify student is registered for the event if eventId provided
     if (eventId) {
       const regCheck = await pool.query(
         `SELECT id FROM event_registrations WHERE event_id=$1 AND student_id=$2`,
@@ -46,24 +49,38 @@ router.post('/', authenticate, requireStudent, async (req, res) => {
         return res.status(400).json({ error: 'You must register for the event before submitting an OD request' });
       }
     }
+
     const existing = await pool.query(
-      `SELECT id FROM od_requests WHERE student_id=$1 AND date=$2
+      `SELECT id FROM od_requests WHERE student_id=$1 AND date=$2 AND slot=$3
        AND status IN ('pending','approved','geo_submitted','completed','checked_in','checked_out')`,
-      [req.user.id, today]
+      [req.user.id, today, odSlot]
     );
     if (existing.rows.length > 0) {
-      return res.status(400).json({ error: 'OD request already submitted for today' });
+      return res.status(400).json({ error: `OD request already submitted for Slot ${odSlot} today` });
     }
+
     const r = await pool.query(
-      `INSERT INTO od_requests (student_id,student_name,event_id,event_name,letter_b64,date)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [req.user.id, req.user.name, eventId || null, eventName || 'Other', letterB64, today]
+      `INSERT INTO od_requests (student_id, student_name, event_id, event_name, slot, lat, lng, location_name, radius_meters, letter_b64, date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 30, $9, $10) RETURNING *`,
+      [
+        req.user.id,
+        req.user.name,
+        eventId || null,
+        eventName || 'Other Event',
+        odSlot,
+        lat ? parseFloat(lat) : null,
+        lng ? parseFloat(lng) : null,
+        locationName || 'Custom Selected Location',
+        letterB64,
+        today
+      ]
     );
+
     // Notify faculty
     const faculty = await pool.query(`SELECT id FROM users WHERE role='faculty' LIMIT 1`);
     if (faculty.rows[0]) {
-      await notify(faculty.rows[0].id, 'od_request', 'New OD Request',
-        `${req.user.name} submitted an OD request for ${eventName || 'Other'}`, r.rows[0].id);
+      await notify(faculty.rows[0].id, 'od_request', 'New OD Request 📝',
+        `${req.user.name} submitted an OD request for Slot ${odSlot} (${eventName || 'Other'})`, r.rows[0].id);
     }
     res.status(201).json(r.rows[0]);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -84,8 +101,8 @@ router.put('/:id/approve', authenticate, requireFaculty, async (req, res) => {
        ON CONFLICT (student_id,date) DO UPDATE SET status='OD', od_request_id=$4`,
       [od.student_id, od.student_name, od.date, od.id]
     );
-    await notify(od.student_id, 'od_approved', 'OD Request Approved',
-      `Your OD request for ${od.event_name} has been approved`, od.id);
+    await notify(od.student_id, 'od_approved', 'OD Request Approved ✅',
+      `Your OD request for Slot ${od.slot || 'A'} (${od.event_name}) has been approved. Complete geo-verification when attendance is marked.`, od.id);
     await logAction(req.user.id, req.user.name, 'faculty', 'approve_od', 'od_requests', od.id);
     res.json(od);
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
@@ -108,7 +125,7 @@ router.put('/:id/reject', authenticate, requireFaculty, async (req, res) => {
          ON CONFLICT (student_id,date) DO UPDATE SET status='Absent'`,
         [od.student_id, od.student_name, od.date]
       );
-      await notify(od.student_id, 'od_rejected', 'OD Request Rejected',
+      await notify(od.student_id, 'od_rejected', 'OD Request Rejected ❌',
         `Your OD request was rejected. Reason: ${reason || 'Not specified'}`, od.id);
       await logAction(req.user.id, req.user.name, 'faculty', 'reject_od', 'od_requests', od.id, null, { reason });
     }
@@ -116,15 +133,15 @@ router.put('/:id/reject', authenticate, requireFaculty, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-// POST student submits geo-tagged photo with GPS validation
+// POST student submits geo-tagged photo with strict 30-min window & 30m radius check
 router.post('/:id/geo-photo', authenticate, requireStudent, async (req, res) => {
   const { geoB64, lat, lng } = req.body;
   if (!geoB64 || lat == null || lng == null)
-    return res.status(400).json({ error: 'Geo photo, lat and lng required' });
+    return res.status(400).json({ error: 'Geo photo, latitude and longitude required' });
 
   try {
     const r = await pool.query(`
-      SELECT o.*, e.lat as event_lat, e.lng as event_lng, e.radius_meters,
+      SELECT o.*, e.lat as event_lat, e.lng as event_lng,
              e.start_time, e.end_time, e.event_date
       FROM od_requests o
       LEFT JOIN events e ON o.event_id = e.id
@@ -133,33 +150,83 @@ router.post('/:id/geo-photo', authenticate, requireStudent, async (req, res) => 
 
     const od = r.rows[0];
     if (!od) return res.status(404).json({ error: 'OD request not found' });
-    if (od.status !== 'approved')
-      return res.status(400).json({ error: 'OD must be in approved state to submit geo-photo' });
+    if (!['approved', 'geo_submitted'].includes(od.status))
+      return res.status(400).json({ error: 'OD must be in approved state to submit geo-verification' });
 
+    // 1. Strict 30-minute Verification Window Check
+    if (od.attendance_marked_at) {
+      const markedTime = new Date(od.attendance_marked_at).getTime();
+      const elapsedMins = (Date.now() - markedTime) / 60000;
+      if (elapsedMins > 30) {
+        await pool.query(
+          `UPDATE od_requests SET status='geo_rejected', is_expired=TRUE,
+             rejection_reason='Geo-verification expired: verification must be completed within 30 minutes after attendance is marked'
+           WHERE id=$1`,
+          [od.id]
+        );
+        await pool.query(
+          `UPDATE attendance SET status='Absent' WHERE student_id=$1 AND date=$2`,
+          [od.student_id, od.date]
+        );
+        return res.status(400).json({
+          error: 'Verification deadline expired! Geo-verification must be completed within 30 minutes after attendance is marked. Your OD has been cancelled and marked Absent.'
+        });
+      }
+    }
+
+    // 2. Strict 30m Radius Location Verification Check
+    const targetLat = od.lat != null ? od.lat : od.event_lat;
+    const targetLng = od.lng != null ? od.lng : od.event_lng;
     let distanceMeters = null;
-    let withinRadius = true;
 
-    // GPS validation if event has location
-    if (od.event_lat && od.event_lng) {
-      distanceMeters = Math.round(haversineDistance(lat, lng, od.event_lat, od.event_lng));
-      withinRadius = distanceMeters <= (od.radius_meters || 200);
+    if (targetLat != null && targetLng != null) {
+      distanceMeters = Math.round(haversineDistance(parseFloat(lat), parseFloat(lng), parseFloat(targetLat), parseFloat(targetLng)));
+      if (distanceMeters > 30) {
+        await pool.query(
+          `UPDATE od_requests SET status='geo_rejected', distance_meters=$1,
+             rejection_reason=$2
+           WHERE id=$3`,
+          [distanceMeters, `Out of range: Student was ${distanceMeters}m away from the selected OD venue (maximum 30m allowed)`, od.id]
+        );
+        await pool.query(
+          `UPDATE attendance SET status='Absent' WHERE student_id=$1 AND date=$2`,
+          [od.student_id, od.date]
+        );
+        return res.status(400).json({
+          error: `Location mismatch: You are ${distanceMeters}m away from the chosen OD location (${od.location_name || 'Selected Venue'}). You must be within a 30m radius! OD has been cancelled and marked Absent.`,
+          distanceMeters
+        });
+      }
     }
 
     const updated = await pool.query(
       `UPDATE od_requests
-       SET geo_b64=$1, geo_lat=$2, geo_lng=$3, status='geo_submitted', distance_meters=$4
+       SET geo_b64=$1, geo_lat=$2, geo_lng=$3, status='completed', distance_meters=$4
        WHERE id=$5 RETURNING *`,
       [geoB64, lat, lng, distanceMeters, od.id]
+    );
+
+    // Mark attendance as OD confirmed
+    await pool.query(
+      `INSERT INTO attendance (student_id,student_name,status,date,od_request_id)
+       VALUES ($1,$2,'OD',$3,$4)
+       ON CONFLICT (student_id,date) DO UPDATE SET status='OD', od_request_id=$4`,
+      [od.student_id, od.student_name, od.date, od.id]
     );
 
     // Notify faculty
     const faculty = await pool.query(`SELECT id FROM users WHERE role='faculty' LIMIT 1`);
     if (faculty.rows[0]) {
-      await notify(faculty.rows[0].id, 'geo_submitted', 'Geo-Photo Submitted',
-        `${req.user.name} submitted geo-verification${distanceMeters !== null ? ` (${distanceMeters}m from event)` : ''}`, od.id);
+      await notify(faculty.rows[0].id, 'geo_submitted', 'OD Geo-Verification Completed 📍',
+        `${req.user.name} verified location within ${distanceMeters !== null ? `${distanceMeters}m` : '30m'} of ${od.location_name || od.event_name}`, od.id);
     }
 
-    res.json({ ...updated.rows[0], distanceMeters, withinRadius });
+    res.json({
+      message: `Geo-verification successful! You are ${distanceMeters || 0}m from the venue (within 30m radius). OD attendance confirmed.`,
+      od: updated.rows[0],
+      distanceMeters,
+      withinRadius: true
+    });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 

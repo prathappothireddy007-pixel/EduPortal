@@ -54,6 +54,15 @@ router.post('/', authenticate, requireFaculty, async (req, res) => {
       [studentId, studentName, actualStatus, date]
     );
 
+    // Trigger the 30-minute verification countdown on approved OD request
+    await pool.query(
+      `UPDATE od_requests
+       SET attendance_marked_at = NOW(),
+           geo_deadline = NOW() + INTERVAL '30 minutes'
+       WHERE student_id = $1 AND date = $2 AND status = 'approved' AND attendance_marked_at IS NULL`,
+      [studentId, date]
+    );
+
     res.json({ ...r.rows[0], autoAbsent });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });

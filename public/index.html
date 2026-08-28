@@ -7,10 +7,12 @@
 <meta name="description" content="EDU OS: Autonomous Academic & Campus Management System with live 3D Kyoto Mountain Temple sanctuary.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2305070a'/%3E%3Ccircle cx='16' cy='17' r='8' fill='%23e0231c'/%3E%3Crect x='4' y='8' width='24' height='2.6' fill='%23dfe7e0'/%3E%3Crect x='7' y='13' width='18' height='2' fill='%23dfe7e0'/%3E%3C/svg%3E">
 
-<!-- Tailwind CSS, Lucide Icons, Chart.js -->
+<!-- Tailwind CSS, Lucide Icons, Chart.js, Leaflet Map -->
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -6322,7 +6324,7 @@ setTimeout(() => {
     }
 
     // --- MULTI-PHASE ACADEMIC GRADEBOOK & RESULTS ENGINE (FACULTY/ADMIN) ---
-    let currentGradebookTab = 'phase1';
+    var currentGradebookTab = 'phase1';
 
     async function renderGradebook(container) {
       const [allUsers, subjects, grades, htRequests] = await Promise.all([
@@ -8879,6 +8881,1332 @@ setTimeout(() => {
         toast(e.message || 'Simulation failed', 'error');
       }
     }
+
+
+// =========================================================================
+// ENHANCED MODULES: Slots A-Z, Map Search & Geotag OD, Individual Marks
+// =========================================================================
+
+var SLOTS_LIST = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
+var selectedSlotFilter = 'ALL';
+var currentGbSubjectId = null;
+var odMapInstance = null;
+var odMarkerInstance = null;
+var studentSlotFilter = 'ALL';
+var currentGradebookTab = 'phase1';
+
+// ── 1. FACULTY / ADMIN: SUBJECTS & COURSE MASTER CATALOG (SLOTS A-Z) ──────
+async function renderSubjects(container) {
+  const subjects = await api('GET', '/subjects');
+  const availableSlots = ['ALL', ...SLOTS_LIST];
+
+  const filteredSubjects = selectedSlotFilter === 'ALL'
+    ? subjects
+    : subjects.filter(s => (s.slot || 'A').toUpperCase() === selectedSlotFilter);
+
+  container.innerHTML = `
+    <div class="space-y-6 animate-fade-in">
+      <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-[#e0231c] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="badge badge-vermilion text-[10px] uppercase tracking-[0.2em]">SLOTS A TO Z</span>
+            <span class="text-xs text-slate-400 font-mono">Master Curriculum</span>
+          </div>
+          <h3 class="text-2xl font-normal text-white tracking-wide mt-1">Course Catalog & Slot Allocations</h3>
+          <p class="text-xs text-slate-300">Launch courses into designated Slots (A through Z) and configure target eligible student departments.</p>
+        </div>
+        <button onclick="openAddSubjectModal()" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase">
+          <i data-lucide="book-plus" class="w-4 h-4"></i>
+          <span>Launch Course in Slot</span>
+        </button>
+      </div>
+
+      <!-- Slot Filter Pills A to Z -->
+      <div class="glass-panel p-4 rounded-2xl border border-white/10 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Filter by Slot (A - Z):</span>
+          <span class="text-xs text-[#ff5a3c] font-mono">${filteredSubjects.length} Course${filteredSubjects.length !== 1 ? 's' : ''} in View</span>
+        </div>
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin">
+          <button onclick="filterSubjectsBySlot('ALL')" class="px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 transition-all ${selectedSlotFilter === 'ALL' ? 'bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
+            All Slots (${subjects.length})
+          </button>
+          ${SLOTS_LIST.map(slot => {
+            const count = subjects.filter(s => (s.slot || 'A').toUpperCase() === slot).length;
+            const active = selectedSlotFilter === slot;
+            return `
+              <button onclick="filterSubjectsBySlot('${slot}')" class="px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 transition-all ${active ? 'bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
+                Slot ${slot} ${count > 0 ? `<span class="opacity-75 text-[10px]">(${count})</span>` : ''}
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Course Cards Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        ${filteredSubjects.map(s => {
+          const slot = (s.slot || 'A').toUpperCase();
+          const targetDept = s.target_dept || 'ALL';
+          return `
+            <div class="glass-card p-6 rounded-3xl flex flex-col justify-between border border-white/10 hover:border-[#e0231c]/40 transition-all space-y-4">
+              <div class="space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="badge badge-purple font-mono font-bold text-xs px-2.5 py-1">SLOT ${slot}</span>
+                    <span class="font-mono text-xs text-[#ff5a3c] bg-[#e0231c]/10 px-2 py-0.5 rounded-md border border-[#e0231c]/20 font-medium">
+                      ${s.course_code || 'CS3451'}
+                    </span>
+                  </div>
+                  <span class="badge ${s.is_launched !== false ? 'badge-emerald' : 'badge-amber'} text-[10px] uppercase tracking-wider">
+                    ${s.is_launched !== false ? 'ACTIVE' : 'DRAFT'}
+                  </span>
+                </div>
+
+                <div>
+                  <h4 class="font-medium text-white text-base tracking-wide">${s.name}</h4>
+                  <p class="text-xs text-slate-400 mt-1 line-clamp-2">${s.description || 'No course description provided.'}</p>
+                </div>
+
+                <div class="space-y-1.5 pt-2 border-t border-white/10 text-xs">
+                  <div class="flex items-center justify-between text-slate-300">
+                    <span class="text-slate-400">Instructor:</span>
+                    <span class="font-medium text-white">${s.faculty_name || 'Assigned Staff'}</span>
+                  </div>
+                  <div class="flex items-center justify-between text-slate-300">
+                    <span class="text-slate-400">Eligible Dept:</span>
+                    <span class="badge ${targetDept === 'ALL' ? 'badge-blue' : 'badge-vermilion'} text-[10px]">${targetDept}</span>
+                  </div>
+                  <div class="flex items-center justify-between text-slate-300">
+                    <span class="text-slate-400">Type / Enrollments:</span>
+                    <span class="text-emerald-400 font-medium">${s.enrolled_count || 0} Student${s.enrolled_count !== 1 ? 's' : ''}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-3 border-t border-white/10 flex items-center justify-between gap-2">
+                <button onclick="toggleCourseLaunch(${s.id}, ${s.is_launched !== false ? 'false' : 'true'})" class="btn-secondary text-xs py-1.5 px-3 rounded-lg flex-1">
+                  ${s.is_launched !== false ? 'Close Launch' : 'Launch Course'}
+                </button>
+                <button onclick="deleteSubject(${s.id})" class="p-1.5 rounded-lg text-slate-400 hover:text-[#e0231c] hover:bg-white/5">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      ${filteredSubjects.length === 0 ? `
+        <div class="glass-panel p-12 rounded-3xl text-center text-slate-400 space-y-3">
+          <i data-lucide="book-x" class="w-12 h-12 mx-auto text-slate-500"></i>
+          <h4 class="text-base font-normal text-white">No Courses Launched in Slot ${selectedSlotFilter}</h4>
+          <p class="text-xs text-slate-400">Click "Launch Course in Slot" to create a new course for this slot.</p>
+        </div>
+      ` : ''}
+    </div>
+  `;
+  lucide.createIcons();
+}
+
+function filterSubjectsBySlot(slot) {
+  selectedSlotFilter = slot;
+  renderPage();
+}
+
+async function openAddSubjectModal() {
+  let facultyList = [];
+  try {
+    facultyList = await api('GET', '/students/faculty-list');
+  } catch(e) {
+    facultyList = [];
+  }
+
+  openModal('Launch / Create Course in Slot (A-Z)', `
+    <div class="space-y-4 text-left">
+      <div class="grid grid-cols-2 gap-3">
+        <!-- Course Slot (A to Z) -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Course Slot (A - Z) <span class="text-[#e0231c]">*</span></label>
+          <select id="m-sub-slot" class="glass-input w-full font-bold text-[#ff5a3c]">
+            ${SLOTS_LIST.map(slot => `<option value="${slot}" ${slot === 'A' ? 'selected' : ''}>Slot ${slot}</option>`).join('')}
+          </select>
+        </div>
+
+        <!-- Course Code -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Course Code <span class="text-[#e0231c]">*</span></label>
+          <input type="text" id="m-sub-code" placeholder="e.g. CS3451" class="glass-input w-full font-mono font-bold text-blue-400" required>
+        </div>
+      </div>
+
+      <!-- Course Name -->
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Course / Subject Name <span class="text-[#e0231c]">*</span></label>
+        <input type="text" id="m-sub-name" placeholder="e.g. Operating Systems & System Programming" class="glass-input w-full font-medium" required>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <!-- Course Type -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Course Type</label>
+          <select id="m-sub-type" class="glass-input w-full font-medium">
+            <option value="classroom" selected>Theory / Lecture</option>
+            <option value="laboratory">Practical / Laboratory</option>
+            <option value="elective">Open Elective</option>
+          </select>
+        </div>
+
+        <!-- Assigned Faculty -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Course Instructor</label>
+          <select id="m-sub-fac" class="glass-input w-full font-medium">
+            ${facultyList.map(f => `<option value="${f.id}">${f.name} (${f.admin_id || 'Faculty'})</option>`).join('')}
+            ${facultyList.length === 0 ? `<option value="${S.user.id}">${S.user.name} (Current User)</option>` : ''}
+          </select>
+        </div>
+      </div>
+
+      <!-- Eligible Student Department(s) -->
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Eligible Student Department(s) <span class="text-[#e0231c]">*</span></label>
+        <select id="m-sub-group" class="glass-input w-full font-medium">
+          <option value="ALL" selected>All Departments (Open to All)</option>
+          <option value="CSE">Computer Science & Engineering (CSE)</option>
+          <option value="AIDS">Artificial Intelligence & Data Science (AIDS)</option>
+          <option value="ECE">Electronics & Communication (ECE)</option>
+          <option value="MECH">Mechanical Engineering (MECH)</option>
+          <option value="CIVIL">Civil Engineering (CIVIL)</option>
+          <option value="CSE,AIDS">CSE & AIDS Combined</option>
+          <option value="ECE,MECH,CIVIL">ECE / MECH / CIVIL</option>
+        </select>
+      </div>
+
+      <!-- Course Description -->
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Course Syllabus & Description</label>
+        <textarea id="m-sub-desc" rows="2" placeholder="Course objectives, unit topics, and prerequisite modules..." class="glass-input w-full font-medium text-xs"></textarea>
+      </div>
+
+      <!-- Launch Status -->
+      <div class="flex items-center gap-2 pt-2">
+        <input type="checkbox" id="m-sub-launch" checked class="w-4 h-4 accent-[#e0231c] rounded">
+        <label for="m-sub-launch" class="text-xs font-medium text-white">Publish and launch course immediately for student enrollment</label>
+      </div>
+    </div>
+  `, `
+    <button onclick="saveSubject()" class="btn-primary text-xs py-2.5 px-6 rounded-xl uppercase tracking-wider flex items-center gap-2">
+      <i data-lucide="rocket" class="w-4 h-4"></i>
+      <span>Launch Course</span>
+    </button>
+  `);
+  lucide.createIcons();
+}
+
+async function saveSubject() {
+  const code = document.getElementById('m-sub-code')?.value.trim();
+  const name = document.getElementById('m-sub-name')?.value.trim();
+  const slot = document.getElementById('m-sub-slot')?.value || 'A';
+  const subjectType = document.getElementById('m-sub-type')?.value || 'classroom';
+  const facultyId = document.getElementById('m-sub-fac')?.value;
+  const targetDept = document.getElementById('m-sub-group')?.value || 'ALL';
+  const description = document.getElementById('m-sub-desc')?.value.trim() || '';
+  const isLaunched = document.getElementById('m-sub-launch')?.checked;
+
+  if (!name) return toast('Subject / Course name is required', 'warning');
+  if (!code) return toast('Course code is required', 'warning');
+
+  try {
+    await api('POST', '/subjects', { code, name, slot, subjectType, facultyId, targetDept, description, isLaunched });
+    toast(`Course "${name}" launched in Slot ${slot}! 🚀`, 'success');
+    closeModal();
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to create course', 'error');
+  }
+}
+
+async function toggleCourseLaunch(id, isLaunched) {
+  try {
+    await api('PUT', `/subjects/${id}`, { isLaunched });
+    toast(isLaunched ? 'Course launched for student enrollment' : 'Course enrollment closed', 'info');
+    renderPage();
+  } catch(e) {
+    toast('Failed to update course status', 'error');
+  }
+}
+
+async function deleteSubject(id) {
+  if (!confirm('Are you sure you want to delete this course?')) return;
+  try {
+    await api('DELETE', `/subjects/${id}`);
+    toast('Course deleted', 'info');
+    renderPage();
+  } catch(e) {
+    toast('Failed to delete course', 'error');
+  }
+}
+
+
+// ── 2. STUDENT COURSE CATALOG & ENROLLMENT (SLOTS A-Z) ───────────────────
+async function renderStudentCourseEnrollment(container) {
+  const availableCourses = await api('GET', '/enrollment/available');
+  const enrolledCourses = availableCourses.filter(c => c.is_enrolled);
+
+  const filteredCourses = studentSlotFilter === 'ALL'
+    ? availableCourses
+    : availableCourses.filter(c => (c.slot || 'A').toUpperCase() === studentSlotFilter);
+
+  container.innerHTML = `
+    <div class="space-y-6 animate-fade-in">
+      <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-blue-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="badge badge-blue text-[10px] uppercase tracking-[0.2em]">SLOTS A TO Z</span>
+            <span class="text-xs text-slate-400 font-mono">My Curriculum</span>
+          </div>
+          <h3 class="text-2xl font-normal text-white tracking-wide mt-1">Course Catalog & Slot Registration</h3>
+          <p class="text-xs text-slate-300">Browse launched courses in Slots A through Z. Enroll in eligible subjects for your department.</p>
+        </div>
+        <span class="badge badge-blue text-xs font-semibold py-2 px-4 rounded-xl shadow-md">
+          ${enrolledCourses.length} Enrolled Course${enrolledCourses.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      <!-- Slot Filter Pills for Student -->
+      <div class="glass-panel p-4 rounded-2xl border border-white/10 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Select Slot (A to Z):</span>
+          <span class="text-xs text-blue-400 font-mono">${filteredCourses.length} Available in View</span>
+        </div>
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin">
+          <button onclick="filterStudentSlot('ALL')" class="px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 transition-all ${studentSlotFilter === 'ALL' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
+            All Slots (${availableCourses.length})
+          </button>
+          ${SLOTS_LIST.map(slot => {
+            const count = availableCourses.filter(c => (c.slot || 'A').toUpperCase() === slot).length;
+            const isEnrolledInSlot = enrolledCourses.some(c => (c.slot || 'A').toUpperCase() === slot);
+            const active = studentSlotFilter === slot;
+            return `
+              <button onclick="filterStudentSlot('${slot}')" class="px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 flex items-center gap-1 transition-all ${
+                active 
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md' 
+                  : isEnrolledInSlot 
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                  : 'bg-white/5 text-slate-400 hover:text-white'
+              }">
+                <span>Slot ${slot}</span>
+                ${isEnrolledInSlot ? '<span class="text-[9px]">✓</span>' : count > 0 ? `<span class="opacity-75 text-[10px]">(${count})</span>` : ''}
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Course Cards Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        ${filteredCourses.map(c => {
+          const slot = (c.slot || 'A').toUpperCase();
+          const isEligible = c.is_dept_eligible !== false;
+          return `
+            <div class="glass-card p-6 rounded-3xl flex flex-col justify-between border ${
+              c.is_enrolled 
+                ? 'border-emerald-500/40 bg-emerald-950/15' 
+                : isEligible 
+                ? 'border-white/10 hover:border-blue-500/40' 
+                : 'border-rose-500/20 bg-rose-950/10 opacity-75'
+            } transition-all space-y-4">
+              <div class="space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="badge badge-purple font-mono font-bold text-xs px-2.5 py-1">SLOT ${slot}</span>
+                    <span class="font-mono text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20 font-medium">
+                      ${c.course_code || 'CS3451'}
+                    </span>
+                  </div>
+                  <span class="badge ${
+                    c.is_enrolled 
+                      ? 'badge-emerald' 
+                      : isEligible 
+                      ? 'badge-blue' 
+                      : 'badge-rose'
+                  } text-[10px] uppercase tracking-wider">
+                    ${c.is_enrolled ? '✓ ENROLLED' : isEligible ? 'ELIGIBLE' : 'DEPT RESTRICTED'}
+                  </span>
+                </div>
+
+                <div>
+                  <h4 class="font-medium text-white text-base tracking-wide">${c.subject_name}</h4>
+                  <p class="text-xs text-slate-400 mt-1 line-clamp-2">${c.description || 'Curriculum engineering course module.'}</p>
+                </div>
+
+                <div class="space-y-1.5 pt-2 border-t border-white/10 text-xs">
+                  <div class="flex items-center justify-between text-slate-300">
+                    <span class="text-slate-400">Instructor:</span>
+                    <span class="font-medium text-white">${c.faculty_name || 'Course Faculty'}</span>
+                  </div>
+                  <div class="flex items-center justify-between text-slate-300">
+                    <span class="text-slate-400">Target Department:</span>
+                    <span class="font-medium ${isEligible ? 'text-emerald-400' : 'text-rose-400'}">${c.target_dept || 'ALL'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-3 border-t border-white/10">
+                ${c.is_enrolled ? `
+                  <button onclick="unenrollCourse(${c.id})" class="btn-secondary w-full text-xs py-2.5 rounded-xl border-rose-500/30 text-rose-400 hover:bg-rose-500/10 flex items-center justify-center gap-2">
+                    <i data-lucide="user-minus" class="w-4 h-4"></i>
+                    <span>Drop Slot ${slot} Course</span>
+                  </button>
+                ` : isEligible ? `
+                  <button onclick="enrollCourse(${c.id})" class="btn-primary w-full text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 tracking-wider uppercase">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i>
+                    <span>Enroll in Slot ${slot}</span>
+                  </button>
+                ` : `
+                  <div class="text-center py-2 text-rose-400 text-xs font-medium">
+                    Restricted to ${c.target_dept} students
+                  </div>
+                `}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      ${filteredCourses.length === 0 ? `
+        <div class="glass-panel p-12 rounded-3xl text-center text-slate-400 space-y-3">
+          <i data-lucide="book-open" class="w-12 h-12 mx-auto text-slate-500"></i>
+          <h4 class="text-base font-normal text-white">No Courses Available in Slot ${studentSlotFilter}</h4>
+          <p class="text-xs text-slate-400">Faculty will launch courses for Slot ${studentSlotFilter} shortly.</p>
+        </div>
+      ` : ''}
+    </div>
+  `;
+  lucide.createIcons();
+}
+
+function filterStudentSlot(slot) {
+  studentSlotFilter = slot;
+  renderPage();
+}
+
+async function enrollCourse(subjectId) {
+  try {
+    await api('POST', '/enrollment/enroll', { subjectId });
+    toast('Enrolled in course successfully! 🎉', 'success');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to enroll', 'error');
+  }
+}
+
+async function unenrollCourse(subjectId) {
+  if (!confirm('Are you sure you want to drop this course?')) return;
+  try {
+    await api('POST', '/enrollment/unenroll', { subjectId });
+    toast('Course dropped', 'info');
+    renderPage();
+  } catch(e) {
+    toast('Failed to drop course', 'error');
+  }
+}
+
+
+// ── 3. ON-DUTY (OD) WORKFLOW WITH MAP SEARCH & 30-MIN 30M RADIUS CHECK ────
+async function renderStudentOD(container) {
+  const odList = await api('GET', '/od');
+
+  container.innerHTML = `
+    <div class="space-y-6 animate-fade-in">
+      <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-emerald-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="badge badge-emerald text-[10px] uppercase tracking-[0.2em]">ON-DUTY (OD) WORKFLOW</span>
+            <span class="text-xs text-slate-400 font-mono">30-Minute / 30m Radius Engine</span>
+          </div>
+          <h3 class="text-2xl font-normal text-white tracking-wide mt-1">My On-Duty (OD) Requests & Geo-Checkin</h3>
+          <p class="text-xs text-slate-300">Select class slot, pinpoint event venue on interactive map, and complete 30-meter geo-verification within 30 minutes of attendance marking.</p>
+        </div>
+        <button onclick="openSubmitODModal()" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase shadow-lg">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Submit New OD Request</span>
+        </button>
+      </div>
+
+      <div class="space-y-6">
+        ${(odList || []).length > 0 ? (odList || []).map(o => {
+          const slot = (o.slot || 'A').toUpperCase();
+          const hasAttendanceMarked = Boolean(o.attendance_marked_at);
+          let minsRemaining = null;
+          let isExpired = Boolean(o.is_expired);
+
+          if (hasAttendanceMarked && o.geo_deadline) {
+            const deadlineMs = new Date(o.geo_deadline).getTime();
+            const nowMs = Date.now();
+            minsRemaining = Math.max(0, Math.round((deadlineMs - nowMs) / 60000));
+            if (minsRemaining <= 0) isExpired = true;
+          }
+
+          const isCompleted = o.status === 'completed' || o.status === 'geo_submitted';
+          const isRejected = o.status === 'rejected' || o.status === 'geo_rejected';
+
+          return `
+            <div class="glass-panel p-6 rounded-3xl border ${isCompleted ? 'border-emerald-500/30' : isRejected ? 'border-rose-500/30' : 'border-white/10'} space-y-5">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+                <div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="badge badge-purple font-mono font-bold text-xs">SLOT ${slot}</span>
+                    <span class="badge ${
+                      isCompleted 
+                        ? 'badge-emerald' 
+                        : isRejected 
+                        ? 'badge-rose' 
+                        : o.status === 'approved' 
+                        ? 'badge-blue' 
+                        : 'badge-amber'
+                    } text-[10px] uppercase tracking-wider">
+                      ${(o.status || 'PENDING').toUpperCase()}
+                    </span>
+                  </div>
+                  <h4 class="font-medium text-white text-lg tracking-wide">${o.event_name}</h4>
+                  <p class="text-xs text-slate-300 flex items-center gap-1.5 mt-0.5">
+                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-400"></i>
+                    <span>${o.location_name || 'Selected OD Venue'}</span>
+                    ${o.lat && o.lng ? `<span class="text-slate-500 font-mono">(${o.lat.toFixed(4)}, ${o.lng.toFixed(4)})</span>` : ''}
+                  </p>
+                </div>
+                <div class="text-right text-xs text-slate-400 font-mono">
+                  <div>Date: <span class="text-white">${o.date || new Date(o.created_at).toLocaleDateString()}</span></div>
+                  <div>Radius: <span class="text-emerald-400 font-bold">≤ 30 Meters</span></div>
+                </div>
+              </div>
+
+              <!-- 3-Stage Progress Stepper -->
+              <div class="grid grid-cols-3 gap-3 text-center">
+                <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                  <div class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-xs font-bold">✓</div>
+                  <p class="text-xs font-medium text-white">1. Map Pin & Letter</p>
+                  <p class="text-[10px] text-slate-400 font-mono">Slot ${slot} Registered</p>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                  <div class="w-6 h-6 rounded-full ${o.status !== 'pending' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-300'} flex items-center justify-center mx-auto text-xs font-bold">
+                    ${o.status !== 'pending' ? '✓' : '2'}
+                  </div>
+                  <p class="text-xs font-medium text-white">2. Faculty Approval</p>
+                  <p class="text-[10px] text-slate-400">${o.status !== 'pending' ? (o.status === 'rejected' ? 'Rejected' : 'Approved') : 'Awaiting Faculty'}</p>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                  <div class="w-6 h-6 rounded-full ${isCompleted ? 'bg-emerald-500/20 text-emerald-400' : isRejected ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-500/20 text-slate-400'} flex items-center justify-center mx-auto text-xs font-bold">
+                    ${isCompleted ? '✓' : isRejected ? '✗' : '3'}
+                  </div>
+                  <p class="text-xs font-medium text-white">3. GPS 30m Check-in</p>
+                  <p class="text-[10px] text-slate-400">${isCompleted ? `Verified (${o.distance_meters || 0}m)` : isRejected ? 'Cancelled' : 'Pending Attendance'}</p>
+                </div>
+              </div>
+
+              <!-- Real-Time 30-Minute Timer & Geo-Action Box -->
+              ${o.status === 'approved' && hasAttendanceMarked && !isExpired ? `
+                <div class="p-5 rounded-2xl bg-gradient-to-r from-[#e0231c]/20 to-amber-600/20 border border-[#e0231c]/50 space-y-3 animate-pulse">
+                  <div class="flex items-center justify-between">
+                    <span class="badge badge-rose text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+                      <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                      <span>30-MIN VERIFICATION WINDOW ACTIVE</span>
+                    </span>
+                    <span class="text-base font-mono font-bold text-amber-300">${minsRemaining} Mins Remaining</span>
+                  </div>
+                  <p class="text-xs text-slate-200">
+                    Faculty has recorded attendance! You must complete your GPS check-in at <b>${o.location_name || 'your chosen venue'}</b> within a <b>30-meter radius</b> before the timer reaches 0, or your OD will be cancelled.
+                  </p>
+                  <button onclick="triggerStrictGeoCheckin(${o.id}, ${o.lat || 'null'}, ${o.lng || 'null'})" class="btn-primary w-full py-3 rounded-xl uppercase tracking-wider text-xs font-bold flex items-center justify-center gap-2 shadow-xl">
+                    <i data-lucide="map-pin" class="w-4 h-4"></i>
+                    <span>Verify GPS Location Now (≤ 30m Radius)</span>
+                  </button>
+                </div>
+              ` : o.status === 'approved' && !hasAttendanceMarked ? `
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                      <i data-lucide="info" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                      <p class="text-xs font-medium text-white">OD Approved by Faculty for Slot ${slot}</p>
+                      <p class="text-[11px] text-slate-400">When faculty marks session attendance, your 30-minute 30-meter verification window will activate.</p>
+                    </div>
+                  </div>
+                  <button onclick="triggerStrictGeoCheckin(${o.id}, ${o.lat || 'null'}, ${o.lng || 'null'})" class="btn-secondary text-xs py-2 px-3 rounded-xl shrink-0">
+                    Pre-Check GPS
+                  </button>
+                </div>
+              ` : isRejected ? `
+                <div class="p-4 rounded-2xl bg-rose-950/20 border border-rose-500/30 text-xs text-rose-300">
+                  <b>OD Cancelled / Rejected:</b> ${o.rejection_reason || 'Out of 30m radius or 30-minute window expired.'} Attendance marked Absent.
+                </div>
+              ` : isCompleted ? `
+                <div class="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-300">
+                  <span class="flex items-center gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+                    <span>Location Verified Successfully within <b>${o.distance_meters || 0}m</b> of venue! OD Attendance Approved.</span>
+                  </span>
+                  <span class="font-mono text-slate-400 text-[11px]">${o.checkin_time ? new Date(o.checkin_time).toLocaleTimeString() : 'Verified'}</span>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('') : `
+          <div class="glass-panel p-12 rounded-3xl text-center text-slate-400 space-y-3">
+            <i data-lucide="clipboard-list" class="w-12 h-12 mx-auto text-slate-500"></i>
+            <h4 class="text-base font-normal text-white">No On-Duty Requests Submitted</h4>
+            <p class="text-xs text-slate-400">Click "Submit New OD Request" to apply for Slot OD with map location picker.</p>
+          </div>
+        `}
+      </div>
+    </div>
+  `;
+  lucide.createIcons();
+}
+
+async function openSubmitODModal() {
+  let events = [];
+  try {
+    events = await api('GET', '/events');
+  } catch(e) {
+    events = [];
+  }
+  const registeredEvents = (events || []).filter(e => e.is_registered);
+
+  openModal('Submit On-Duty (OD) Request with Map Location', `
+    <div class="space-y-4 text-left">
+      <div class="grid grid-cols-2 gap-3">
+        <!-- Target Slot (A to Z) -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">For Which Slot? <span class="text-[#e0231c]">*</span></label>
+          <select id="m-od-slot" class="glass-input w-full font-bold text-[#ff5a3c]">
+            ${SLOTS_LIST.map(s => `<option value="${s}">Slot ${s}</option>`).join('')}
+            <option value="ALL">All Slots (Full Day OD)</option>
+          </select>
+        </div>
+
+        <!-- Registered Event Selector -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Registered Event (Optional)</label>
+          <select id="m-od-event-id" class="glass-input w-full font-medium" onchange="handleODEventChange(this.value)">
+            <option value="">-- Custom Event / Other --</option>
+            ${registeredEvents.map(e => `<option value="${e.id}" data-name="${e.title}" data-lat="${e.lat || ''}" data-lng="${e.lng || ''}" data-venue="${e.venue || ''}">${e.title}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      <!-- Event Name -->
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Event / Symposium / Competition Name <span class="text-[#e0231c]">*</span></label>
+        <input type="text" id="m-od-event-name" class="glass-input w-full font-medium" placeholder="e.g. National Smart India Hackathon Grand Finale" required>
+      </div>
+
+      <!-- INTERACTIVE MAP WITH LOCATION SEARCH -->
+      <div class="space-y-2 pt-1">
+        <div class="flex items-center justify-between">
+          <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Pinpoint OD Location on Map <span class="text-[#e0231c]">*</span></label>
+          <span id="od-coords-display" class="text-xs text-emerald-400 font-mono">📍 Lat: 13.0827, Lng: 80.2707</span>
+        </div>
+
+        <!-- Search Bar for Map -->
+        <div class="flex items-center gap-2">
+          <input type="text" id="od-map-search-input" placeholder="Search institution, stadium, or venue address..." class="glass-input flex-1 font-medium text-xs">
+          <button type="button" onclick="searchODLocation()" class="btn-secondary text-xs py-2 px-3 rounded-xl flex items-center gap-1 shrink-0">
+            <i data-lucide="search" class="w-3.5 h-3.5"></i>
+            <span>Search Map</span>
+          </button>
+        </div>
+
+        <!-- Leaflet Map Container -->
+        <div id="od-leaflet-map" class="w-full h-52 rounded-2xl overflow-hidden border border-white/15 relative z-10"></div>
+        <p class="text-[11px] text-slate-400">Search above or click / drag the pin on the map to set the exact venue. (30-meter radius will be enforced).</p>
+
+        <!-- Hidden input storage for GPS & Location Name -->
+        <input type="hidden" id="od-lat" value="13.0827">
+        <input type="hidden" id="od-lng" value="80.2707">
+        <input type="hidden" id="od-location-name" value="Anna University / Chennai Campus">
+      </div>
+
+      <!-- Permission Letter Upload -->
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Official Permission Letter / ID Card Photo <span class="text-[#e0231c]">*</span></label>
+        <input type="file" id="m-od-file" accept="image/*,application/pdf" class="glass-input w-full font-medium" required>
+      </div>
+    </div>
+  `, `
+    <button onclick="saveOD()" class="btn-primary text-xs py-2.5 px-6 rounded-xl uppercase tracking-wider flex items-center gap-2">
+      <i data-lucide="send" class="w-4 h-4"></i>
+      <span>Submit OD Application</span>
+    </button>
+  `);
+  lucide.createIcons();
+  initODMap(13.0827, 80.2707);
+}
+
+function initODMap(initialLat = 13.0827, initialLng = 80.2707) {
+  setTimeout(() => {
+    const mapDiv = document.getElementById('od-leaflet-map');
+    if (!mapDiv || typeof L === 'undefined') return;
+
+    if (odMapInstance) {
+      odMapInstance.remove();
+      odMapInstance = null;
+    }
+
+    odMapInstance = L.map('od-leaflet-map').setView([initialLat, initialLng], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(odMapInstance);
+
+    odMarkerInstance = L.marker([initialLat, initialLng], { draggable: true }).addTo(odMapInstance);
+
+    function updateCoords(lat, lng, name) {
+      const latEl = document.getElementById('od-lat');
+      const lngEl = document.getElementById('od-lng');
+      const nameEl = document.getElementById('od-location-name');
+      const dispEl = document.getElementById('od-coords-display');
+      if (latEl) latEl.value = Number(lat).toFixed(6);
+      if (lngEl) lngEl.value = Number(lng).toFixed(6);
+      if (name && nameEl) nameEl.value = name;
+      if (dispEl) dispEl.innerText = `📍 Lat: ${Number(lat).toFixed(4)}, Lng: ${Number(lng).toFixed(4)}`;
+    }
+
+    odMarkerInstance.on('dragend', async (e) => {
+      const pos = e.target.getLatLng();
+      updateCoords(pos.lat, pos.lng);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.lat}&lon=${pos.lng}`);
+        const data = await res.json();
+        if (data && data.display_name) {
+          updateCoords(pos.lat, pos.lng, data.display_name.split(',').slice(0, 3).join(','));
+        }
+      } catch(err) {}
+    });
+
+    odMapInstance.on('click', async (e) => {
+      const { lat, lng } = e.latlng;
+      odMarkerInstance.setLatLng([lat, lng]);
+      updateCoords(lat, lng);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+        const data = await res.json();
+        if (data && data.display_name) {
+          updateCoords(lat, lng, data.display_name.split(',').slice(0, 3).join(','));
+        }
+      } catch(err) {}
+    });
+  }, 250);
+}
+
+async function searchODLocation() {
+  const q = document.getElementById('od-map-search-input')?.value.trim();
+  if (!q) return toast('Please enter a location name to search', 'warning');
+
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`);
+    const results = await res.json();
+    if (results && results.length > 0) {
+      const item = results[0];
+      const lat = parseFloat(item.lat);
+      const lng = parseFloat(item.lon);
+      if (odMapInstance && odMarkerInstance) {
+        odMapInstance.setView([lat, lng], 15);
+        odMarkerInstance.setLatLng([lat, lng]);
+      }
+      document.getElementById('od-lat').value = lat.toFixed(6);
+      document.getElementById('od-lng').value = lng.toFixed(6);
+      document.getElementById('od-location-name').value = item.display_name.split(',').slice(0, 3).join(',');
+      document.getElementById('od-coords-display').innerText = `📍 Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
+      toast(`Location Pinned: ${item.display_name.split(',').slice(0, 2).join(',')}`, 'success');
+    } else {
+      toast('Location not found. Click directly on the map to place pin.', 'info');
+    }
+  } catch (err) {
+    toast('Search service busy. You can click directly on the map.', 'info');
+  }
+}
+
+function handleODEventChange(val) {
+  const select = document.getElementById('m-od-event-id');
+  const opt = select.options[select.selectedIndex];
+  if (val && opt) {
+    if (opt.dataset.name) document.getElementById('m-od-event-name').value = opt.dataset.name;
+    if (opt.dataset.lat && opt.dataset.lng) {
+      const lat = parseFloat(opt.dataset.lat);
+      const lng = parseFloat(opt.dataset.lng);
+      if (odMapInstance && odMarkerInstance) {
+        odMapInstance.setView([lat, lng], 15);
+        odMarkerInstance.setLatLng([lat, lng]);
+      }
+      document.getElementById('od-lat').value = lat.toFixed(6);
+      document.getElementById('od-lng').value = lng.toFixed(6);
+      if (opt.dataset.venue) document.getElementById('od-location-name').value = opt.dataset.venue;
+      document.getElementById('od-coords-display').innerText = `📍 Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
+    }
+  }
+}
+
+async function saveOD() {
+  const slot = document.getElementById('m-od-slot')?.value || 'A';
+  const eventId = document.getElementById('m-od-event-id')?.value || null;
+  const eventName = document.getElementById('m-od-event-name')?.value;
+  const lat = document.getElementById('od-lat')?.value;
+  const lng = document.getElementById('od-lng')?.value;
+  const locationName = document.getElementById('od-location-name')?.value || 'Selected Venue';
+  const fileInput = document.getElementById('m-od-file');
+
+  if (!eventName || !eventName.trim()) return toast('Event name is required', 'warning');
+  if (!fileInput || !fileInput.files[0]) return toast('Permission letter or photo is required', 'warning');
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      await api('POST', '/od', {
+        slot,
+        eventId: eventId ? parseInt(eventId, 10) : null,
+        eventName: eventName.trim(),
+        lat: lat ? parseFloat(lat) : null,
+        lng: lng ? parseFloat(lng) : null,
+        locationName,
+        letterB64: e.target.result
+      });
+      toast(`OD Request for Slot ${slot} Submitted Successfully! 🚀`, 'success');
+      closeModal();
+      renderPage();
+    } catch(err) {
+      toast(err.message || 'Failed to submit OD', 'error');
+    }
+  };
+  reader.readAsDataURL(fileInput.files[0]);
+}
+
+async function triggerStrictGeoCheckin(odId, targetLat, targetLng) {
+  if (!navigator.geolocation) return toast('Geolocation is not supported by your browser', 'error');
+
+  toast('Acquiring high-accuracy GPS coordinates...', 'info');
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+
+    try {
+      const res = await api('POST', `/od/${odId}/geo-photo`, {
+        geoB64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        lat, lng
+      });
+      toast(res.message || 'Geo-Verification Successful within 30m radius! ✅', 'success');
+      renderPage();
+    } catch(err) {
+      toast(err.message || 'Geo-Verification failed', 'error');
+      renderPage();
+    }
+  }, (err) => {
+    toast('GPS permission required for 30m location check-in', 'error');
+  }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+}
+
+
+// ── 4. GRADEBOOK: INDIVIDUAL & BATCH MARKS SUBMISSION ─────────────────────
+function switchGbTab(tab) {
+  currentGradebookTab = tab;
+  ['phase1', 'hallticket', 'phase2', 'phase3'].forEach(t => {
+    const el = document.getElementById(`gb-tab-${t}`);
+    if (el) el.classList.toggle('hidden', t !== tab);
+  });
+  lucide.createIcons();
+}
+
+async function renderGradebook(container) {
+  const [allUsers, subjects, grades, htRequests] = await Promise.all([
+    api('GET', '/students'),
+    api('GET', '/subjects'),
+    api('GET', '/grades'),
+    api('GET', '/grades/hall-ticket/requests')
+  ]);
+
+  const students = allUsers.filter(u => u.role === 'student');
+  const pendingHtCount = htRequests.filter(r => r.status === 'requested').length;
+
+  if (!currentGbSubjectId && subjects.length > 0) {
+    currentGbSubjectId = subjects[0].id;
+  }
+
+  const activeSubject = subjects.find(s => s.id === currentGbSubjectId) || subjects[0] || {};
+  const currentGrades = grades.filter(g => g.subject_id === activeSubject.id);
+
+  container.innerHTML = `
+    <div class="space-y-8 animate-fade-in">
+      <!-- Gradebook Header with Lifecycle Stepper -->
+      <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-purple-500 space-y-4 shadow-xl">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="badge badge-purple text-[10px] uppercase tracking-wider">5 ACADEMIC DIVISIONS LIFECYCLE</span>
+              <span class="text-xs text-blue-400 font-mono">400 Internal | 100 Univ Exam | 500 Total</span>
+            </div>
+            <h3 class="text-2xl font-normal text-white tracking-wide mt-1">Academic Gradebook & Results Engine</h3>
+            <p class="text-xs text-slate-300">Enter marks individually per student row or submit all students simultaneously.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button onclick="openCloseCourseModal()" class="btn-secondary text-xs py-2 px-3.5 rounded-xl flex items-center gap-2 border-purple-500/30 text-purple-300 hover:bg-purple-500/10 uppercase tracking-wider">
+              <i data-lucide="lock" class="w-4 h-4 text-purple-400"></i>
+              <span>Close Course for Exams</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Subject / Course Selector Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-white/10">
+          <div class="flex items-center gap-2 flex-1 max-w-lg">
+            <label class="text-xs font-medium text-slate-400 uppercase tracking-wider shrink-0">Selected Course:</label>
+            <select id="gb-course-select" class="glass-input w-full font-bold text-white text-xs" onchange="changeGbSubject(this.value)">
+              ${subjects.map(s => `
+                <option value="${s.id}" ${s.id === activeSubject.id ? 'selected' : ''}>
+                  [Slot ${s.slot || 'A'}] ${s.code || ''} — ${s.name} ${s.is_closed ? '(Closed)' : '(Active)'}
+                </option>
+              `).join('')}
+            </select>
+          </div>
+          <span class="badge ${activeSubject.is_closed ? 'badge-rose' : 'badge-emerald'} text-xs font-mono">
+            ${activeSubject.is_closed ? '🔒 CLOSED FOR EXAMS' : '🟢 ACTIVE LAUNCH'}
+          </span>
+        </div>
+
+        <!-- Workflow Stage Nav Pills -->
+        <div class="flex flex-wrap items-center gap-2 pt-3 border-t border-white/10 text-xs">
+          <button onclick="switchGbTab('phase1')" class="px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-all ${currentGradebookTab === 'phase1' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
+            <span>1. Phase 1 Marks (CAT & Class Lab)</span>
+          </button>
+          <button onclick="switchGbTab('hallticket')" class="px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-all ${currentGradebookTab === 'hallticket' ? 'bg-purple-600 text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
+            <span>2. Hall Ticket Requests (${pendingHtCount} Pending)</span>
+            ${pendingHtCount > 0 ? '<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>' : ''}
+          </button>
+          <button onclick="switchGbTab('phase2')" class="px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-all ${currentGradebookTab === 'phase2' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
+            <span>3. Phase 2 Marks (Capstone & Univ Lab)</span>
+          </button>
+          <button onclick="switchGbTab('phase3')" class="px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-all ${currentGradebookTab === 'phase3' ? 'bg-emerald-600 text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
+            <span>4. Main Univ Exam & Publish Results</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 1: PHASE 1 MARKS ENTRY TABLE (INDIVIDUAL & BATCH) -->
+      <div id="gb-tab-phase1" class="${currentGradebookTab === 'phase1' ? '' : 'hidden'} glass-panel p-6 rounded-3xl border border-blue-500/20 space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h4 class="text-base font-medium text-white flex items-center gap-2">
+              <i data-lucide="edit-3" class="w-5 h-5 text-blue-400"></i>
+              <span>Step 1: Continuous Assessment (Div 1) & Class Lab (Div 3) Marks</span>
+            </h4>
+            <p class="text-xs text-slate-400 mt-0.5">Enter marks student-by-student with individual Submit buttons or batch submit all students.</p>
+          </div>
+          <button onclick="saveAllPhase1Grades(${activeSubject.id})" class="btn-primary text-xs py-2 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md">
+            <i data-lucide="check-check" class="w-4 h-4"></i>
+            <span>Submit All Students (Phase 1)</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto rounded-2xl border border-white/10">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
+              <tr>
+                <th class="p-4">Student</th>
+                <th class="p-4">Reg Number</th>
+                <th class="p-4">Department</th>
+                <th class="p-4">Div 1: Assessments (/100)</th>
+                <th class="p-4">Div 3: Class Lab (/100)</th>
+                <th class="p-4">Total (/200)</th>
+                <th class="p-4 text-right">Individual Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 whitespace-nowrap">
+              ${students.map((st, idx) => {
+                const g = currentGrades.find(gr => gr.student_id === st.id) || {};
+                const d1 = g.div1_assessments !== undefined ? g.div1_assessments : '';
+                const d3 = g.div3_class_lab !== undefined ? g.div3_class_lab : '';
+                const total = (parseFloat(d1) || 0) + (parseFloat(d3) || 0);
+
+                return `
+                  <tr class="hover:bg-white/[0.02] transition-colors" id="p1-row-${st.id}">
+                    <td class="p-4 font-medium text-white">${st.name}</td>
+                    <td class="p-4 font-mono text-blue-400 font-bold">${st.admin_id || 'N/A'}</td>
+                    <td class="p-4 text-slate-400">${st.department || 'ALL'}</td>
+                    <td class="p-4">
+                      <input type="number" id="p1-d1-${st.id}" min="0" max="100" value="${d1}" placeholder="0-100" class="glass-input w-24 font-mono text-xs font-bold text-blue-400 text-center" oninput="calcP1Row(${st.id})">
+                    </td>
+                    <td class="p-4">
+                      <input type="number" id="p1-d3-${st.id}" min="0" max="100" value="${d3}" placeholder="0-100" class="glass-input w-24 font-mono text-xs font-bold text-purple-400 text-center" oninput="calcP1Row(${st.id})">
+                    </td>
+                    <td class="p-4 font-mono font-bold text-white text-sm" id="p1-tot-${st.id}">
+                      ${total}/200
+                    </td>
+                    <td class="p-4 text-right">
+                      <button onclick="saveIndividualPhase1Grade(${st.id}, ${activeSubject.id})" class="btn-secondary text-xs py-1.5 px-3 rounded-lg border-blue-500/30 text-blue-300 hover:bg-blue-500/10 flex items-center gap-1.5 ml-auto">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        <span>Submit</span>
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 2: HALL TICKET REQUESTS APPROVAL QUEUE -->
+      <div id="gb-tab-hallticket" class="${currentGradebookTab === 'hallticket' ? '' : 'hidden'} space-y-6">
+        <div class="glass-panel p-6 rounded-3xl border border-purple-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h4 class="text-base font-medium text-white flex items-center gap-2">
+              <i data-lucide="ticket" class="w-5 h-5 text-purple-400"></i>
+              <span>Step 2 & 3: Student Hall Ticket Requests</span>
+            </h4>
+            <p class="text-xs text-slate-400 mt-0.5">Approve examination hall ticket requests to issue cryptographic admit cards.</p>
+          </div>
+          <button onclick="openCloseCourseModal()" class="btn-primary text-xs py-2 px-4 rounded-xl flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600">
+            <i data-lucide="lock" class="w-4 h-4"></i>
+            <span>Close Course Launch</span>
+          </button>
+        </div>
+
+        <div class="glass-panel rounded-3xl border border-white/10 overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
+              <tr>
+                <th class="p-4">Student Name</th>
+                <th class="p-4">Register Number</th>
+                <th class="p-4">Course</th>
+                <th class="p-4">Request Date</th>
+                <th class="p-4">Status</th>
+                <th class="p-4 text-right">Faculty Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 whitespace-nowrap">
+              ${htRequests.length === 0 ? `
+                <tr><td colspan="6" class="p-8 text-center text-slate-500">No student hall ticket requests pending.</td></tr>
+              ` : htRequests.map(r => `
+                <tr class="hover:bg-white/[0.02]">
+                  <td class="p-4 font-medium text-white">${r.student_name}</td>
+                  <td class="p-4 font-mono text-blue-400 font-bold">${r.student_reg_no || 'N/A'}</td>
+                  <td class="p-4">
+                    <span class="font-mono text-purple-400">${r.course_code || ''}</span>
+                    <div class="text-white">${r.subject_name}</div>
+                  </td>
+                  <td class="p-4 text-slate-400">${new Date(r.request_date).toLocaleDateString()}</td>
+                  <td class="p-4">
+                    <span class="badge ${r.status === 'approved' ? 'badge-emerald' : 'badge-amber'} text-xs">
+                      ${r.status === 'approved' ? '✅ Approved' : '⏳ Pending'}
+                    </span>
+                  </td>
+                  <td class="p-4 text-right">
+                    ${r.status !== 'approved' ? `
+                      <button onclick="approveHallTicketRequest(${r.id})" class="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 ml-auto">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        <span>Approve Hall Ticket</span>
+                      </button>
+                    ` : `
+                      <span class="text-xs text-emerald-400 font-mono font-bold">UUID: ${r.hall_ticket_token ? r.hall_ticket_token.slice(0, 8) : 'ACTIVE'}</span>
+                    `}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 3: PHASE 2 MARKS ENTRY TABLE (INDIVIDUAL & BATCH) -->
+      <div id="gb-tab-phase2" class="${currentGradebookTab === 'phase2' ? '' : 'hidden'} glass-panel p-6 rounded-3xl border border-indigo-500/20 space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h4 class="text-base font-medium text-white flex items-center gap-2">
+              <i data-lucide="award" class="w-5 h-5 text-indigo-400"></i>
+              <span>Step 4: Capstone (Div 2) & University Lab Exam (Div 4) Marks</span>
+            </h4>
+            <p class="text-xs text-slate-400 mt-0.5">Recorded after course closing. Save individually or batch submit all students.</p>
+          </div>
+          <button onclick="saveAllPhase2Grades(${activeSubject.id})" class="btn-primary text-xs py-2 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase bg-gradient-to-r from-indigo-600 to-purple-600 shadow-md">
+            <i data-lucide="check-check" class="w-4 h-4"></i>
+            <span>Submit All Students (Phase 2)</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto rounded-2xl border border-white/10">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
+              <tr>
+                <th class="p-4">Student</th>
+                <th class="p-4">Reg Number</th>
+                <th class="p-4">Div 2: Capstone (/100)</th>
+                <th class="p-4">Div 4: Univ Lab (/100)</th>
+                <th class="p-4">Total Internal (/400)</th>
+                <th class="p-4 text-right">Individual Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 whitespace-nowrap">
+              ${students.map((st, idx) => {
+                const g = currentGrades.find(gr => gr.student_id === st.id) || {};
+                const d1 = parseFloat(g.div1_assessments) || 0;
+                const d3 = parseFloat(g.div3_class_lab) || 0;
+                const d2 = g.div2_capstone !== undefined ? g.div2_capstone : '';
+                const d4 = g.div4_univ_lab !== undefined ? g.div4_univ_lab : '';
+                const totalInternal = d1 + d3 + (parseFloat(d2) || 0) + (parseFloat(d4) || 0);
+
+                return `
+                  <tr class="hover:bg-white/[0.02] transition-colors" id="p2-row-${st.id}">
+                    <td class="p-4 font-medium text-white">${st.name}</td>
+                    <td class="p-4 font-mono text-blue-400 font-bold">${st.admin_id || 'N/A'}</td>
+                    <td class="p-4">
+                      <input type="number" id="p2-d2-${st.id}" min="0" max="100" value="${d2}" placeholder="0-100" class="glass-input w-24 font-mono text-xs font-bold text-amber-400 text-center" oninput="calcP2Row(${st.id}, ${d1 + d3})">
+                    </td>
+                    <td class="p-4">
+                      <input type="number" id="p2-d4-${st.id}" min="0" max="100" value="${d4}" placeholder="0-100" class="glass-input w-24 font-mono text-xs font-bold text-indigo-400 text-center" oninput="calcP2Row(${st.id}, ${d1 + d3})">
+                    </td>
+                    <td class="p-4 font-mono font-bold text-emerald-400 text-sm" id="p2-tot-${st.id}">
+                      ${totalInternal}/400
+                    </td>
+                    <td class="p-4 text-right">
+                      <button onclick="saveIndividualPhase2Grade(${st.id}, ${activeSubject.id})" class="btn-secondary text-xs py-1.5 px-3 rounded-lg border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10 flex items-center gap-1.5 ml-auto">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        <span>Submit</span>
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 4: PHASE 3 MARKS ENTRY TABLE (INDIVIDUAL & BATCH PUBLISH) -->
+      <div id="gb-tab-phase3" class="${currentGradebookTab === 'phase3' ? '' : 'hidden'} glass-panel p-6 rounded-3xl border border-emerald-500/20 space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h4 class="text-base font-medium text-white flex items-center gap-2">
+              <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+              <span>Step 5: Main University Examination (Div 5) & Publish Results</span>
+            </h4>
+            <p class="text-xs text-slate-400 mt-0.5">Submit exam marks per student or publish final semester grade transcripts for all students.</p>
+          </div>
+          <button onclick="saveAllPhase3Grades(${activeSubject.id})" class="btn-primary text-xs py-2 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase bg-gradient-to-r from-emerald-600 to-teal-600 shadow-md">
+            <i data-lucide="award" class="w-4 h-4"></i>
+            <span>Publish Results for All Students</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto rounded-2xl border border-white/10">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
+              <tr>
+                <th class="p-4">Student</th>
+                <th class="p-4">Reg Number</th>
+                <th class="p-4">Internal (/400)</th>
+                <th class="p-4">Div 5: Univ Exam (/100)</th>
+                <th class="p-4">Grand Total (/500)</th>
+                <th class="p-4">Grade</th>
+                <th class="p-4 text-right">Individual Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 whitespace-nowrap">
+              ${students.map((st, idx) => {
+                const g = currentGrades.find(gr => gr.student_id === st.id) || {};
+                const totalInternal = parseFloat(g.total_internal) || 0;
+                const d5 = g.div5_univ_exam !== undefined ? g.div5_univ_exam : '';
+                const grandTotal = totalInternal + (parseFloat(d5) || 0);
+                const gradeLetter = g.grade_letter || (grandTotal >= 450 ? 'O' : grandTotal >= 400 ? 'A+' : grandTotal >= 350 ? 'A' : grandTotal >= 300 ? 'B+' : grandTotal >= 250 ? 'B' : 'RA');
+
+                return `
+                  <tr class="hover:bg-white/[0.02] transition-colors" id="p3-row-${st.id}">
+                    <td class="p-4 font-medium text-white">${st.name}</td>
+                    <td class="p-4 font-mono text-blue-400 font-bold">${st.admin_id || 'N/A'}</td>
+                    <td class="p-4 font-mono text-slate-300">${totalInternal}/400</td>
+                    <td class="p-4">
+                      <input type="number" id="p3-d5-${st.id}" min="0" max="100" value="${d5}" placeholder="0-100" class="glass-input w-24 font-mono text-xs font-bold text-emerald-400 text-center" oninput="calcP3Row(${st.id}, ${totalInternal})">
+                    </td>
+                    <td class="p-4 font-mono font-bold text-white text-sm" id="p3-tot-${st.id}">
+                      ${grandTotal}/500
+                    </td>
+                    <td class="p-4" id="p3-grd-${st.id}">
+                      <span class="badge ${gradeLetter === 'RA' ? 'badge-rose' : 'badge-emerald'} text-xs font-bold">${gradeLetter}</span>
+                    </td>
+                    <td class="p-4 text-right">
+                      <button onclick="saveIndividualPhase3Grade(${st.id}, ${activeSubject.id})" class="btn-secondary text-xs py-1.5 px-3 rounded-lg border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10 flex items-center gap-1.5 ml-auto">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        <span>Submit</span>
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+  lucide.createIcons();
+}
+
+function changeGbSubject(subjectId) {
+  currentGbSubjectId = parseInt(subjectId, 10);
+  renderPage();
+}
+
+function calcP1Row(studentId) {
+  const d1 = parseFloat(document.getElementById(`p1-d1-${studentId}`)?.value) || 0;
+  const d3 = parseFloat(document.getElementById(`p1-d3-${studentId}`)?.value) || 0;
+  const totEl = document.getElementById(`p1-tot-${studentId}`);
+  if (totEl) totEl.innerText = `${d1 + d3}/200`;
+}
+
+function calcP2Row(studentId, baseInternal) {
+  const d2 = parseFloat(document.getElementById(`p2-d2-${studentId}`)?.value) || 0;
+  const d4 = parseFloat(document.getElementById(`p2-d4-${studentId}`)?.value) || 0;
+  const totEl = document.getElementById(`p2-tot-${studentId}`);
+  if (totEl) totEl.innerText = `${baseInternal + d2 + d4}/400`;
+}
+
+function calcP3Row(studentId, totalInternal) {
+  const d5 = parseFloat(document.getElementById(`p3-d5-${studentId}`)?.value) || 0;
+  const grandTotal = totalInternal + d5;
+  const totEl = document.getElementById(`p3-tot-${studentId}`);
+  const grdEl = document.getElementById(`p3-grd-${studentId}`);
+  const gradeLetter = grandTotal >= 450 ? 'O' : grandTotal >= 400 ? 'A+' : grandTotal >= 350 ? 'A' : grandTotal >= 300 ? 'B+' : grandTotal >= 250 ? 'B' : 'RA';
+  if (totEl) totEl.innerText = `${grandTotal}/500`;
+  if (grdEl) grdEl.innerHTML = `<span class="badge ${gradeLetter === 'RA' ? 'badge-rose' : 'badge-emerald'} text-xs font-bold">${gradeLetter}</span>`;
+}
+
+async function saveIndividualPhase1Grade(studentId, subjectId) {
+  const d1 = document.getElementById(`p1-d1-${studentId}`)?.value;
+  const d3 = document.getElementById(`p1-d3-${studentId}`)?.value;
+  if (d1 === '' || d3 === '') return toast('Please enter marks for both Assessment and Class Lab', 'warning');
+
+  try {
+    await api('POST', '/grades/submit-phase1', {
+      studentId,
+      subjectId,
+      div1Assessments: d1,
+      div3ClassLab: d3
+    });
+    toast('Phase 1 marks saved for student! ✅', 'success');
+  } catch(e) {
+    toast(e.message || 'Failed to save marks', 'error');
+  }
+}
+
+async function saveAllPhase1Grades(subjectId) {
+  const inputsD1 = document.querySelectorAll(`[id^="p1-d1-"]`);
+  let savedCount = 0;
+
+  for (const input of inputsD1) {
+    const studentId = parseInt(input.id.replace('p1-d1-', ''), 10);
+    const d1 = input.value;
+    const d3 = document.getElementById(`p1-d3-${studentId}`)?.value;
+
+    if (d1 !== '' || d3 !== '') {
+      try {
+        await api('POST', '/grades/submit-phase1', {
+          studentId,
+          subjectId,
+          div1Assessments: d1 || 0,
+          div3ClassLab: d3 || 0
+        });
+        savedCount++;
+      } catch(e) {}
+    }
+  }
+
+  toast(`Submitted Phase 1 marks for ${savedCount} students! 🚀`, 'success');
+  renderPage();
+}
+
+async function saveIndividualPhase2Grade(studentId, subjectId) {
+  const d2 = document.getElementById(`p2-d2-${studentId}`)?.value;
+  const d4 = document.getElementById(`p2-d4-${studentId}`)?.value;
+  if (d2 === '' || d4 === '') return toast('Please enter marks for both Capstone and Univ Lab', 'warning');
+
+  try {
+    await api('POST', '/grades/submit-phase2', {
+      studentId,
+      subjectId,
+      div2Capstone: d2,
+      div4UnivLab: d4
+    });
+    toast('Phase 2 marks saved for student! ✅', 'success');
+  } catch(e) {
+    toast(e.message || 'Failed to save marks', 'error');
+  }
+}
+
+async function saveAllPhase2Grades(subjectId) {
+  const inputsD2 = document.querySelectorAll(`[id^="p2-d2-"]`);
+  let savedCount = 0;
+
+  for (const input of inputsD2) {
+    const studentId = parseInt(input.id.replace('p2-d2-', ''), 10);
+    const d2 = input.value;
+    const d4 = document.getElementById(`p2-d4-${studentId}`)?.value;
+
+    if (d2 !== '' || d4 !== '') {
+      try {
+        await api('POST', '/grades/submit-phase2', {
+          studentId,
+          subjectId,
+          div2Capstone: d2 || 0,
+          div4UnivLab: d4 || 0
+        });
+        savedCount++;
+      } catch(e) {}
+    }
+  }
+
+  toast(`Submitted Phase 2 marks for ${savedCount} students! 📊`, 'success');
+  renderPage();
+}
+
+async function saveIndividualPhase3Grade(studentId, subjectId) {
+  const d5 = document.getElementById(`p3-d5-${studentId}`)?.value;
+  if (d5 === '') return toast('Please enter Univ Exam marks', 'warning');
+
+  try {
+    await api('POST', '/grades/submit-phase3-individual', {
+      studentId,
+      subjectId,
+      div5UnivExam: d5
+    });
+    toast('University Exam marks saved for student! 🎓', 'success');
+  } catch(e) {
+    toast(e.message || 'Failed to save exam marks', 'error');
+  }
+}
+
+async function saveAllPhase3Grades(subjectId) {
+  const inputsD5 = document.querySelectorAll(`[id^="p3-d5-"]`);
+  const studentMarks = [];
+
+  inputsD5.forEach(input => {
+    const studentId = parseInt(input.id.replace('p3-d5-', ''), 10);
+    const d5 = input.value;
+    if (d5 !== '') {
+      studentMarks.push({ studentId, div5UnivExam: d5 });
+    }
+  });
+
+  if (studentMarks.length === 0) return toast('Please enter marks for at least one student', 'warning');
+
+  try {
+    await api('POST', '/grades/submit-phase3-results', { subjectId, studentMarks });
+    toast('University Exam marks submitted and Results published for all students! 🎉', 'success');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to publish results', 'error');
+  }
+}
 
 </script>
 </body>
