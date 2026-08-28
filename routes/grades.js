@@ -375,51 +375,85 @@ router.get('/hall-ticket/requests', authenticate, requireFaculty, async (req, re
   }
 });
 
-// ── 5. FACULTY APPROVES HALL TICKET GENERATION ──
-router.put('/hall-ticket/approve/:requestId', authenticate, requireFaculty, async (req, res) => {
-  const { requestId } = req.params;
+// ── Helper to approve a single hall ticket request ──
+async function approveHallTicketById(requestId, facultyUser) {
+  const reqRow = await pool.query(
+    `SELECT htr.*, u.name as student_name, u.admin_id, s.name as subject_name
+     FROM hall_ticket_requests htr
+     JOIN users u ON htr.student_id = u.id
+     JOIN subjects s ON htr.subject_id = s.id
+     WHERE htr.id = $1`,
+    [requestId]
+  );
+
+  if (!reqRow.rows[0]) return null;
+
+  const student = reqRow.rows[0];
+  const token = crypto.createHash('sha256')
+    .update(`${student.admin_id}_${student.subject_id}_${Date.now()}`)
+    .digest('hex').slice(0, 16).toUpperCase();
+
+  const r = await pool.query(
+    `UPDATE hall_ticket_requests SET
+       status = 'approved',
+       approved_at = NOW(),
+       hall_ticket_token = $1
+     WHERE id = $2
+     RETURNING *`,
+    [token, requestId]
+  );
+
+  await notify(
+    student.student_id,
+    'hall_ticket_approved',
+    '🎟️ Hall Ticket Approved & Generated!',
+    `Faculty has approved and generated your official University Hall Ticket for "${student.subject_name}".`,
+    r.rows[0].id
+  );
+
+  if (facultyUser) {
+    await logAction(facultyUser.id, facultyUser.name, facultyUser.role, 'approve_hall_ticket', 'hall_ticket_requests', requestId);
+  }
+
+  return r.rows[0];
+}
+
+// ── 5. FACULTY APPROVES HALL TICKET GENERATION (Supports PUT & POST, single & batch) ──
+router.post('/hall-ticket/approve', authenticate, requireFaculty, async (req, res) => {
+  const requestId = req.body.requestId || req.body.id;
+  if (!requestId) return res.status(400).json({ error: 'requestId is required' });
 
   try {
-    const reqRow = await pool.query(
-      `SELECT htr.*, u.name as student_name, u.admin_id, s.name as subject_name
-       FROM hall_ticket_requests htr
-       JOIN users u ON htr.student_id = u.id
-       JOIN subjects s ON htr.subject_id = s.id
-       WHERE htr.id = $1`,
-      [requestId]
-    );
-
-    if (!reqRow.rows[0]) return res.status(404).json({ error: 'Hall ticket request not found' });
-
-    const student = reqRow.rows[0];
-    const token = crypto.createHash('sha256')
-      .update(`${student.admin_id}_${student.subject_id}_${Date.now()}`)
-      .digest('hex').slice(0, 16).toUpperCase();
-
-    const r = await pool.query(
-      `UPDATE hall_ticket_requests SET
-         status = 'approved',
-         approved_at = NOW(),
-         hall_ticket_token = $1
-       WHERE id = $2
-       RETURNING *`,
-      [token, requestId]
-    );
-
-    await notify(
-      student.student_id,
-      'hall_ticket_approved',
-      '🎟️ Hall Ticket Approved & Generated!',
-      `Faculty has approved and generated your official University Hall Ticket for "${student.subject_name}".`,
-      r.rows[0].id
-    );
-
-    await logAction(req.user.id, req.user.name, req.user.role, 'approve_hall_ticket', 'hall_ticket_requests', requestId);
-
-    res.json({ message: 'Hall ticket approved and issued to student!', request: r.rows[0] });
+    const updated = await approveHallTicketById(requestId, req.user);
+    if (!updated) return res.status(404).json({ error: 'Hall ticket request not found' });
+    res.json({ message: 'Hall ticket approved and issued to student! 🎟️', request: updated });
   } catch (err) {
-    console.error('[Approve Hall Ticket] Error:', err);
-    res.status(500).json({ error: 'Server error' });
+    console.error('[Approve Hall Ticket POST] Error:', err);
+    res.status(500).json({ error: err.message || 'Server error' });
+  }
+});
+
+router.post('/hall-ticket/approve/:requestId', authenticate, requireFaculty, async (req, res) => {
+  const { requestId } = req.params;
+  try {
+    const updated = await approveHallTicketById(requestId, req.user);
+    if (!updated) return res.status(404).json({ error: 'Hall ticket request not found' });
+    res.json({ message: 'Hall ticket approved and issued to student! 🎟️', request: updated });
+  } catch (err) {
+    console.error('[Approve Hall Ticket POST :id] Error:', err);
+    res.status(500).json({ error: err.message || 'Server error' });
+  }
+});
+
+router.put('/hall-ticket/approve/:requestId', authenticate, requireFaculty, async (req, res) => {
+  const { requestId } = req.params;
+  try {
+    const updated = await approveHallTicketById(requestId, req.user);
+    if (!updated) return res.status(404).json({ error: 'Hall ticket request not found' });
+    res.json({ message: 'Hall ticket approved and issued to student! 🎟️', request: updated });
+  } catch (err) {
+    console.error('[Approve Hall Ticket PUT :id] Error:', err);
+    res.status(500).json({ error: err.message || 'Server error' });
   }
 });
 

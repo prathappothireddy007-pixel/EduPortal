@@ -125,8 +125,8 @@ router.get('/:id', authenticate, async (req, res) => {
   }
 });
 
-// PUT /:id - update status
-router.put('/:id', authenticate, async (req, res) => {
+// Handler for updating issue status
+async function handleUpdateIssueStatus(req, res) {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -159,23 +159,28 @@ router.put('/:id', authenticate, async (req, res) => {
 
     const updatedIssue = updateResult.rows[0];
 
-    if (req.user.role === 'faculty' && updatedIssue.student_id) {
+    // Notify student if faculty updated
+    if (req.user.role === 'faculty' && issue.student_id) {
       await notify(
-        updatedIssue.student_id,
+        issue.student_id,
         'issue_update',
         'Ticket Status Updated',
-        `Your ticket "${updatedIssue.title}" status changed to ${status}`,
-        updatedIssue.id
+        `Your ticket "${issue.title}" status was changed to ${status}`,
+        issue.id
       );
     }
 
-    await logAction(req.user.id, req.user.name, req.user.role, 'update_issue_status', 'issues', id);
+    await logAction(req.user.id, req.user.name, req.user.role, 'update_issue_status', 'issues', issue.id, null, { status });
     res.json(updatedIssue);
   } catch (err) {
-    console.error('[Issue PUT] Error:', err);
+    console.error('[Issue Status PUT] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
-});
+}
+
+// PUT /:id - update status
+router.put('/:id', authenticate, handleUpdateIssueStatus);
+router.put('/:id/status', authenticate, handleUpdateIssueStatus);
 
 // POST /:id/respond - add response
 router.post('/:id/respond', authenticate, async (req, res) => {
