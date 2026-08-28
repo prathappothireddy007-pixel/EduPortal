@@ -10158,7 +10158,7 @@ async function renderGradebook(container) {
 
                   return `
                     <tr class="hover:bg-white/[0.02] transition-colors" id="row-p1-${stu.id}">
-                      <td class="p-3.5 font-mono text-xs font-bold text-blue-400">${stu.admin_id}</td>
+                      <td class="p-3.5 font-mono text-xs font-bold text-blue-400">${stu.admin_id || 'STU' + stu.id}</td>
                       <td class="p-3.5 font-medium text-white">${stu.name}</td>
                       <td class="p-3.5">
                         <input type="number" min="0" max="100" id="p1-d1-${stu.id}" value="${d1}" placeholder="0-100" class="glass-input w-28 font-mono text-xs font-bold text-blue-400" oninput="recalcRowP1(${stu.id})">
@@ -10276,7 +10276,7 @@ async function renderGradebook(container) {
 
                   return `
                     <tr class="hover:bg-white/[0.02] transition-colors" id="row-p2-${stu.id}">
-                      <td class="p-3.5 font-mono text-xs font-bold text-emerald-400">${stu.admin_id}</td>
+                      <td class="p-3.5 font-mono text-xs font-bold text-emerald-400">${stu.admin_id || 'STU' + stu.id}</td>
                       <td class="p-3.5 font-medium text-white">${stu.name}</td>
                       <td class="p-3.5">
                         <input type="number" min="0" max="100" id="p2-d2-${stu.id}" value="${d2}" placeholder="0-100" class="glass-input w-28 font-mono text-xs font-bold text-teal-400" oninput="recalcRowP2(${stu.id}, ${d1 + d3})">
@@ -10343,7 +10343,7 @@ async function renderGradebook(container) {
 
                   return `
                     <tr class="hover:bg-white/[0.02] transition-colors" id="row-p3-${stu.id}">
-                      <td class="p-3.5 font-mono text-xs font-bold text-[#ff5a3c]">${stu.admin_id}</td>
+                      <td class="p-3.5 font-mono text-xs font-bold text-[#ff5a3c]">${stu.admin_id || 'STU' + stu.id}</td>
                       <td class="p-3.5 font-medium text-white">${stu.name}</td>
                       <td class="p-3.5 font-mono text-xs text-slate-300">${totalInternal} / 400</td>
                       <td class="p-3.5">
@@ -10418,6 +10418,9 @@ function recalcRowP3(studentId, totalInternal) {
 }
 
 async function saveIndividualPhase1Grade(studentId, subjectId) {
+  const validSubjectId = subjectId || currentGbSubjectId;
+  if (!validSubjectId) return toast('Please select a valid course first', 'warning');
+
   const d1 = document.getElementById(`p1-d1-${studentId}`)?.value;
   const d3 = document.getElementById(`p1-d3-${studentId}`)?.value;
 
@@ -10425,7 +10428,7 @@ async function saveIndividualPhase1Grade(studentId, subjectId) {
 
   try {
     const res = await api('POST', '/grades/submit-phase1-individual', {
-      studentId, subjectId, div1Assessments: d1, div3ClassLab: d3
+      studentId, subjectId: validSubjectId, div1Assessments: d1, div3ClassLab: d3
     });
     toast(res.message || 'Phase 1 marks saved for student! 📝', 'success');
   } catch(e) {
@@ -10434,6 +10437,9 @@ async function saveIndividualPhase1Grade(studentId, subjectId) {
 }
 
 async function saveAllPhase1Grades(subjectId) {
+  const validSubjectId = subjectId || currentGbSubjectId;
+  if (!validSubjectId) return toast('Please select a valid course first', 'warning');
+
   const inputsD1 = document.querySelectorAll(`[id^="p1-d1-"]`);
   const studentMarks = [];
 
@@ -10449,8 +10455,8 @@ async function saveAllPhase1Grades(subjectId) {
   if (studentMarks.length === 0) return toast('Please enter marks for at least one student', 'warning');
 
   try {
-    await api('POST', '/grades/submit-phase1', { subjectId, studentMarks });
-    toast('Phase 1 marks submitted successfully for all students! 📝', 'success');
+    const res = await api('POST', '/grades/submit-phase1', { subjectId: validSubjectId, studentMarks });
+    toast(res.message || 'Phase 1 marks submitted successfully for all students! 📝', 'success');
     renderPage();
   } catch(e) {
     toast(e.message || 'Failed to save Phase 1 marks', 'error');
@@ -10458,14 +10464,17 @@ async function saveAllPhase1Grades(subjectId) {
 }
 
 async function saveIndividualPhase2Grade(studentId, subjectId) {
+  const validSubjectId = subjectId || currentGbSubjectId;
+  if (!validSubjectId) return toast('Please select a valid course first', 'warning');
+
   const d2 = document.getElementById(`p2-d2-${studentId}`)?.value;
   const d4 = document.getElementById(`p2-d4-${studentId}`)?.value;
 
   if (d2 === '' && d4 === '') return toast('Please enter Phase 2 marks before submitting', 'warning');
 
   try {
-    const res = await api('POST', '/grades/submit-phase2', {
-      studentId, subjectId, div2Capstone: d2, div4UnivLab: d4
+    const res = await api('POST', '/grades/submit-phase2-individual', {
+      studentId, subjectId: validSubjectId, div2Capstone: d2, div4UnivLab: d4
     });
     toast(res.message || 'Phase 2 marks saved for student! 🧪', 'success');
   } catch(e) {
@@ -10474,33 +10483,42 @@ async function saveIndividualPhase2Grade(studentId, subjectId) {
 }
 
 async function saveAllPhase2Grades(subjectId) {
-  const inputsD2 = document.querySelectorAll(`[id^="p2-d2-"]`);
-  let savedCount = 0;
+  const validSubjectId = subjectId || currentGbSubjectId;
+  if (!validSubjectId) return toast('Please select a valid course first', 'warning');
 
-  for (const input of inputsD2) {
+  const inputsD2 = document.querySelectorAll(`[id^="p2-d2-"]`);
+  const studentMarks = [];
+
+  inputsD2.forEach(input => {
     const studentId = parseInt(input.id.replace('p2-d2-', ''), 10);
     const d2 = input.value;
     const d4 = document.getElementById(`p2-d4-${studentId}`)?.value;
     if (d2 !== '' || d4 !== '') {
-      try {
-        await api('POST', '/grades/submit-phase2', { studentId, subjectId, div2Capstone: d2, div4UnivLab: d4 });
-        savedCount++;
-      } catch(e) {}
+      studentMarks.push({ studentId, div2Capstone: d2, div4UnivLab: d4 });
     }
-  }
+  });
 
-  if (savedCount === 0) return toast('Please enter marks for at least one student', 'warning');
-  toast(`Phase 2 marks saved for ${savedCount} students! 🧪`, 'success');
-  renderPage();
+  if (studentMarks.length === 0) return toast('Please enter Phase 2 marks for at least one student', 'warning');
+
+  try {
+    const res = await api('POST', '/grades/submit-phase2', { subjectId: validSubjectId, studentMarks });
+    toast(res.message || 'Phase 2 marks saved for all students! 🧪', 'success');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to save Phase 2 marks', 'error');
+  }
 }
 
 async function saveIndividualPhase3Grade(studentId, subjectId) {
+  const validSubjectId = subjectId || currentGbSubjectId;
+  if (!validSubjectId) return toast('Please select a valid course first', 'warning');
+
   const d5 = document.getElementById(`p3-d5-${studentId}`)?.value;
   if (d5 === '') return toast('Please enter University Exam mark before submitting', 'warning');
 
   try {
     const res = await api('POST', '/grades/submit-phase3-individual', {
-      studentId, subjectId, div5UnivExam: d5
+      studentId, subjectId: validSubjectId, div5UnivExam: d5
     });
     toast(res.message || 'University Exam marks saved and results published! 🎓', 'success');
   } catch(e) {
@@ -10509,6 +10527,9 @@ async function saveIndividualPhase3Grade(studentId, subjectId) {
 }
 
 async function saveAllPhase3Grades(subjectId) {
+  const validSubjectId = subjectId || currentGbSubjectId;
+  if (!validSubjectId) return toast('Please select a valid course first', 'warning');
+
   const inputsD5 = document.querySelectorAll(`[id^="p3-d5-"]`);
   const studentMarks = [];
 
@@ -10523,8 +10544,8 @@ async function saveAllPhase3Grades(subjectId) {
   if (studentMarks.length === 0) return toast('Please enter marks for at least one student', 'warning');
 
   try {
-    await api('POST', '/grades/submit-phase3-results', { subjectId, studentMarks });
-    toast('University Exam marks submitted and Results published for all students! 🎉', 'success');
+    const res = await api('POST', '/grades/submit-phase3-results', { subjectId: validSubjectId, studentMarks });
+    toast(res.message || 'University Exam marks submitted and Results published for all students! 🎉', 'success');
     renderPage();
   } catch(e) {
     toast(e.message || 'Failed to publish results', 'error');

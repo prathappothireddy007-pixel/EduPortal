@@ -83,87 +83,130 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-// ── 1. PHASE 1 MARKS ENTRY: Faculty enters Assessment (Div 1) and Class Lab (Div 3) marks ──
+// Helper for Phase 1 Upsert
+async function upsertPhase1Grade(studentId, subjectId, div1Assessments, div3ClassLab) {
+  const d1 = Math.min(100, Math.max(0, parseFloat(div1Assessments) || 0));
+  const d3 = Math.min(100, Math.max(0, parseFloat(div3ClassLab) || 0));
+
+  const student = await pool.query('SELECT name FROM users WHERE id=$1', [studentId]);
+  const subject = await pool.query('SELECT name, code FROM subjects WHERE id=$1', [subjectId]);
+  const studentName = student.rows[0]?.name || 'Student';
+  const subjectName = subject.rows[0]?.name || 'Subject';
+
+  const exists = await pool.query(
+    'SELECT id, div2_capstone, div4_univ_lab, div5_univ_exam FROM grades WHERE student_id=$1 AND subject_id=$2',
+    [studentId, subjectId]
+  );
+
+  let result;
+  if (exists.rows.length > 0) {
+    const d2 = parseFloat(exists.rows[0].div2_capstone) || 0;
+    const d4 = parseFloat(exists.rows[0].div4_univ_lab) || 0;
+    const d5 = parseFloat(exists.rows[0].div5_univ_exam) || 0;
+    const totalInternal = d1 + d2 + d3 + d4;
+    const grandTotal = totalInternal + d5;
+    const gradeLetter = calculateGrade(grandTotal);
+
+    result = await pool.query(
+      `UPDATE grades SET
+         div1_assessments = $1,
+         div3_class_lab = $2,
+         total_internal = $3,
+         grand_total = $4,
+         grade_letter = $5,
+         phase1_submitted = TRUE,
+         date = NOW()
+       WHERE id = $6
+       RETURNING *`,
+      [d1, d3, totalInternal, grandTotal, gradeLetter, exists.rows[0].id]
+    );
+  } else {
+    const totalInternal = d1 + d3;
+    const grandTotal = totalInternal;
+    const gradeLetter = calculateGrade(grandTotal);
+
+    result = await pool.query(
+      `INSERT INTO grades (
+         student_id, student_name, subject_id, subject_name, week,
+         div1_assessments, div2_capstone, div3_class_lab, div4_univ_lab, div5_univ_exam,
+         total_internal, grand_total, grade_letter, score, phase1_submitted
+       ) VALUES ($1,$2,$3,$4,1,$5,0,$6,0,0,$7,$8,$9,$10,TRUE)
+       RETURNING *`,
+      [studentId, studentName, subjectId, subjectName, d1, d3, totalInternal, grandTotal, gradeLetter, String(d1)]
+    );
+  }
+
+  await notify(
+    studentId,
+    'phase1_marks_entered',
+    '📝 Phase 1 Assessment Marks Recorded',
+    `Phase 1 marks (Assessments: ${d1}/100, Class Lab: ${d3}/100) recorded for "${subjectName}".`,
+    result.rows[0].id
+  );
+
+  return result.rows[0];
+}
+
+// ── 1. PHASE 1 MARKS ENTRY (BATCH OR SINGLE): Faculty enters Assessment (Div 1) and Class Lab (Div 3) marks ──
 router.post('/submit-phase1', authenticate, requireFaculty, async (req, res) => {
+  const { studentId, subjectId, div1Assessments, div3ClassLab, studentMarks } = req.body;
+
+  if (!subjectId) {
+    return res.status(400).json({ error: 'subjectId is required' });
+  }
+
+  try {
+    const subject = await pool.query('SELECT name, code, faculty_id FROM subjects WHERE id=$1', [subjectId]);
+    if (!subject.rows[0]) return res.status(404).json({ error: 'Subject not found' });
+    if (req.user.role === 'faculty' && subject.rows[0].faculty_id && subject.rows[0].faculty_id !== req.user.id) {
+      return res.status(403).json({ error: 'You are only authorized to enter marks for your own courses.' });
+    }
+
+    if (Array.isArray(studentMarks) && studentMarks.length > 0) {
+      for (const sm of studentMarks) {
+        if (sm.studentId) {
+          await upsertPhase1Grade(sm.studentId, subjectId, sm.div1Assessments, sm.div3ClassLab);
+        }
+      }
+      await pool.query('UPDATE subjects SET is_phase1_submitted = TRUE WHERE id = $1', [subjectId]);
+      await logAction(req.user.id, req.user.name, req.user.role, 'submit_phase1_batch', 'subjects', subjectId);
+      return res.json({ message: 'Phase 1 marks submitted successfully for all students!' });
+    }
+
+    if (studentId) {
+      const grade = await upsertPhase1Grade(studentId, subjectId, div1Assessments, div3ClassLab);
+      await pool.query('UPDATE subjects SET is_phase1_submitted = TRUE WHERE id = $1', [subjectId]);
+      await logAction(req.user.id, req.user.name, req.user.role, 'submit_phase1_single', 'grades', grade.id);
+      return res.json({ message: 'Phase 1 marks recorded for student!', grade });
+    }
+
+    return res.status(400).json({ error: 'studentId or studentMarks array is required' });
+  } catch (err) {
+    console.error('[Submit Phase 1] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ── 1B. PHASE 1 INDIVIDUAL MARKS ENTRY ──
+router.post('/submit-phase1-individual', authenticate, requireFaculty, async (req, res) => {
   const { studentId, subjectId, div1Assessments, div3ClassLab } = req.body;
 
   if (!studentId || !subjectId) {
     return res.status(400).json({ error: 'studentId and subjectId are required' });
   }
 
-  const d1 = Math.min(100, Math.max(0, parseFloat(div1Assessments) || 0));
-  const d3 = Math.min(100, Math.max(0, parseFloat(div3ClassLab) || 0));
-
   try {
-    const student = await pool.query('SELECT name FROM users WHERE id=$1', [studentId]);
-    const subject = await pool.query('SELECT name, code FROM subjects WHERE id=$1', [subjectId]);
-
-    const studentName = student.rows[0]?.name || 'Student';
-    const subjectName = subject.rows[0]?.name || 'Subject';
-
-    const exists = await pool.query(
-      'SELECT id, div2_capstone, div4_univ_lab, div5_univ_exam FROM grades WHERE student_id=$1 AND subject_id=$2',
-      [studentId, subjectId]
-    );
-
-    let result;
-    if (exists.rows.length > 0) {
-      const d2 = parseFloat(exists.rows[0].div2_capstone) || 0;
-      const d4 = parseFloat(exists.rows[0].div4_univ_lab) || 0;
-      const d5 = parseFloat(exists.rows[0].div5_univ_exam) || 0;
-      const totalInternal = d1 + d2 + d3 + d4;
-      const grandTotal = totalInternal + d5;
-      const gradeLetter = calculateGrade(grandTotal);
-
-      result = await pool.query(
-        `UPDATE grades SET
-           div1_assessments = $1,
-           div3_class_lab = $2,
-           total_internal = $3,
-           grand_total = $4,
-           grade_letter = $5,
-           phase1_submitted = TRUE,
-           date = NOW()
-         WHERE id = $6
-         RETURNING *`,
-        [d1, d3, totalInternal, grandTotal, gradeLetter, exists.rows[0].id]
-      );
-    } else {
-      const totalInternal = d1 + d3;
-      const grandTotal = totalInternal;
-      const gradeLetter = calculateGrade(grandTotal);
-
-      result = await pool.query(
-        `INSERT INTO grades (
-           student_id, student_name, subject_id, subject_name, week,
-           div1_assessments, div2_capstone, div3_class_lab, div4_univ_lab, div5_univ_exam,
-           total_internal, grand_total, grade_letter, score, phase1_submitted
-         ) VALUES ($1,$2,$3,$4,1,$5,0,$6,0,0,$7,$8,$9,$10,TRUE)
-         RETURNING *`,
-        [studentId, studentName, subjectId, subjectName, d1, d3, totalInternal, grandTotal, gradeLetter, String(d1)]
-      );
+    const subject = await pool.query('SELECT name, code, faculty_id FROM subjects WHERE id=$1', [subjectId]);
+    if (!subject.rows[0]) return res.status(404).json({ error: 'Subject not found' });
+    if (req.user.role === 'faculty' && subject.rows[0].faculty_id && subject.rows[0].faculty_id !== req.user.id) {
+      return res.status(403).json({ error: 'You are only authorized to enter marks for your own courses.' });
     }
 
-    // Mark subject as phase1 submitted
+    const grade = await upsertPhase1Grade(studentId, subjectId, div1Assessments, div3ClassLab);
     await pool.query('UPDATE subjects SET is_phase1_submitted = TRUE WHERE id = $1', [subjectId]);
+    await logAction(req.user.id, req.user.name, req.user.role, 'submit_phase1_individual', 'grades', grade.id);
 
-    await notify(
-      studentId,
-      'assessment_marks',
-      'Assessment Marks Recorded 📝',
-      `Assessment marks (${d1}/100) recorded for "${subjectName}".`,
-      'phase1_marks_entered',
-      '📝 Phase 1 Assessment Marks Recorded',
-      `Phase 1 marks (Assessments: ${d1}/100, Class Lab: ${d3}/100) recorded for "${subject.rows[0].name}".`,
-      subjectId
-    );
-
-    await logAction(req.user.id, req.user.name, req.user.role, 'submit_phase1_individual', 'grades', result.rows[0].id);
-
-    res.json({
-      message: 'Phase 1 marks recorded for student!',
-      grade: result.rows[0]
-    });
+    res.json({ message: 'Phase 1 marks recorded for student!', grade });
   } catch (err) {
     console.error('[Submit Phase 1 Individual] Error:', err);
     res.status(500).json({ error: 'Server error' });
@@ -410,16 +453,59 @@ router.get('/hall-ticket', authenticate, async (req, res) => {
   }
 });
 
-// ── 7. PHASE 2 MARKS ENTRY: Faculty enters Capstone (Div 2) and Univ Lab (Div 4) marks ──
-router.post('/submit-phase2', authenticate, requireFaculty, async (req, res) => {
-  const { studentId, subjectId, div2Capstone, div4UnivLab } = req.body;
-
-  if (!studentId || !subjectId) {
-    return res.status(400).json({ error: 'studentId and subjectId are required' });
-  }
-
+// Helper for Phase 2 Upsert
+async function upsertPhase2Grade(studentId, subjectId, div2Capstone, div4UnivLab) {
   const d2 = Math.min(100, Math.max(0, parseFloat(div2Capstone) || 0));
   const d4 = Math.min(100, Math.max(0, parseFloat(div4UnivLab) || 0));
+
+  const exists = await pool.query(
+    'SELECT id, div1_assessments, div3_class_lab, div5_univ_exam FROM grades WHERE student_id=$1 AND subject_id=$2',
+    [studentId, subjectId]
+  );
+
+  let result;
+  if (exists.rows.length > 0) {
+    const d1 = parseFloat(exists.rows[0].div1_assessments) || 0;
+    const d3 = parseFloat(exists.rows[0].div3_class_lab) || 0;
+    const d5 = parseFloat(exists.rows[0].div5_univ_exam) || 0;
+    const totalInternal = d1 + d2 + d3 + d4;
+    const grandTotal = totalInternal + d5;
+    const gradeLetter = calculateGrade(grandTotal);
+
+    result = await pool.query(
+      `UPDATE grades SET
+         div2_capstone = $1,
+         div4_univ_lab = $2,
+         total_internal = $3,
+         grand_total = $4,
+         grade_letter = $5,
+         phase2_submitted = TRUE,
+         date = NOW()
+       WHERE id = $6
+       RETURNING *`,
+      [d2, d4, totalInternal, grandTotal, gradeLetter, exists.rows[0].id]
+    );
+  } else {
+    const totalInternal = d2 + d4;
+    result = await pool.query(
+      `INSERT INTO grades (
+         student_id, subject_id, div2_capstone, div4_univ_lab,
+         total_internal, grand_total, phase2_submitted
+       ) VALUES ($1,$2,$3,$4,$5,$5,TRUE)
+       RETURNING *`,
+      [studentId, subjectId, d2, d4, totalInternal]
+    );
+  }
+  return result.rows[0];
+}
+
+// ── 7. PHASE 2 MARKS ENTRY (BATCH OR SINGLE): Faculty enters Capstone (Div 2) and Univ Lab (Div 4) marks ──
+router.post('/submit-phase2', authenticate, requireFaculty, async (req, res) => {
+  const { studentId, subjectId, div2Capstone, div4UnivLab, studentMarks } = req.body;
+
+  if (!subjectId) {
+    return res.status(400).json({ error: 'subjectId is required' });
+  }
 
   try {
     const subject = await pool.query('SELECT name, faculty_id, is_closed FROM subjects WHERE id=$1', [subjectId]);
@@ -427,55 +513,54 @@ router.post('/submit-phase2', authenticate, requireFaculty, async (req, res) => 
     if (req.user.role === 'faculty' && subject.rows[0].faculty_id && subject.rows[0].faculty_id !== req.user.id) {
       return res.status(403).json({ error: 'You are only authorized to enter marks for your own courses.' });
     }
-    if (!subject.rows[0]?.is_closed) {
-      return res.status(400).json({ error: 'Course launch must be closed before entering Phase 2 (Capstone & University Lab) marks.' });
+
+    if (Array.isArray(studentMarks) && studentMarks.length > 0) {
+      for (const sm of studentMarks) {
+        if (sm.studentId) {
+          await upsertPhase2Grade(sm.studentId, subjectId, sm.div2Capstone, sm.div4UnivLab);
+        }
+      }
+      await pool.query('UPDATE subjects SET is_phase2_submitted = TRUE WHERE id = $1', [subjectId]);
+      await logAction(req.user.id, req.user.name, req.user.role, 'submit_phase2_batch', 'subjects', subjectId);
+      return res.json({ message: 'Phase 2 marks (Capstone & University Lab) recorded successfully for all students!' });
     }
 
-    const exists = await pool.query(
-      'SELECT id, div1_assessments, div3_class_lab, div5_univ_exam FROM grades WHERE student_id=$1 AND subject_id=$2',
-      [studentId, subjectId]
-    );
-
-    let result;
-    if (exists.rows.length > 0) {
-      const d1 = parseFloat(exists.rows[0].div1_assessments) || 0;
-      const d3 = parseFloat(exists.rows[0].div3_class_lab) || 0;
-      const d5 = parseFloat(exists.rows[0].div5_univ_exam) || 0;
-      const totalInternal = d1 + d2 + d3 + d4;
-      const grandTotal = totalInternal + d5;
-      const gradeLetter = calculateGrade(grandTotal);
-
-      result = await pool.query(
-        `UPDATE grades SET
-           div2_capstone = $1,
-           div4_univ_lab = $2,
-           total_internal = $3,
-           grand_total = $4,
-           grade_letter = $5,
-           phase2_submitted = TRUE,
-           date = NOW()
-         WHERE id = $6
-         RETURNING *`,
-        [d2, d4, totalInternal, grandTotal, gradeLetter, exists.rows[0].id]
-      );
-    } else {
-      const totalInternal = d2 + d4;
-      result = await pool.query(
-        `INSERT INTO grades (
-           student_id, subject_id, div2_capstone, div4_univ_lab,
-           total_internal, grand_total, phase2_submitted
-         ) VALUES ($1,$2,$3,$4,$5,$5,TRUE)
-         RETURNING *`,
-        [studentId, subjectId, d2, d4, totalInternal]
-      );
+    if (studentId) {
+      const grade = await upsertPhase2Grade(studentId, subjectId, div2Capstone, div4UnivLab);
+      await pool.query('UPDATE subjects SET is_phase2_submitted = TRUE WHERE id = $1', [subjectId]);
+      await logAction(req.user.id, req.user.name, req.user.role, 'submit_phase2_single', 'grades', grade.id);
+      return res.json({ message: 'Phase 2 marks (Capstone & University Lab) recorded successfully!', grade });
     }
 
-    await pool.query('UPDATE subjects SET is_phase2_submitted = TRUE WHERE id = $1', [subjectId]);
-    await logAction(req.user.id, req.user.name, req.user.role, 'submit_phase2_grades', 'grades', result.rows[0].id);
-
-    res.json({ message: 'Phase 2 marks (Capstone & University Lab) recorded successfully!', grade: result.rows[0] });
+    return res.status(400).json({ error: 'studentId or studentMarks array is required' });
   } catch (err) {
     console.error('[Submit Phase 2] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ── 7B. PHASE 2 INDIVIDUAL MARKS ENTRY ──
+router.post('/submit-phase2-individual', authenticate, requireFaculty, async (req, res) => {
+  const { studentId, subjectId, div2Capstone, div4UnivLab } = req.body;
+
+  if (!studentId || !subjectId) {
+    return res.status(400).json({ error: 'studentId and subjectId are required' });
+  }
+
+  try {
+    const subject = await pool.query('SELECT name, faculty_id, is_closed FROM subjects WHERE id=$1', [subjectId]);
+    if (!subject.rows[0]) return res.status(404).json({ error: 'Subject not found' });
+    if (req.user.role === 'faculty' && subject.rows[0].faculty_id && subject.rows[0].faculty_id !== req.user.id) {
+      return res.status(403).json({ error: 'You are only authorized to enter marks for your own courses.' });
+    }
+
+    const grade = await upsertPhase2Grade(studentId, subjectId, div2Capstone, div4UnivLab);
+    await pool.query('UPDATE subjects SET is_phase2_submitted = TRUE WHERE id = $1', [subjectId]);
+    await logAction(req.user.id, req.user.name, req.user.role, 'submit_phase2_individual', 'grades', grade.id);
+
+    res.json({ message: 'Phase 2 marks (Capstone & University Lab) recorded successfully!', grade });
+  } catch (err) {
+    console.error('[Submit Phase 2 Individual] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
