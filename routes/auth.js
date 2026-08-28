@@ -12,31 +12,46 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    let user;
-    if (role === 'admin') {
-      const r = await pool.query(
-        "SELECT * FROM users WHERE role='admin' AND (admin_id=$1 OR LOWER(email)=LOWER($1))",
-        [loginIdentifier]
-      );
-      user = r.rows[0];
-    } else if (role === 'faculty') {
-      const r = await pool.query(
-        "SELECT * FROM users WHERE role='faculty' AND (admin_id=$1 OR LOWER(email)=LOWER($1))",
-        [loginIdentifier]
-      );
-      user = r.rows[0];
-    } else {
-      const r = await pool.query(
-        "SELECT * FROM users WHERE role='student' AND (admin_id=$1 OR LOWER(email)=LOWER($1))",
-        [loginIdentifier]
-      );
-      user = r.rows[0];
+    // 1. Search user by case-insensitive admin_id or email
+    const r = await pool.query(
+      `SELECT * FROM users 
+       WHERE deleted_at IS NULL 
+         AND (UPPER(admin_id) = UPPER($1) OR LOWER(email) = LOWER($1))
+       ORDER BY id ASC LIMIT 1`,
+      [loginIdentifier]
+    );
+
+    const user = r.rows[0];
+
+    if (!user) {
+      return res.status(401).json({ error: `No user found with ID or Email "${loginIdentifier}"` });
     }
 
-    if (!user) return res.status(401).json({ error: 'Invalid credentials or user role' });
+    // 2. Validate role compatibility
+    const requestedRole = (role || 'student').toLowerCase();
+    const userRole = (user.role || 'student').toLowerCase();
 
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
+    if (requestedRole !== userRole) {
+      // Allow admin to log into faculty role
+      if (!(userRole === 'admin' && requestedRole === 'faculty')) {
+        return res.status(401).json({
+          error: `Role mismatch: This ID belongs to a ${userRole.toUpperCase()} account. Please select the "${userRole.charAt(0).toUpperCase() + userRole.slice(1)}" tab to sign in.`
+        });
+      }
+    }
+
+    // 3. Validate password (bcrypt hash or plaintext fallback)
+    let valid = false;
+    if (user.password_hash) {
+      valid = await bcrypt.compare(password, user.password_hash);
+    }
+    if (!valid && user.plain_pass) {
+      valid = (user.plain_pass === password);
+    }
+
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid password. Please check your credentials.' });
+    }
 
     const token = jwt.sign(
       { id: user.id, role: user.role, name: user.name },
