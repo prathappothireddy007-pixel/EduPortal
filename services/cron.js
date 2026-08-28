@@ -21,12 +21,22 @@ const startODExpiryJob = () => {
         await pool.query(
           "UPDATE od_requests SET status='rejected' WHERE id=$1", [od.id]
         );
-        await pool.query(
-          `INSERT INTO attendance (student_id, student_name, status, date)
-           VALUES ($1, $2, 'Absent', $3)
-           ON CONFLICT (student_id, date) DO UPDATE SET status='Absent'`,
-          [od.student_id, od.student_name, od.date]
+        const targetSlot = od.slot || 'A';
+        const exists = await pool.query(
+          'SELECT id FROM attendance WHERE student_id=$1 AND date=$2 AND slot=$3',
+          [od.student_id, od.date, targetSlot]
         );
+        if (exists.rows.length > 0) {
+          await pool.query(
+            "UPDATE attendance SET status='Absent', od_request_id=NULL WHERE id=$1",
+            [exists.rows[0].id]
+          );
+        } else {
+          await pool.query(
+            "INSERT INTO attendance (student_id, student_name, status, date, slot) VALUES ($1, $2, 'Absent', $3, $4)",
+            [od.student_id, od.student_name, od.date, targetSlot]
+          );
+        }
         console.log(`⏰ Auto-rejected stale OD for ${od.student_name} (${od.date})`);
       }
     } catch (err) {

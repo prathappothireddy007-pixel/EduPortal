@@ -86,6 +86,26 @@ router.post('/', authenticate, requireStudent, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
+// Helper for multi-slot attendance upsert on OD events
+async function upsertODAttendance(studentId, studentName, status, date, slot, odRequestId) {
+  const targetSlot = slot || 'A';
+  const exists = await pool.query(
+    'SELECT id FROM attendance WHERE student_id=$1 AND date=$2 AND slot=$3',
+    [studentId, date, targetSlot]
+  );
+  if (exists.rows.length > 0) {
+    await pool.query(
+      'UPDATE attendance SET status=$1, od_request_id=$2 WHERE id=$3',
+      [status, odRequestId || null, exists.rows[0].id]
+    );
+  } else {
+    await pool.query(
+      'INSERT INTO attendance (student_id, student_name, status, date, slot, od_request_id) VALUES ($1, $2, $3, $4, $5, $6)',
+      [studentId, studentName, status, date, targetSlot, odRequestId || null]
+    );
+  }
+}
+
 // PUT approve OD (faculty)
 router.put('/:id/approve', authenticate, requireFaculty, async (req, res) => {
   try {
@@ -95,17 +115,17 @@ router.put('/:id/approve', authenticate, requireFaculty, async (req, res) => {
     );
     if (!r.rows[0]) return res.status(404).json({ error: 'Not found' });
     const od = r.rows[0];
-    await pool.query(
-      `INSERT INTO attendance (student_id,student_name,status,date,od_request_id)
-       VALUES ($1,$2,'OD',$3,$4)
-       ON CONFLICT (student_id,date) DO UPDATE SET status='OD', od_request_id=$4`,
-      [od.student_id, od.student_name, od.date, od.id]
-    );
+    
+    await upsertODAttendance(od.student_id, od.student_name, 'OD', od.date, od.slot, od.id);
+
     await notify(od.student_id, 'od_approved', 'OD Request Approved ✅',
       `Your OD request for Slot ${od.slot || 'A'} (${od.event_name}) has been approved. Complete geo-verification when attendance is marked.`, od.id);
     await logAction(req.user.id, req.user.name, 'faculty', 'approve_od', 'od_requests', od.id);
     res.json(od);
-  } catch (err) { res.status(500).json({ error: 'Server error' }); }
+  } catch (err) {
+    console.error('[Approve OD Error]:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 // PUT reject OD (faculty)
@@ -119,18 +139,17 @@ router.put('/:id/reject', authenticate, requireFaculty, async (req, res) => {
     );
     const od = r.rows[0];
     if (od) {
-      await pool.query(
-        `INSERT INTO attendance (student_id,student_name,status,date)
-         VALUES ($1,$2,'Absent',$3)
-         ON CONFLICT (student_id,date) DO UPDATE SET status='Absent'`,
-        [od.student_id, od.student_name, od.date]
-      );
+      await upsertODAttendance(od.student_id, od.student_name, 'Absent', od.date, od.slot, null);
+
       await notify(od.student_id, 'od_rejected', 'OD Request Rejected ❌',
         `Your OD request was rejected. Reason: ${reason || 'Not specified'}`, od.id);
       await logAction(req.user.id, req.user.name, 'faculty', 'reject_od', 'od_requests', od.id, null, { reason });
     }
     res.json(od);
-  } catch (err) { res.status(500).json({ error: 'Server error' }); }
+  } catch (err) {
+    console.error('[Reject OD Error]:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 // POST student submits geo-tagged photo with strict 30-min window & 30m radius check
@@ -207,12 +226,7 @@ router.post('/:id/geo-photo', authenticate, requireStudent, async (req, res) => 
     );
 
     // Mark attendance as OD confirmed
-    await pool.query(
-      `INSERT INTO attendance (student_id,student_name,status,date,od_request_id)
-       VALUES ($1,$2,'OD',$3,$4)
-       ON CONFLICT (student_id,date) DO UPDATE SET status='OD', od_request_id=$4`,
-      [od.student_id, od.student_name, od.date, od.id]
-    );
+    await upsertODAttendance(od.student_id, od.student_name, 'OD', od.date, od.slot, od.id);
 
     // Notify faculty
     const faculty = await pool.query(`SELECT id FROM users WHERE role='faculty' LIMIT 1`);
@@ -256,12 +270,7 @@ router.put('/:id/verify-geo', authenticate, requireFaculty, async (req, res) => 
         "UPDATE od_requests SET status='geo_rejected', rejection_reason=$1 WHERE id=$2 RETURNING *",
         [reason || 'Geo-photo rejected by faculty', od.id]
       );
-      await pool.query(
-        `INSERT INTO attendance (student_id,student_name,status,date)
-         VALUES ($1,$2,'Absent',$3)
-         ON CONFLICT (student_id,date) DO UPDATE SET status='Absent'`,
-        [od.student_id, od.student_name, od.date]
-      );
+      await upsertODAttendance(od.student_id, od.student_name, 'Absent', od.date, od.slot, null);
       await notify(od.student_id, 'geo_rejected', 'Geo-Verification Rejected',
         `Your geo-verification was rejected. Reason: ${reason || 'Not specified'}`, od.id);
       await logAction(req.user.id, req.user.name, 'faculty', 'reject_geo', 'od_requests', od.id, null, { reason });
