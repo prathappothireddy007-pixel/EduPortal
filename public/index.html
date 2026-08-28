@@ -13,7 +13,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Onest:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="secret-pathways-assets/fonts.css">
 
 <script>
@@ -22,8 +22,9 @@
     theme: {
       extend: {
         fontFamily: {
-          sans: ['Onest', 'Inter', 'sans-serif'],
-          display: ['Onest', 'sans-serif']
+          sans: ['Onest', 'sans-serif'],
+          display: ['Onest', 'sans-serif'],
+          mono: ['Onest', 'monospace']
         },
         colors: {
           brand: {
@@ -63,11 +64,18 @@
   --ease-out:cubic-bezier(.16,1,.3,1);
   --ease-io:cubic-bezier(.65,0,.35,1);
 }
-*,*::before,*::after{box-sizing:border-box}
+
+/* Universal Onest Typography applied everywhere */
+*, *::before, *::after,
+html, body, button, input, select, textarea, table, th, td, p, span, h1, h2, h3, h4, h5, h6, label, div, a {
+  font-family: 'Onest', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  box-sizing: border-box;
+}
+
 html{ -webkit-text-size-adjust:100%; scroll-behavior:smooth; }
 body{
   margin:0; background:var(--ink); color:var(--bone);
-  font-family:'Onest','Inter',system-ui,-apple-system,sans-serif;
+  font-family:'Onest',sans-serif !important;
   font-weight:300; font-size:16px; line-height:1.6;
   -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
   overflow-x:hidden;
@@ -111,19 +119,21 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   padding: 10px 14px !important;
   outline: none !important;
   transition: all 0.2s !important;
+  font-family: 'Onest', sans-serif !important;
 }
 .glass-input:focus {
   border-color: var(--vermilion) !important;
   background: rgba(224, 35, 28, 0.08) !important;
   box-shadow: 0 0 0 3px rgba(224, 35, 28, 0.2) !important;
 }
-select.glass-input option { background: #0a0e12; color: #F8FAFC; }
+select.glass-input option { background: #0a0e12; color: #F8FAFC; font-family: 'Onest', sans-serif; }
 
 /* Buttons */
 .btn-primary {
   background: linear-gradient(135deg, #e0231c 0%, #ff5a3c 100%) !important;
   color: #FFFFFF !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.12em !important;
   border-radius: 12px !important;
   padding: 10px 22px !important;
   transition: all 0.25s !important;
@@ -142,7 +152,8 @@ select.glass-input option { background: #0a0e12; color: #F8FAFC; }
   background: rgba(223, 231, 224, 0.06) !important;
   color: #dfe7e0 !important;
   border: 1px solid rgba(223, 231, 224, 0.12) !important;
-  font-weight: 500 !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.1em !important;
   border-radius: 12px !important;
   padding: 10px 20px !important;
   transition: all 0.2s !important;
@@ -155,7 +166,7 @@ select.glass-input option { background: #0a0e12; color: #F8FAFC; }
   background: rgba(223, 231, 224, 0.12) !important;
   color: #ffffff !important;
 }
-.badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 500; letter-spacing: 0.14em; }
 .badge-vermilion { background: rgba(224, 35, 28, 0.18); color: #ff5a3c; border: 1px solid rgba(224, 35, 28, 0.35); }
 .badge-blue { background: rgba(59, 130, 246, 0.15); color: #60A5FA; border: 1px solid rgba(59, 130, 246, 0.3); }
 .badge-emerald { background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.3); }
@@ -184,7 +195,7 @@ select.glass-input option { background: #0a0e12; color: #F8FAFC; }
   font-size:10px; font-weight:500; letter-spacing:.22em; text-transform:uppercase;
   color:var(--bone-dim); text-shadow:0 1px 16px rgba(3,6,8,.9);
 }
-.jp{ font-family:'NotoJP','Onest',sans-serif; font-weight:400; }
+.jp{ font-family:'NotoJP','Onest',sans-serif !important; font-weight:400; }
 h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 .display{
   text-transform:uppercase; line-height:1.055; letter-spacing:-.012em;
@@ -249,7 +260,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 .brand-tx i{ font-style:normal; font-size:8px; letter-spacing:.34em; color:var(--muted); }
 .nav-links{ display:flex; gap:clamp(16px,2.2vw,36px); margin-left:auto; }
 .nav-link{
-  position:relative; font-size:11px; font-weight:500; letter-spacing:.2em; text-transform:uppercase;
+  position:relative; font-size:11px; font-weight:500; letter-spacing:.22em; text-transform:uppercase;
   color:var(--bone-dim); display:block; height:15px; line-height:15px; overflow:hidden;
 }
 .nav-link span{ display:block; height:15px; line-height:15px; transition:transform .55s var(--ease-out), color .3s; }
@@ -362,7 +373,6 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 #app-screen {
   background: transparent !important;
   color: var(--bone);
-  font-family: 'Onest', 'Inter', sans-serif;
 }
 
 #app-screen aside#sidebar {
@@ -385,7 +395,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 #app-screen [class*="bg-slate-800"],
 #app-screen [class*="bg-black"],
 #app-screen .glass-panel {
-  background: rgba(8, 12, 16, 0.45) !important;
+  background: rgba(8, 12, 16, 0.48) !important;
   backdrop-filter: blur(14px) !important;
   -webkit-backdrop-filter: blur(14px) !important;
   border: 1px solid rgba(223, 231, 224, 0.1) !important;
@@ -420,8 +430,8 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 
 #app-screen table th {
   color: var(--bone-dim) !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.08em !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.16em !important;
   text-transform: uppercase !important;
 }
 
@@ -466,7 +476,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
   color: #FFFFFF !important;
   border: none !important;
   box-shadow: 0 4px 18px rgba(224, 35, 28, 0.35) !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
   border-radius: 0.75rem !important;
 }
 
@@ -620,8 +630,8 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
                 <i data-lucide="cpu" class="w-4 h-4"></i>
               </div>
               <div>
-                <p class="text-sm font-bold text-white">Algorithmic Reg. No Engine</p>
-                <p class="text-xs text-slate-300">Instantly builds standard IDs: e.g. <span class="font-mono text-emerald-400 font-semibold">ENG-CSE-2026-001</span></p>
+                <p class="text-sm font-medium text-white tracking-wide">Algorithmic Reg. No Engine</p>
+                <p class="text-xs text-slate-300">Instantly builds standard IDs: e.g. <span class="font-medium text-emerald-400">ENG-CSE-2026-001</span></p>
               </div>
             </div>
             <div class="glass-card p-4 rounded-xl flex items-center gap-3">
@@ -629,7 +639,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
                 <i data-lucide="search" class="w-4 h-4"></i>
               </div>
               <div>
-                <p class="text-sm font-bold text-white">Instant Reg. No Directory Search</p>
+                <p class="text-sm font-medium text-white tracking-wide">Instant Reg. No Directory Search</p>
                 <p class="text-xs text-slate-300">Debounced, multi-column search filtering student records.</p>
               </div>
             </div>
@@ -640,12 +650,12 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
         <div class="lg:col-span-6" data-rv="up">
           <div class="glass-panel p-6 rounded-3xl border border-white/10 shadow-2xl space-y-5">
             <div class="flex items-center justify-between border-b border-white/10 pb-3">
-              <span class="text-xs uppercase font-bold tracking-wider text-slate-400">Live Generator Demo</span>
+              <span class="text-xs uppercase font-medium tracking-[0.2em] text-slate-400">Live Generator Demo</span>
               <span class="badge badge-vermilion">Autonomous Engine</span>
             </div>
             <div class="space-y-3">
               <div>
-                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Select Engineering Branch</label>
+                <label class="block text-xs font-medium text-slate-400 uppercase tracking-[0.16em] mb-1.5">Select Engineering Branch</label>
                 <select id="demo-branch" onchange="updateDemoRegNo()" class="glass-input w-full">
                   <option value="CSE">Computer Science Engineering (CSE)</option>
                   <option value="AIDS">Artificial Intelligence & Data Science (AIDS)</option>
@@ -657,7 +667,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
               <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between">
                 <div>
                   <p class="text-xs text-slate-400">Calculated Registration Number:</p>
-                  <p id="demo-reg-result" class="text-xl font-mono font-bold text-[#ff5a3c] mt-1">ENG-CSE-2026-001</p>
+                  <p id="demo-reg-result" class="text-xl font-medium tracking-wider text-[#ff5a3c] mt-1">ENG-CSE-2026-001</p>
                 </div>
                 <button onclick="updateDemoRegNo(true)" class="btn-secondary text-xs py-2 px-3">
                   <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
@@ -691,7 +701,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
             Students engage in continuous practical and theoretical coursework, receiving verified examination admit cards and authenticated semester grade transcripts upon course completion.
           </p>
           <div class="glass-card p-5 rounded-2xl border-l-4 border-l-[#e0231c] space-y-2">
-            <h4 class="text-sm font-bold text-white">Autonomous Examination Hall Tickets</h4>
+            <h4 class="text-sm font-medium text-white tracking-wide">Autonomous Examination Hall Tickets</h4>
             <p class="text-xs text-slate-300 leading-relaxed">
               When course terms conclude, students receive digital hall tickets with QR security seals, verifying room seating, exam sessions, and 75% attendance compliance.
             </p>
@@ -702,27 +712,27 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
           <div class="glass-panel p-5 rounded-2xl border border-white/10 space-y-2">
             <div class="flex items-center justify-between">
               <span class="badge badge-vermilion">Continuous Learning</span>
-              <span class="text-xs font-mono text-slate-400">Semester</span>
+              <span class="text-xs font-medium text-slate-400">Semester</span>
             </div>
-            <h4 class="font-bold text-white">Coursework & Practice</h4>
+            <h4 class="font-medium text-white tracking-wide">Coursework & Practice</h4>
             <p class="text-xs text-slate-300">Unit assessments, laboratory programming practicals, and engineering design tutorials.</p>
           </div>
 
           <div class="glass-panel p-5 rounded-2xl border border-white/10 space-y-2">
             <div class="flex items-center justify-between">
               <span class="badge badge-blue">Examination Hall</span>
-              <span class="text-xs font-mono text-slate-400">Admit Card</span>
+              <span class="text-xs font-medium text-slate-400">Admit Card</span>
             </div>
-            <h4 class="font-bold text-white">University Hall Ticket</h4>
+            <h4 class="font-medium text-white tracking-wide">University Hall Ticket</h4>
             <p class="text-xs text-slate-300">Direct digital admit card issuance with verified seat numbers and invigilator signature lines.</p>
           </div>
 
           <div class="glass-panel p-5 rounded-2xl border border-white/10 space-y-2 sm:col-span-2">
             <div class="flex items-center justify-between">
               <span class="badge badge-emerald">Grade Sheet</span>
-              <span class="text-xs font-mono text-slate-300">Official Release</span>
+              <span class="text-xs font-medium text-slate-300">Official Release</span>
             </div>
-            <h4 class="font-bold text-white">Consolidated Semester Transcripts</h4>
+            <h4 class="font-medium text-white tracking-wide">Consolidated Semester Transcripts</h4>
             <p class="text-xs text-slate-300">Official semester statements of grades with SGPA, credits earned, and tamper-proof verification.</p>
           </div>
         </div>
@@ -747,7 +757,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
           <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#e0231c] to-[#ff5a3c] flex items-center justify-center text-white">
             <i data-lucide="book-plus" class="w-5 h-5"></i>
           </div>
-          <h3 class="text-lg font-bold text-white">Targeted Course Launching</h3>
+          <h3 class="text-lg font-medium text-white tracking-wide">Targeted Course Launching</h3>
           <p class="text-xs text-slate-300">
             Faculty launch specialized engineering subjects tailored to specific student batches and sections.
           </p>
@@ -757,7 +767,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
           <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white">
             <i data-lucide="calendar-check" class="w-5 h-5"></i>
           </div>
-          <h3 class="text-lg font-bold text-white">Real-Time Attendance & Shortage</h3>
+          <h3 class="text-lg font-medium text-white tracking-wide">Real-Time Attendance & Shortage</h3>
           <p class="text-xs text-slate-300">
             Session-by-session recording with student shortage alerts before examination eligibility cutoffs.
           </p>
@@ -767,7 +777,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
           <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-600 flex items-center justify-center text-white">
             <i data-lucide="clipboard-check" class="w-5 h-5"></i>
           </div>
-          <h3 class="text-lg font-bold text-white">On-Duty (OD) Verification Engine</h3>
+          <h3 class="text-lg font-medium text-white tracking-wide">On-Duty (OD) Verification Engine</h3>
           <p class="text-xs text-slate-300">
             Multi-tier workflow for students participating in hackathons, sports, and symposiums.
           </p>
@@ -794,7 +804,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
             <div class="w-10 h-10 rounded-xl bg-[#e0231c]/20 border border-[#e0231c]/40 flex items-center justify-center text-[#ff5a3c]">
               <i data-lucide="medal" class="w-5 h-5"></i>
             </div>
-            <h3 class="text-xl font-bold text-white">Certificate Generator & Verification</h3>
+            <h3 class="text-xl font-medium text-white tracking-wide">Certificate Generator & Verification</h3>
           </div>
           <p class="text-sm text-slate-300 leading-relaxed">
             Generate verifiable, cryptographic academic certificates with unique verification IDs, timestamps, and secure digital signatures for coursework, hackathon victories, and honors.
@@ -806,7 +816,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
             <div class="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
               <i data-lucide="file-text" class="w-5 h-5"></i>
             </div>
-            <h3 class="text-xl font-bold text-white">Digital Vault & Achievement Portfolio</h3>
+            <h3 class="text-xl font-medium text-white tracking-wide">Digital Vault & Achievement Portfolio</h3>
           </div>
           <p class="text-sm text-slate-300 leading-relaxed">
             Encrypted document storage for bona fides, government IDs, research publications, and verified extracurricular achievements reviewed directly by faculty mentors.
@@ -828,27 +838,27 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
             <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#e0231c] to-[#ff5a3c] mb-3 shadow-xl shadow-[#e0231c]/25">
               <i data-lucide="graduation-cap" class="w-9 h-9 text-white"></i>
             </div>
-            <h3 class="text-2xl font-extrabold text-white tracking-tight">Sign In to EDU OS</h3>
+            <h3 class="text-2xl font-medium text-white tracking-wide">Sign In to EDU OS</h3>
             <p class="text-xs text-slate-400 mt-1">Select your campus role to enter your unified operational dashboard.</p>
           </div>
 
           <!-- Role Selector -->
           <div class="grid grid-cols-3 gap-2 p-1.5 bg-white/5 rounded-2xl mb-6 border border-white/10">
-            <button id="btn-role-admin" onclick="setRole('admin')" class="py-2.5 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">Admin</button>
-            <button id="btn-role-faculty" onclick="setRole('faculty')" class="py-2.5 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] text-white shadow-md">Faculty</button>
-            <button id="btn-role-student" onclick="setRole('student')" class="py-2.5 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">Student</button>
+            <button id="btn-role-admin" onclick="setRole('admin')" class="py-2.5 rounded-xl text-xs font-medium tracking-wider transition-all text-slate-400 hover:text-white">Admin</button>
+            <button id="btn-role-faculty" onclick="setRole('faculty')" class="py-2.5 rounded-xl text-xs font-medium tracking-wider transition-all bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] text-white shadow-md">Faculty</button>
+            <button id="btn-role-student" onclick="setRole('student')" class="py-2.5 rounded-xl text-xs font-medium tracking-wider transition-all text-slate-400 hover:text-white">Student</button>
           </div>
 
           <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
             <div>
-              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2" id="login-id-label">Admin / Faculty ID</label>
+              <label class="block text-xs font-medium text-slate-400 uppercase tracking-[0.16em] mb-2" id="login-id-label">Admin / Faculty ID</label>
               <input type="text" id="login-id" required class="glass-input w-full font-medium" placeholder="Enter User ID">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Password</label>
+              <label class="block text-xs font-medium text-slate-400 uppercase tracking-[0.16em] mb-2">Password</label>
               <input type="password" id="login-password" required class="glass-input w-full font-medium" placeholder="••••••••">
             </div>
-            <button type="submit" class="btn-primary w-full mt-2 py-3.5 flex items-center justify-center gap-2 bg-gradient-to-r from-[#e0231c] to-[#ff5a3c]">
+            <button type="submit" class="btn-primary w-full mt-2 py-3.5 flex items-center justify-center gap-2 bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] uppercase tracking-[0.14em] text-xs">
               <span>Sign In to Portal</span>
               <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </button>
@@ -856,7 +866,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 
           <div class="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-500">
             <span class="flex items-center gap-1.5"><i data-lucide="lock" class="w-3.5 h-3.5 text-emerald-400"></i> 256-Bit Encrypted Session</span>
-            <span class="font-mono text-slate-400">v3.0 Production</span>
+            <span class="font-medium tracking-wider text-slate-400">v3.0 Production</span>
           </div>
         </div>
       </div>
@@ -864,7 +874,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 
     <!-- Footer -->
     <footer class="sec foot border-t border-white/10 py-12 text-center text-xs text-slate-500 space-y-2">
-      <p>© 2026 EDU OS — Academic & Campus Operations Platform</p>
+      <p class="tracking-wider uppercase">© 2026 EDU OS — Academic & Campus Operations Platform</p>
       <p class="jp text-[#dfe7e0]/60">静けさは一つの技である · 影の道</p>
     </footer>
 
@@ -907,8 +917,8 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
             </svg>
           </div>
           <div class="flex flex-col">
-            <span class="font-extrabold text-sm text-white tracking-widest uppercase">EDU <span class="text-[#ff5a3c]">OS</span></span>
-            <span class="text-[9px] font-mono text-slate-400 jp">学術の扉 · 自律型OS</span>
+            <span class="font-medium text-sm text-white tracking-[0.24em] uppercase">EDU <span class="text-[#ff5a3c]">OS</span></span>
+            <span class="text-[9px] font-normal text-slate-400 jp">学術の扉 · 自律型OS</span>
           </div>
         </div>
         <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
@@ -925,12 +935,12 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
     <!-- User Footer -->
     <div class="p-4 border-t border-white/10 flex items-center justify-between glass-panel bg-white/[0.02]">
       <div class="flex items-center gap-3 overflow-hidden">
-        <div id="user-avatar" class="w-9 h-9 rounded-full bg-[#e0231c]/20 border border-[#e0231c]/40 flex items-center justify-center font-bold text-[#ff5a3c] shrink-0">
+        <div id="user-avatar" class="w-9 h-9 rounded-full bg-[#e0231c]/20 border border-[#e0231c]/40 flex items-center justify-center font-medium text-[#ff5a3c] shrink-0">
           U
         </div>
         <div class="truncate">
-          <p id="user-display-name" class="text-sm font-semibold text-white truncate">User</p>
-          <p id="user-display-role" class="text-xs text-slate-400 capitalize">Role</p>
+          <p id="user-display-name" class="text-sm font-medium text-white truncate tracking-wide">User</p>
+          <p id="user-display-role" class="text-xs text-slate-400 uppercase tracking-widest">Role</p>
         </div>
       </div>
       <button onclick="handleLogout()" title="Logout" class="text-slate-400 hover:text-[#ff5a3c] p-2 rounded-lg hover:bg-white/5 transition-colors">
@@ -944,12 +954,12 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
     <!-- TOP HEADER BAR -->
     <header class="h-16 glass-panel border-b border-white/10 flex items-center justify-between px-8 sticky top-0 z-20 bg-[#070b0e]/65 backdrop-blur-xl">
       <div class="flex items-center gap-4">
-        <h2 id="page-title" class="text-xl font-bold text-white tracking-tight">Dashboard Overview</h2>
+        <h2 id="page-title" class="text-lg font-medium text-white tracking-[0.08em] uppercase">Dashboard Overview</h2>
       </div>
 
       <div class="flex items-center gap-4">
         <!-- Clean Campus Tour Action -->
-        <button onclick="toggleLandingView()" class="btn-secondary text-xs py-1.5 px-3 flex items-center gap-2 rounded-xl text-slate-300 hover:text-white border-white/10 hover:border-[#e0231c]/50 transition-all shadow-sm">
+        <button onclick="toggleLandingView()" class="btn-secondary text-xs py-1.5 px-3 flex items-center gap-2 rounded-xl text-slate-300 hover:text-white border-white/10 hover:border-[#e0231c]/50 transition-all shadow-sm tracking-wider uppercase">
           <i data-lucide="compass" class="w-3.5 h-3.5 text-[#ff5a3c]"></i>
           <span>Campus Tour</span>
         </button>
@@ -964,7 +974,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
           <!-- Notifications Dropdown Panel -->
           <div id="notification-dropdown" class="hidden absolute right-0 mt-3 w-80 sm:w-96 glass-panel rounded-3xl shadow-2xl border border-white/15 p-4 z-50 animate-fade-in bg-slate-950/95">
             <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
-              <h4 class="font-bold text-sm text-white">Notifications</h4>
+              <h4 class="font-medium text-sm text-white tracking-wider uppercase">Notifications</h4>
               <button onclick="markAllNotificationsRead()" class="text-xs text-[#ff5a3c] hover:underline font-medium">Mark all as read</button>
             </div>
             <div id="notification-list-container" class="space-y-2 max-h-80 overflow-y-auto pr-1 text-sm text-slate-300">
@@ -974,7 +984,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
         </div>
 
         <div class="h-6 w-[1px] bg-white/10"></div>
-        <span id="current-date" class="text-xs font-semibold text-slate-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10"></span>
+        <span id="current-date" class="text-xs font-medium tracking-wider text-slate-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10"></span>
       </div>
     </header>
 
@@ -992,7 +1002,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 <div id="modal-container" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
   <div class="glass-panel w-full max-w-2xl rounded-3xl shadow-2xl border border-white/15 overflow-hidden bg-[#070b0e]/95">
     <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
-      <h3 id="modal-title" class="font-bold text-base text-white">Modal</h3>
+      <h3 id="modal-title" class="font-medium text-base text-white tracking-wide uppercase">Modal</h3>
       <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
@@ -4916,13 +4926,13 @@ setTimeout(() => {
       
       let html = '';
       navStructure.forEach(sec => {
-        html += `<div class="text-[10px] font-extrabold text-[#78837c] tracking-widest uppercase px-3 mb-2">${sec.section}</div>`;
+        html += `<div class="text-[10px] font-medium text-[#78837c] tracking-[0.2em] uppercase px-3 mb-2">${sec.section}</div>`;
         sec.items.forEach(item => {
           const active = S.tab === item.tab;
           html += `
-            <button onclick="switchTab('${item.tab}')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            <button onclick="switchTab('${item.tab}')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium tracking-wide transition-all ${
               active 
-                ? 'bg-[#e0231c]/20 text-[#ff5a3c] border border-[#e0231c]/50 shadow-md font-semibold' 
+                ? 'bg-[#e0231c]/20 text-[#ff5a3c] border border-[#e0231c]/50 shadow-md' 
                 : 'text-slate-300 hover:text-white hover:bg-white/5'
             }">
               <i data-lucide="${item.icon}" class="w-4 h-4 ${active ? 'text-[#ff5a3c]' : 'text-slate-400'}"></i>
@@ -7655,18 +7665,18 @@ setTimeout(() => {
           <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-[#e0231c] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
             <div>
               <div class="flex items-center gap-2">
-                <span class="badge badge-vermilion text-[10px] uppercase tracking-wider">STUDENT PORTAL</span>
-                <span class="text-xs text-slate-400 font-mono font-bold">${S.user.admin_id || ''}</span>
+                <span class="badge badge-vermilion text-[10px] uppercase tracking-[0.2em]">STUDENT PORTAL</span>
+                <span class="text-xs text-slate-400 font-medium tracking-wider">${S.user.admin_id || ''}</span>
               </div>
-              <h3 class="text-2xl font-extrabold text-white mt-1">Welcome back, ${S.user.name}</h3>
+              <h3 class="text-2xl font-normal text-white tracking-wide mt-1">Welcome back, ${S.user.name}</h3>
               <p class="text-xs text-slate-300">Track your coursework, access your examination hall ticket, and review academic notices.</p>
             </div>
             <div class="flex items-center gap-3">
-              <button onclick="switchTab('hall-ticket')" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2">
+              <button onclick="switchTab('hall-ticket')" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase">
                 <i data-lucide="ticket" class="w-4 h-4"></i>
                 <span>University Hall Ticket</span>
               </button>
-              <button onclick="switchTab('course-enrollment')" class="btn-secondary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2">
+              <button onclick="switchTab('course-enrollment')" class="btn-secondary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase">
                 <i data-lucide="book-plus" class="w-4 h-4"></i>
                 <span>Course Catalog</span>
               </button>
@@ -7677,25 +7687,25 @@ setTimeout(() => {
           ${announcements && announcements.length > 0 ? `
             <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
               <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2 text-[#ff5a3c] font-bold text-sm">
+                <div class="flex items-center gap-2 text-[#ff5a3c] font-medium tracking-wider uppercase text-xs">
                   <i data-lucide="megaphone" class="w-4 h-4"></i>
                   <span>Official Campus Circulars & Notices</span>
                 </div>
-                <button onclick="switchTab('announcements')" class="text-xs text-slate-300 hover:text-white font-semibold">View All Notices →</button>
+                <button onclick="switchTab('announcements')" class="text-xs text-slate-300 hover:text-white font-medium tracking-wide">View All Notices →</button>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 ${announcements.slice(0, 2).map(a => `
                   <div class="glass-card p-4 rounded-2xl border border-white/10 space-y-2">
                     <div class="flex items-center justify-between">
-                      <span class="badge ${a.priority === 'urgent' ? 'badge-rose' : a.priority === 'academic' ? 'badge-blue' : 'badge-vermilion'} text-[9px]">
+                      <span class="badge ${a.priority === 'urgent' ? 'badge-rose' : a.priority === 'academic' ? 'badge-blue' : 'badge-vermilion'} text-[9px] tracking-wider uppercase">
                         ${a.priority ? a.priority.toUpperCase() : 'CIRCULAR'}
                       </span>
-                      <span class="text-[10px] text-slate-400 font-mono">${new Date(a.created_at).toLocaleDateString()}</span>
+                      <span class="text-[10px] text-slate-400 font-medium">${new Date(a.created_at).toLocaleDateString()}</span>
                     </div>
-                    <h5 class="font-bold text-white text-xs">${a.title}</h5>
+                    <h5 class="font-medium text-white text-xs tracking-wide">${a.title}</h5>
                     <p class="text-[11px] text-slate-300 line-clamp-2">${a.content}</p>
                     ${a.pdf_b64 ? `
-                      <button onclick="downloadOrViewPDF('${a.pdf_b64}', '${a.pdf_name}')" class="text-[10px] text-[#ff5a3c] hover:underline font-semibold pt-1 flex items-center gap-1">
+                      <button onclick="downloadOrViewPDF('${a.pdf_b64}', '${a.pdf_name}')" class="text-[10px] text-[#ff5a3c] hover:underline font-medium tracking-wide pt-1 flex items-center gap-1">
                         <i data-lucide="file-text" class="w-3 h-3"></i>
                         <span>View Attached Circular PDF</span>
                       </button>
@@ -7709,16 +7719,16 @@ setTimeout(() => {
           <!-- PROMINENT "WHERE IS MY CLASS?" CARD -->
           <div class="glass-panel p-8 rounded-3xl border border-[#e0231c]/30 shadow-2xl relative overflow-hidden">
             <div class="flex items-center justify-between mb-4">
-              <span class="badge badge-vermilion text-xs uppercase tracking-wider">📍 CURRENT LECTURE VENUE</span>
-              <span class="text-xs text-[#ff5a3c] font-mono">Live Timetable Sync</span>
+              <span class="badge badge-vermilion text-xs uppercase tracking-[0.2em]">📍 CURRENT LECTURE VENUE</span>
+              <span class="text-xs text-[#ff5a3c] font-medium tracking-wider">Live Timetable Sync</span>
             </div>
 
             ${currentClass && currentClass.current ? `
               <div class="space-y-3">
-                <h4 class="text-3xl font-black text-white tracking-tight">${currentClass.current.subject_name}</h4>
-                <p class="text-sm text-slate-300">Course Instructor: <span class="font-semibold text-white">${currentClass.current.faculty_name || 'Instructor'}</span></p>
+                <h4 class="text-3xl font-normal text-white tracking-wide">${currentClass.current.subject_name}</h4>
+                <p class="text-sm text-slate-300">Course Instructor: <span class="font-medium text-white">${currentClass.current.faculty_name || 'Instructor'}</span></p>
                 <div class="flex items-center gap-6 mt-4 pt-4 border-t border-white/10 text-sm">
-                  <div class="flex items-center gap-2 text-emerald-400 font-bold">
+                  <div class="flex items-center gap-2 text-emerald-400 font-medium">
                     <i data-lucide="building-2" class="w-5 h-5"></i>
                     <span>Room ${currentClass.current.room_name} (${currentClass.current.building || 'Academic Block'})</span>
                   </div>
@@ -7733,7 +7743,7 @@ setTimeout(() => {
                 <div class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-3 text-slate-400">
                   <i data-lucide="coffee" class="w-6 h-6"></i>
                 </div>
-                <h4 class="text-lg font-bold text-white">No active class session scheduled right now</h4>
+                <h4 class="text-lg font-medium text-white tracking-wide">No active class session scheduled right now</h4>
                 <p class="text-xs text-slate-400 mt-1">Check your full daily schedule in the Class Schedule tab.</p>
               </div>
             `}
@@ -7743,17 +7753,17 @@ setTimeout(() => {
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <button onclick="switchTab('grades')" class="glass-card p-6 rounded-3xl text-left space-y-2">
               <div class="p-3 rounded-2xl bg-[#e0231c]/10 text-[#ff5a3c] w-fit mb-2"><i data-lucide="award" class="w-6 h-6"></i></div>
-              <h4 class="text-base font-bold text-white">Continuous Assessment Marks</h4>
+              <h4 class="text-base font-medium text-white tracking-wide">Continuous Assessment Marks</h4>
               <p class="text-xs text-slate-300">View your verified continuous internal progress.</p>
             </button>
             <button onclick="switchTab('hall-ticket')" class="glass-card p-6 rounded-3xl text-left space-y-2">
               <div class="p-3 rounded-2xl bg-blue-500/10 text-blue-400 w-fit mb-2"><i data-lucide="ticket" class="w-6 h-6"></i></div>
-              <h4 class="text-base font-bold text-white">University Hall Ticket</h4>
+              <h4 class="text-base font-medium text-white tracking-wide">University Hall Ticket</h4>
               <p class="text-xs text-slate-300">View examination admit card and hall seating.</p>
             </button>
             <button onclick="switchTab('attendance-calc')" class="glass-card p-6 rounded-3xl text-left space-y-2">
               <div class="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 w-fit mb-2"><i data-lucide="calendar-check" class="w-6 h-6"></i></div>
-              <h4 class="text-base font-bold text-white">Attendance Standing</h4>
+              <h4 class="text-base font-medium text-white tracking-wide">Attendance Standing</h4>
               <p class="text-xs text-slate-300">Monitor your 75% examination eligibility.</p>
             </button>
           </div>
