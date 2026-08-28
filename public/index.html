@@ -8384,11 +8384,11 @@ setTimeout(() => {
       document.getElementById('modal-title').innerText = title;
       document.getElementById('modal-body').innerHTML = bodyHtml;
       document.getElementById('modal-footer').innerHTML = footerHtml || `<button onclick="closeModal()" class="btn-secondary">Close</button>`;
-      document.getElementById('modal-wrapper').classList.remove('hidden');
+      const m = document.getElementById('modal-container') || document.getElementById('modal-wrapper'); if (m) m.classList.remove('hidden'); lucide.createIcons();
     }
 
     function closeModal() {
-      document.getElementById('modal-wrapper').classList.add('hidden');
+      const m = document.getElementById('modal-container') || document.getElementById('modal-wrapper'); if (m) m.classList.add('hidden');
     }
 
     function toggleSidebar() {
@@ -8729,29 +8729,35 @@ setTimeout(() => {
     }
 
     async function openSubmitODModal() {
-      const events = await api('GET', '/events').catch(() => []);
+      let events = [];
+      try {
+        events = await api('GET', '/events');
+      } catch(e) {
+        events = [];
+      }
       const registeredEvents = (events || []).filter(e => e.is_registered);
 
       openModal('Submit On-Duty (OD) Request', `
-        <div class="space-y-4">
+        <div class="space-y-4 text-left">
           <div>
             <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Registered Event (Optional)</label>
-            <select id="m-od-event-id" class="glass-input w-full" onchange="handleODEventChange(this.value)">
+            <select id="m-od-event-id" class="glass-input w-full font-medium" onchange="handleODEventChange(this.value)">
               <option value="">-- Custom Event / Other --</option>
               ${registeredEvents.map(e => `<option value="${e.id}" data-name="${e.title}">${e.title} (${e.event_date ? new Date(e.event_date).toLocaleDateString() : ''})</option>`).join('')}
             </select>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Event / Competition Name</label>
-            <input type="text" id="m-od-event-name" class="glass-input w-full" placeholder="e.g. National Hackathon 2026" required>
+            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Event / Competition Name <span class="text-[#e0231c]">*</span></label>
+            <input type="text" id="m-od-event-name" class="glass-input w-full font-medium" placeholder="e.g. National Hackathon 2026" required>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Permission Letter / Proof Photo</label>
-            <input type="file" id="m-od-file" accept="image/*,application/pdf" class="glass-input w-full" required>
+            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Permission Letter / Proof Photo (Image or PDF) <span class="text-[#e0231c]">*</span></label>
+            <input type="file" id="m-od-file" accept="image/*,application/pdf" class="glass-input w-full font-medium" required>
           </div>
         </div>
       `, `
-        <button onclick="saveOD()" class="btn-primary text-xs py-2.5 px-6 rounded-xl uppercase tracking-wider">
+        <button onclick="saveOD()" class="btn-primary text-xs py-2.5 px-6 rounded-xl uppercase tracking-wider flex items-center gap-2">
+          <i data-lucide="send" class="w-4 h-4"></i>
           <span>Submit OD Application</span>
         </button>
       `);
@@ -8772,7 +8778,7 @@ setTimeout(() => {
       const eventName = document.getElementById('m-od-event-name')?.value;
       const fileInput = document.getElementById('m-od-file');
 
-      if (!eventName) return toast('Event name is required', 'warning');
+      if (!eventName || !eventName.trim()) return toast('Event name is required', 'warning');
       if (!fileInput || !fileInput.files[0]) return toast('Permission letter or photo required', 'warning');
 
       const reader = new FileReader();
@@ -8780,7 +8786,7 @@ setTimeout(() => {
         try {
           await api('POST', '/od', {
             eventId: eventId ? parseInt(eventId, 10) : null,
-            eventName,
+            eventName: eventName.trim(),
             letterB64: e.target.result
           });
           toast('OD Request Submitted Successfully!', 'success');
