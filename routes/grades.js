@@ -534,6 +534,15 @@ router.post('/submit-phase3-results', authenticate, requireFaculty, async (req, 
     await pool.query('UPDATE subjects SET is_results_published = TRUE WHERE id = $1', [subjectId]);
     await logAction(req.user.id, req.user.name, req.user.role, 'publish_results', 'subjects', subjectId);
 
+    res.json({
+      message: 'Main University Exam marks submitted and Official Results published successfully for all students!'
+    });
+  } catch (err) {
+    console.error('[Submit Phase 3 Results] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ── 8B. PHASE 3 INDIVIDUAL MARKS ENTRY: Faculty enters Main Univ Exam (Div 5) for a single student ──
 router.post('/submit-phase3-individual', authenticate, requireFaculty, async (req, res) => {
   const { studentId, subjectId, div5UnivExam } = req.body;
