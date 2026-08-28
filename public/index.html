@@ -27,8 +27,8 @@
         },
         colors: {
           brand: {
-            bg: '#05070a',
-            surface: 'rgba(10, 14, 18, 0.85)',
+            bg: 'transparent',
+            surface: 'rgba(10, 14, 18, 0.65)',
             glass: 'rgba(223, 231, 224, 0.04)',
             border: 'rgba(223, 231, 224, 0.08)',
             vermilion: '#e0231c',
@@ -85,27 +85,27 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 
 /* Glassmorphism Classes */
 .glass-panel {
-  background: rgba(10, 14, 18, 0.65) !important;
-  backdrop-filter: blur(18px) !important;
-  -webkit-backdrop-filter: blur(18px) !important;
-  border: 1px solid rgba(223, 231, 224, 0.08) !important;
-}
-.glass-card {
-  background: rgba(223, 231, 224, 0.035) !important;
+  background: rgba(10, 14, 18, 0.52) !important;
   backdrop-filter: blur(14px) !important;
   -webkit-backdrop-filter: blur(14px) !important;
-  border: 1px solid rgba(223, 231, 224, 0.07) !important;
+  border: 1px solid rgba(223, 231, 224, 0.09) !important;
+}
+.glass-card {
+  background: rgba(223, 231, 224, 0.04) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(223, 231, 224, 0.08) !important;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 .glass-card:hover {
-  background: rgba(223, 231, 224, 0.065) !important;
-  border-color: rgba(224, 35, 28, 0.4) !important;
+  background: rgba(223, 231, 224, 0.08) !important;
+  border-color: rgba(224, 35, 28, 0.45) !important;
   transform: translateY(-2px) !important;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(224, 35, 28, 0.15) !important;
 }
 .glass-input {
-  background: rgba(223, 231, 224, 0.04) !important;
-  border: 1px solid rgba(223, 231, 224, 0.12) !important;
+  background: rgba(223, 231, 224, 0.05) !important;
+  border: 1px solid rgba(223, 231, 224, 0.14) !important;
   color: #F8FAFC !important;
   border-radius: 12px !important;
   padding: 10px 14px !important;
@@ -140,7 +140,7 @@ select.glass-input option { background: #0a0e12; color: #F8FAFC; }
 }
 .btn-secondary {
   background: rgba(223, 231, 224, 0.06) !important;
-  color: #aab4ad !important;
+  color: #dfe7e0 !important;
   border: 1px solid rgba(223, 231, 224, 0.12) !important;
   font-weight: 500 !important;
   border-radius: 12px !important;
@@ -153,7 +153,7 @@ select.glass-input option { background: #0a0e12; color: #F8FAFC; }
 }
 .btn-secondary:hover {
   background: rgba(223, 231, 224, 0.12) !important;
-  color: #dfe7e0 !important;
+  color: #ffffff !important;
 }
 .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
 .badge-vermilion { background: rgba(224, 35, 28, 0.18); color: #ff5a3c; border: 1px solid rgba(224, 35, 28, 0.35); }
@@ -360,68 +360,59 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 
 /* ============================================================ UNIVERSAL EDU OS THEME (POST-LOGIN) */
 #app-screen {
-  background: rgba(5, 7, 10, 0.35) !important;
-  backdrop-filter: blur(6px) !important;
-  -webkit-backdrop-filter: blur(6px) !important;
+  background: transparent !important;
   color: var(--bone);
   font-family: 'Onest', 'Inter', sans-serif;
 }
 
 #app-screen aside#sidebar {
-  background: rgba(8, 12, 16, 0.72) !important;
+  background: rgba(6, 9, 13, 0.75) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
   border-right: 1px solid rgba(223, 231, 224, 0.1) !important;
 }
 
 #app-screen header {
-  background: rgba(8, 12, 16, 0.65) !important;
+  background: rgba(6, 9, 13, 0.65) !important;
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
   border-bottom: 1px solid rgba(223, 231, 224, 0.08) !important;
 }
 
-/* Force all dark rectangular containers inside app-screen to be frosted glass panels */
-#app-screen .bg-slate-900,
-#app-screen .bg-slate-950,
-#app-screen .bg-slate-900/50,
-#app-screen .bg-slate-900/80,
-#app-screen .bg-slate-900/90,
-#app-screen .bg-slate-800,
-#app-screen .bg-slate-800/50,
-#app-screen .bg-slate-800/80,
+/* Transform all containers inside app-screen into translucent frosted glass */
+#app-screen [class*="bg-slate-900"],
+#app-screen [class*="bg-slate-950"],
+#app-screen [class*="bg-slate-800"],
+#app-screen [class*="bg-black"],
 #app-screen .glass-panel {
-  background: rgba(10, 14, 18, 0.58) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(223, 231, 224, 0.09) !important;
+  background: rgba(10, 14, 18, 0.48) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border: 1px solid rgba(223, 231, 224, 0.1) !important;
   border-radius: 1.25rem !important;
 }
 
-/* Force cards and stat boxes inside app-screen to be glowing frosted glass cards */
-#app-screen .bg-slate-800/40,
-#app-screen .bg-slate-800/60,
-#app-screen .bg-white/5,
+/* Translucent cards and stat tiles */
 #app-screen .glass-card,
-#app-screen .stat-card {
+#app-screen .stat-card,
+#app-screen [class*="bg-white/"] {
   background: rgba(223, 231, 224, 0.04) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
   border: 1px solid rgba(223, 231, 224, 0.08) !important;
   border-radius: 1rem !important;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 #app-screen .glass-card:hover,
-#app-screen .bg-slate-800/40:hover,
 #app-screen .stat-card:hover {
   background: rgba(223, 231, 224, 0.08) !important;
-  border-color: rgba(224, 35, 28, 0.4) !important;
+  border-color: rgba(224, 35, 28, 0.45) !important;
   transform: translateY(-2px);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(224, 35, 28, 0.15) !important;
 }
 
-/* Force all tables inside app-screen to have sleek glass headers and rows */
+/* Sleek glass tables */
 #app-screen table thead {
   background: rgba(223, 231, 224, 0.04) !important;
   border-bottom: 1px solid rgba(223, 231, 224, 0.1) !important;
@@ -443,7 +434,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
   background: rgba(224, 35, 28, 0.08) !important;
 }
 
-/* Force inputs and dropdowns to have Kage glass focus styling */
+/* Inputs and dropdowns */
 #app-screen input,
 #app-screen select,
 #app-screen textarea,
@@ -466,10 +457,10 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
   box-shadow: 0 0 0 3px rgba(224, 35, 28, 0.25) !important;
 }
 
-/* Force primary action buttons to have Kyoto Vermilion Gradient */
-#app-screen .bg-blue-600,
-#app-screen .bg-gradient-to-r.from-blue-600,
-#app-screen .bg-gradient-to-r.from-purple-600,
+/* Primary buttons in Kyoto Vermilion */
+#app-screen [class*="bg-blue-600"],
+#app-screen [class*="from-blue-600"],
+#app-screen [class*="from-purple-600"],
 #app-screen .btn-primary {
   background: linear-gradient(135deg, #e0231c 0%, #ff5a3c 100%) !important;
   color: #FFFFFF !important;
@@ -479,9 +470,9 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
   border-radius: 0.75rem !important;
 }
 
-#app-screen .bg-blue-600:hover,
-#app-screen .bg-gradient-to-r.from-blue-600:hover,
-#app-screen .bg-gradient-to-r.from-purple-600:hover,
+#app-screen [class*="bg-blue-600"]:hover,
+#app-screen [class*="from-blue-600"]:hover,
+#app-screen [class*="from-purple-600"]:hover,
 #app-screen .btn-primary:hover {
   transform: translateY(-1px) !important;
   box-shadow: 0 6px 24px rgba(224, 35, 28, 0.55) !important;
@@ -630,7 +621,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
               </div>
               <div>
                 <p class="text-sm font-bold text-white">Algorithmic Reg. No Engine</p>
-                <p class="text-xs text-slate-400">Instantly builds standard IDs: e.g. <span class="font-mono text-emerald-400 font-semibold">ENG-CSE-2026-001</span></p>
+                <p class="text-xs text-slate-300">Instantly builds standard IDs: e.g. <span class="font-mono text-emerald-400 font-semibold">ENG-CSE-2026-001</span></p>
               </div>
             </div>
             <div class="glass-card p-4 rounded-xl flex items-center gap-3">
@@ -639,7 +630,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
               </div>
               <div>
                 <p class="text-sm font-bold text-white">Instant Reg. No Directory Search</p>
-                <p class="text-xs text-slate-400">Debounced, multi-column search filtering student records.</p>
+                <p class="text-xs text-slate-300">Debounced, multi-column search filtering student records.</p>
               </div>
             </div>
           </div>
@@ -714,7 +705,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
               <span class="text-xs font-mono text-slate-400">Semester</span>
             </div>
             <h4 class="font-bold text-white">Coursework & Practice</h4>
-            <p class="text-xs text-slate-400">Unit assessments, laboratory programming practicals, and engineering design tutorials.</p>
+            <p class="text-xs text-slate-300">Unit assessments, laboratory programming practicals, and engineering design tutorials.</p>
           </div>
 
           <div class="glass-panel p-5 rounded-2xl border border-white/10 space-y-2">
@@ -723,16 +714,16 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
               <span class="text-xs font-mono text-slate-400">Admit Card</span>
             </div>
             <h4 class="font-bold text-white">University Hall Ticket</h4>
-            <p class="text-xs text-slate-400">Direct digital admit card issuance with verified seat numbers and invigilator signature lines.</p>
+            <p class="text-xs text-slate-300">Direct digital admit card issuance with verified seat numbers and invigilator signature lines.</p>
           </div>
 
-          <div class="glass-panel p-5 rounded-2xl border border-white/10 space-y-2 sm:col-span-2 bg-gradient-to-r from-white/5 to-red-950/20">
+          <div class="glass-panel p-5 rounded-2xl border border-white/10 space-y-2 sm:col-span-2">
             <div class="flex items-center justify-between">
               <span class="badge badge-emerald">Grade Sheet</span>
               <span class="text-xs font-mono text-slate-300">Official Release</span>
             </div>
             <h4 class="font-bold text-white">Consolidated Semester Transcripts</h4>
-            <p class="text-xs text-slate-400">Official semester statements of grades with SGPA, credits earned, and tamper-proof verification.</p>
+            <p class="text-xs text-slate-300">Official semester statements of grades with SGPA, credits earned, and tamper-proof verification.</p>
           </div>
         </div>
       </div>
@@ -757,7 +748,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
             <i data-lucide="book-plus" class="w-5 h-5"></i>
           </div>
           <h3 class="text-lg font-bold text-white">Targeted Course Launching</h3>
-          <p class="text-xs text-slate-400">
+          <p class="text-xs text-slate-300">
             Faculty launch specialized engineering subjects tailored to specific student batches and sections.
           </p>
         </div>
@@ -767,7 +758,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
             <i data-lucide="calendar-check" class="w-5 h-5"></i>
           </div>
           <h3 class="text-lg font-bold text-white">Real-Time Attendance & Shortage</h3>
-          <p class="text-xs text-slate-400">
+          <p class="text-xs text-slate-300">
             Session-by-session recording with student shortage alerts before examination eligibility cutoffs.
           </p>
         </div>
@@ -777,7 +768,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
             <i data-lucide="clipboard-check" class="w-5 h-5"></i>
           </div>
           <h3 class="text-lg font-bold text-white">On-Duty (OD) Verification Engine</h3>
-          <p class="text-xs text-slate-400">
+          <p class="text-xs text-slate-300">
             Multi-tier workflow for students participating in hackathons, sports, and symposiums.
           </p>
         </div>
@@ -805,7 +796,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
             </div>
             <h3 class="text-xl font-bold text-white">Certificate Generator & Verification</h3>
           </div>
-          <p class="text-sm text-slate-400 leading-relaxed">
+          <p class="text-sm text-slate-300 leading-relaxed">
             Generate verifiable, cryptographic academic certificates with unique verification IDs, timestamps, and secure digital signatures for coursework, hackathon victories, and honors.
           </p>
         </div>
@@ -817,7 +808,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
             </div>
             <h3 class="text-xl font-bold text-white">Digital Vault & Achievement Portfolio</h3>
           </div>
-          <p class="text-sm text-slate-400 leading-relaxed">
+          <p class="text-sm text-slate-300 leading-relaxed">
             Encrypted document storage for bona fides, government IDs, research publications, and verified extracurricular achievements reviewed directly by faculty mentors.
           </p>
         </div>
@@ -3857,19 +3848,19 @@ function applyCamera() {
   const isAppOpen = document.getElementById('app-screen') && !document.getElementById('app-screen').classList.contains('hidden');
   
   if (isAppOpen) {
-    // Dynamic cinematic sanctuary view while browsing the dashboard
-    const slowT = clock * 0.15;
+    // Stunning panoramic Kyoto sanctuary view positioned right before the Torii Gate & glowing moon
+    const slowT = clock * 0.14;
     _p.set(
-      Math.sin(slowT * 0.8) * 3.2,
-      3.8 + Math.cos(slowT * 0.5) * 0.4,
-      10.8 + Math.sin(slowT * 0.4) * 1.5
+      Math.sin(slowT * 0.6) * 2.6,
+      4.4 + Math.cos(slowT * 0.4) * 0.35,
+      2.2 + Math.sin(slowT * 0.3) * 0.9
     );
     _t.set(
-      Math.sin(slowT * 0.4) * 1.2,
-      5.6 + Math.sin(slowT * 0.3) * 0.3,
-      -18.0
+      Math.sin(slowT * 0.4) * 0.9,
+      6.5 + Math.sin(slowT * 0.2) * 0.25,
+      -22.0
     );
-    const fov = fitAspect(_p, _t, 44);
+    const fov = fitAspect(_p, _t, 42);
     camera.position.copy(_p);
     camera.lookAt(_t);
     if (Math.abs(camera.fov - fov) > 1e-4) {
@@ -4910,8 +4901,8 @@ setTimeout(() => {
           html += `
             <button onclick="switchTab('${item.tab}')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
               active 
-                ? 'bg-[#e0231c]/18 text-[#ff5a3c] border border-[#e0231c]/40 shadow-md font-semibold' 
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                ? 'bg-[#e0231c]/20 text-[#ff5a3c] border border-[#e0231c]/50 shadow-md font-semibold' 
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
             }">
               <i data-lucide="${item.icon}" class="w-4 h-4 ${active ? 'text-[#ff5a3c]' : 'text-slate-400'}"></i>
               <span class="truncate">${item.label}</span>
@@ -7647,7 +7638,7 @@ setTimeout(() => {
                 <span class="text-xs text-slate-400 font-mono font-bold">${S.user.admin_id || ''}</span>
               </div>
               <h3 class="text-2xl font-extrabold text-white mt-1">Welcome back, ${S.user.name}</h3>
-              <p class="text-xs text-slate-400">Track your coursework, access your examination hall ticket, and review academic notices.</p>
+              <p class="text-xs text-slate-300">Track your coursework, access your examination hall ticket, and review academic notices.</p>
             </div>
             <div class="flex items-center gap-3">
               <button onclick="switchTab('hall-ticket')" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2">
@@ -7669,7 +7660,7 @@ setTimeout(() => {
                   <i data-lucide="megaphone" class="w-4 h-4"></i>
                   <span>Official Campus Circulars & Notices</span>
                 </div>
-                <button onclick="switchTab('announcements')" class="text-xs text-slate-400 hover:text-white font-semibold">View All Notices →</button>
+                <button onclick="switchTab('announcements')" class="text-xs text-slate-300 hover:text-white font-semibold">View All Notices →</button>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 ${announcements.slice(0, 2).map(a => `
@@ -7695,7 +7686,7 @@ setTimeout(() => {
           ` : ''}
 
           <!-- PROMINENT "WHERE IS MY CLASS?" CARD -->
-          <div class="glass-panel p-8 rounded-3xl border border-[#e0231c]/30 bg-gradient-to-r from-red-950/20 via-slate-950/60 to-slate-950/80 shadow-2xl relative overflow-hidden">
+          <div class="glass-panel p-8 rounded-3xl border border-[#e0231c]/30 shadow-2xl relative overflow-hidden">
             <div class="flex items-center justify-between mb-4">
               <span class="badge badge-vermilion text-xs uppercase tracking-wider">📍 CURRENT LECTURE VENUE</span>
               <span class="text-xs text-[#ff5a3c] font-mono">Live Timetable Sync</span>
@@ -7732,17 +7723,17 @@ setTimeout(() => {
             <button onclick="switchTab('grades')" class="glass-card p-6 rounded-3xl text-left space-y-2">
               <div class="p-3 rounded-2xl bg-[#e0231c]/10 text-[#ff5a3c] w-fit mb-2"><i data-lucide="award" class="w-6 h-6"></i></div>
               <h4 class="text-base font-bold text-white">Continuous Assessment Marks</h4>
-              <p class="text-xs text-slate-400">View your verified continuous internal progress.</p>
+              <p class="text-xs text-slate-300">View your verified continuous internal progress.</p>
             </button>
             <button onclick="switchTab('hall-ticket')" class="glass-card p-6 rounded-3xl text-left space-y-2">
               <div class="p-3 rounded-2xl bg-blue-500/10 text-blue-400 w-fit mb-2"><i data-lucide="ticket" class="w-6 h-6"></i></div>
               <h4 class="text-base font-bold text-white">University Hall Ticket</h4>
-              <p class="text-xs text-slate-400">View examination admit card and hall seating.</p>
+              <p class="text-xs text-slate-300">View examination admit card and hall seating.</p>
             </button>
             <button onclick="switchTab('attendance-calc')" class="glass-card p-6 rounded-3xl text-left space-y-2">
               <div class="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 w-fit mb-2"><i data-lucide="calendar-check" class="w-6 h-6"></i></div>
               <h4 class="text-base font-bold text-white">Attendance Standing</h4>
-              <p class="text-xs text-slate-400">Monitor your 75% examination eligibility.</p>
+              <p class="text-xs text-slate-300">Monitor your 75% examination eligibility.</p>
             </button>
           </div>
         </div>
