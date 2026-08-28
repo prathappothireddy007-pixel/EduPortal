@@ -28,7 +28,7 @@
         colors: {
           brand: {
             bg: 'transparent',
-            surface: 'rgba(10, 14, 18, 0.65)',
+            surface: 'rgba(10, 14, 18, 0.60)',
             glass: 'rgba(223, 231, 224, 0.04)',
             border: 'rgba(223, 231, 224, 0.08)',
             vermilion: '#e0231c',
@@ -85,7 +85,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 
 /* Glassmorphism Classes */
 .glass-panel {
-  background: rgba(10, 14, 18, 0.52) !important;
+  background: rgba(8, 12, 16, 0.48) !important;
   backdrop-filter: blur(14px) !important;
   -webkit-backdrop-filter: blur(14px) !important;
   border: 1px solid rgba(223, 231, 224, 0.09) !important;
@@ -366,14 +366,14 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 }
 
 #app-screen aside#sidebar {
-  background: rgba(6, 9, 13, 0.75) !important;
+  background: rgba(6, 9, 13, 0.72) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
   border-right: 1px solid rgba(223, 231, 224, 0.1) !important;
 }
 
 #app-screen header {
-  background: rgba(6, 9, 13, 0.65) !important;
+  background: rgba(6, 9, 13, 0.62) !important;
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
   border-bottom: 1px solid rgba(223, 231, 224, 0.08) !important;
@@ -385,7 +385,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 #app-screen [class*="bg-slate-800"],
 #app-screen [class*="bg-black"],
 #app-screen .glass-panel {
-  background: rgba(10, 14, 18, 0.48) !important;
+  background: rgba(8, 12, 16, 0.45) !important;
   backdrop-filter: blur(14px) !important;
   -webkit-backdrop-filter: blur(14px) !important;
   border: 1px solid rgba(223, 231, 224, 0.1) !important;
@@ -396,7 +396,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 #app-screen .glass-card,
 #app-screen .stat-card,
 #app-screen [class*="bg-white/"] {
-  background: rgba(223, 231, 224, 0.04) !important;
+  background: rgba(223, 231, 224, 0.035) !important;
   backdrop-filter: blur(10px) !important;
   -webkit-backdrop-filter: blur(10px) !important;
   border: 1px solid rgba(223, 231, 224, 0.08) !important;
@@ -871,7 +871,28 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
   </div><!-- /#top -->
 </div><!-- /#landing-container -->
 
-<!-- ============================================================ AUTHENTICATED APP SCREEN (EDU OS INTEGRATED) -->
+<!-- ============================================================ AUTHENTICATED APP ATMOSPHERE & SCREEN -->
+<div id="dashboard-atmosphere" class="fixed inset-0 pointer-events-none z-15 overflow-hidden">
+  <!-- Glowing Vermilion Moon Ambient Radiance -->
+  <div class="absolute top-[6%] right-[18%] w-80 h-80 rounded-full bg-[#e0231c]/18 blur-[90px] pointer-events-none"></div>
+  <div class="absolute top-[22%] left-[28%] w-[32rem] h-[32rem] rounded-full bg-[#ff5a3c]/12 blur-[130px] pointer-events-none"></div>
+  <div class="absolute bottom-[8%] left-[12%] w-96 h-96 rounded-full bg-blue-900/12 blur-[100px] pointer-events-none"></div>
+  
+  <!-- Kyoto Temple Silhouette & Sacred Garden Foliage framing the dashboard -->
+  <img class="absolute -top-10 -right-8 w-96 max-w-[32vw] opacity-75 pointer-events-none select-none filter contrast-125 brightness-95" src="secret-pathways-assets/foreground/png/sakura-branch.webp" alt="">
+  <img class="absolute -top-16 -right-2 w-80 max-w-[28vw] opacity-55 pointer-events-none select-none" src="secret-pathways-assets/foreground/png/pine-tree.webp" alt="">
+  <img class="absolute top-1/4 -left-14 w-72 max-w-[24vw] opacity-60 pointer-events-none select-none" src="secret-pathways-assets/foreground/png/maple-leaves.webp" alt="">
+  <img class="absolute -bottom-10 right-10 w-64 max-w-[20vw] opacity-75 pointer-events-none select-none filter drop-shadow-[0_0_20px_rgba(255,140,50,0.35)]" src="secret-pathways-assets/foreground/png/stone-lantern.webp" alt="">
+  <img class="absolute -bottom-16 left-1/4 w-[30rem] max-w-[38vw] opacity-50 pointer-events-none select-none" src="secret-pathways-assets/foreground/png/tall-grass.webp" alt="">
+  <img class="absolute -bottom-10 -left-12 w-80 max-w-[26vw] opacity-60 pointer-events-none select-none" src="secret-pathways-assets/foreground/png/temple-wall.webp" alt="">
+  <img class="absolute -bottom-8 right-1/3 w-72 max-w-[24vw] opacity-55 pointer-events-none select-none" src="secret-pathways-assets/foreground/png/basalt-stones.webp" alt="">
+
+  <!-- Japanese Kanji Calligraphy Watermark in Right Margin -->
+  <div class="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-4 text-[#dfe7e0]/25 pointer-events-none select-none text-xs tracking-[0.55em] jp [writing-mode:vertical-rl]">
+    <span>影の道 · 智の門 · 学術の扉 · 智慧の泉</span>
+  </div>
+</div>
+
 <div id="app-screen" class="hidden flex min-h-screen relative z-30 bg-transparent">
   <!-- SIDEBAR -->
   <aside id="sidebar" class="w-64 glass-panel border-r border-white/10 flex flex-col justify-between transition-all duration-300 z-30 shrink-0 bg-[#070b0e]/75 backdrop-blur-2xl">
