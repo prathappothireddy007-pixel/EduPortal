@@ -85,14 +85,15 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 
 /* Glassmorphism */
 .glass-panel {
-  background: rgba(10, 14, 18, 0.82);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background: rgba(10, 14, 18, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(223, 231, 224, 0.08);
 }
 .glass-card {
   background: rgba(223, 231, 224, 0.03);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border: 1px solid rgba(223, 231, 224, 0.07);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -352,7 +353,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 
 /* Toast */
 #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 380px; }
-.toast-item { background: #0a0e12; border: 1px solid rgba(223, 231, 224, 0.15); border-radius: 12px; padding: 14px 18px; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); display: flex; align-items: center; gap: 12px; animation: fadeIn 0.3s ease; }
+.toast-item { background: rgba(10, 14, 18, 0.95); border: 1px solid rgba(223, 231, 224, 0.15); border-radius: 14px; padding: 14px 18px; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); display: flex; align-items: center; gap: 12px; backdrop-filter: blur(16px); animation: fadeIn 0.3s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .animate-fade-in { animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 </style>
@@ -399,10 +400,10 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 
     <nav class="nav-links" id="navlinks">
       <a class="nav-link" href="#gate"><span>Admissions</span><span class="alt">伽藍</span></a>
-      <a class="nav-link" href="#pathways"><span>5-Tier Grades</span><span class="alt">庭園</span></a>
+      <a class="nav-link" href="#pathways"><span>Academics</span><span class="alt">庭園</span></a>
       <a class="nav-link" href="#lessons"><span>Faculty</span><span class="alt">神事</span></a>
-      <a class="nav-link" href="#eternity"><span>Digital Vault</span><span class="alt">残光</span></a>
-      <a class="nav-link" href="#portal"><span>Portal Access</span><span class="alt">扉</span></a>
+      <a class="nav-link" href="#eternity"><span>Vault</span><span class="alt">残光</span></a>
+      <a class="nav-link" href="#portal"><span>Portal</span><span class="alt">扉</span></a>
     </nav>
 
     <a href="#portal" class="btn-primary text-xs py-2 px-4 rounded-full flex items-center gap-2 shadow-lg hover:scale-105 transition-all">
@@ -423,7 +424,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
           <span class="mask-line"><span>mastery.</span></span>
         </h1>
         <p class="hero-sub body" data-rv="up">
-          Enter EduPortal OS through quiet Kyoto thresholds, where automated engineering admissions, 5-tier division grading, and verified hall ticket governance unite.
+          Enter EduPortal OS through quiet Kyoto thresholds, where automated engineering admissions, continuous academic progress, and verified hall ticket governance unite.
         </p>
         <div class="mt-6 flex items-center gap-3">
           <a href="#portal" class="btn-primary text-sm py-3 px-6 rounded-xl shadow-xl flex items-center gap-2">
@@ -443,13 +444,13 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
         <div class="hero-cue" data-rv="fade"><span>Scroll through the temple chapters</span><span class="track"><i></i></span></div>
         <div class="chapters" id="chips">
           <div class="chip" data-chip="0" data-rv="up"><span class="num">01</span>
-            <span class="tx"><b>Engineering Admissions</b><p>Automated Reg. No generator & student directory search.</p></span></div>
+            <span class="tx"><b>Admissions & Reg No</b><p>Automated Reg No generator & directory search.</p></span></div>
           <div class="chip" data-chip="1" data-rv="up"><span class="num">02</span>
-            <span class="tx"><b>5-Tier Gradebook</b><p>400-point divisions, course closing & university hall tickets.</p></span></div>
+            <span class="tx"><b>Academic Excellence</b><p>Continuous learning & verified exam hall tickets.</p></span></div>
           <div class="chip" data-chip="2" data-rv="up"><span class="num">03</span>
-            <span class="tx"><b>Faculty Operations</b><p>Targeted courses, daily attendance & OD approval engine.</p></span></div>
+            <span class="tx"><b>Faculty Operations</b><p>Course curriculum, timetable & attendance tracking.</p></span></div>
           <div class="chip" data-chip="3" data-rv="up"><span class="num">04</span>
-            <span class="tx"><b>Vault & Honors</b><p>Tamper-proof certificate generator & student achievements.</p></span></div>
+            <span class="tx"><b>Honors & Vault</b><p>Verifiable credentials & student portfolios.</p></span></div>
         </div>
       </div>
 
@@ -499,7 +500,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
               </div>
               <div>
                 <p class="text-sm font-bold text-white">Instant Reg. No Directory Search</p>
-                <p class="text-xs text-slate-400">Debounced, multi-column search filtering thousands of student records.</p>
+                <p class="text-xs text-slate-400">Debounced, multi-column search filtering student records.</p>
               </div>
             </div>
           </div>
@@ -539,7 +540,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
       </div>
     </section>
 
-    <!-- ============================================================ Chapter II: 5-Tier Gradebook -->
+    <!-- ============================================================ Chapter II: Academic Excellence -->
     <section class="sec" id="pathways" data-cam="2">
       <div class="fg" aria-hidden="true">
         <img class="fg-el fg-sakura" src="secret-pathways-assets/foreground/png/sakura-branch.webp" alt="">
@@ -549,72 +550,50 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
       </div>
 
       <div class="sec-head" data-rv="fade">
-        <span class="k"><b>Chapter 02</b> · 5-Tier Evaluation & Gradebook</span>
+        <span class="k"><b>Chapter 02</b> · Academic Standing & Examination Governance</span>
         <div class="rule"></div>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
-        <div class="lg:col-span-5 space-y-6" data-rv="up">
-          <h2 class="display h-sec text-white">400-Mark Division Structure</h2>
+        <div class="lg:col-span-6 space-y-6" data-rv="up">
+          <h2 class="display h-sec text-white">Curriculum Mastery & Official Credentials</h2>
           <p class="body-lg">
-            Evaluation is structured into 5 strict academic divisions totaling 400 internal marks followed by final university results generation.
+            Students engage in continuous practical and theoretical coursework, receiving verified examination admit cards and authenticated semester grade transcripts upon course completion.
           </p>
           <div class="glass-card p-5 rounded-2xl border-l-4 border-l-[#e0231c] space-y-2">
-            <h4 class="text-sm font-bold text-white">Course Closing & Hall Ticket Protocol</h4>
+            <h4 class="text-sm font-bold text-white">Autonomous Examination Hall Tickets</h4>
             <p class="text-xs text-slate-300 leading-relaxed">
-              1. Faculty submits <b>Assessments</b> & <b>Class Lab</b> marks.<br>
-              2. Faculty closes the course to freeze internal marks.<br>
-              3. Student requests & receives <b>University Hall Ticket</b>.<br>
-              4. Faculty submits University Practical Lab & Final Exam Marks.<br>
-              5. Final Course Grades are published to student results!
+              When course terms conclude, students receive digital hall tickets with QR security seals, verifying room seating, exam sessions, and 75% attendance compliance.
             </p>
           </div>
         </div>
 
-        <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4" data-rv="up">
+        <div class="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-4" data-rv="up">
           <div class="glass-panel p-5 rounded-2xl border border-white/10 space-y-2">
             <div class="flex items-center justify-between">
-              <span class="badge badge-vermilion">Division 1</span>
-              <span class="text-xs font-mono text-slate-400">100 Marks</span>
+              <span class="badge badge-vermilion">Continuous Learning</span>
+              <span class="text-xs font-mono text-slate-400">Semester</span>
             </div>
-            <h4 class="font-bold text-white">Assessments Marks</h4>
-            <p class="text-xs text-slate-400">Unit assessments, continuous tutorials, and technical problem sheets.</p>
+            <h4 class="font-bold text-white">Coursework & Practice</h4>
+            <p class="text-xs text-slate-400">Unit assessments, laboratory programming practicals, and engineering design tutorials.</p>
           </div>
 
           <div class="glass-panel p-5 rounded-2xl border border-white/10 space-y-2">
             <div class="flex items-center justify-between">
-              <span class="badge badge-blue">Division 2</span>
-              <span class="text-xs font-mono text-slate-400">100 Marks</span>
+              <span class="badge badge-blue">Examination Hall</span>
+              <span class="text-xs font-mono text-slate-400">Admit Card</span>
             </div>
-            <h4 class="font-bold text-white">Capstone Project</h4>
-            <p class="text-xs text-slate-400">Project reviews, technical implementations, thesis defense & documentation.</p>
-          </div>
-
-          <div class="glass-panel p-5 rounded-2xl border border-white/10 space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="badge badge-emerald">Division 3</span>
-              <span class="text-xs font-mono text-slate-400">100 Marks</span>
-            </div>
-            <h4 class="font-bold text-white">Class Lab Practical</h4>
-            <p class="text-xs text-slate-400">Continuous internal laboratory evaluation, code submissions & lab viva.</p>
-          </div>
-
-          <div class="glass-panel p-5 rounded-2xl border border-white/10 space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="badge badge-purple">Division 4</span>
-              <span class="text-xs font-mono text-slate-400">100 Marks</span>
-            </div>
-            <h4 class="font-bold text-white">University Practical Lab</h4>
-            <p class="text-xs text-slate-400">External university practical examination conducted under board guidelines.</p>
+            <h4 class="font-bold text-white">University Hall Ticket</h4>
+            <p class="text-xs text-slate-400">Direct digital admit card issuance with verified seat numbers and invigilator signature lines.</p>
           </div>
 
           <div class="glass-panel p-5 rounded-2xl border border-white/10 space-y-2 sm:col-span-2 bg-gradient-to-r from-white/5 to-red-950/20">
             <div class="flex items-center justify-between">
-              <span class="badge badge-amber">Division 5 · Final Grade</span>
-              <span class="text-xs font-mono text-slate-300">Semester Board Final</span>
+              <span class="badge badge-emerald">Grade Sheet</span>
+              <span class="text-xs font-mono text-slate-300">Official Release</span>
             </div>
-            <h4 class="font-bold text-white">Main University Exam & Results Publication</h4>
-            <p class="text-xs text-slate-400">Published directly into student grade sheets with instant GPA & credit calculations.</p>
+            <h4 class="font-bold text-white">Consolidated Semester Transcripts</h4>
+            <p class="text-xs text-slate-400">Official semester statements of grades with SGPA, credits earned, and tamper-proof verification.</p>
           </div>
         </div>
       </div>
@@ -640,7 +619,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
           </div>
           <h3 class="text-lg font-bold text-white">Targeted Course Launching</h3>
           <p class="text-xs text-slate-400">
-            Faculty select specific student eligibility groups (e.g. CSE-A, CSE-B, AI-1) and launch courses with designated course codes.
+            Faculty launch specialized engineering subjects tailored to specific student batches and sections.
           </p>
         </div>
 
@@ -650,7 +629,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
           </div>
           <h3 class="text-lg font-bold text-white">Real-Time Attendance & Shortage</h3>
           <p class="text-xs text-slate-400">
-            Session-by-session recording with student shortage calculators and automated alerts before exam eligibility cutoffs.
+            Session-by-session recording with student shortage alerts before examination eligibility cutoffs.
           </p>
         </div>
 
@@ -660,7 +639,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
           </div>
           <h3 class="text-lg font-bold text-white">On-Duty (OD) Verification Engine</h3>
           <p class="text-xs text-slate-400">
-            Multi-tier workflow for students participating in hackathons, sports, and symposiums with auto-credit to attendance records.
+            Multi-tier workflow for students participating in hackathons, sports, and symposiums.
           </p>
         </div>
       </div>
@@ -714,9 +693,9 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
       </div>
 
       <div class="max-w-xl mx-auto relative z-10" data-rv="up">
-        <div class="glass-panel p-8 sm:p-10 rounded-3xl shadow-2xl border border-white/15 bg-slate-950/85 backdrop-blur-2xl">
+        <div class="glass-panel p-8 sm:p-10 rounded-3xl shadow-2xl border border-white/15 bg-[#05070a]/85 backdrop-blur-2xl">
           <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#e0231c] to-indigo-600 mb-3 shadow-xl shadow-[#e0231c]/25">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#e0231c] to-[#ff5a3c] mb-3 shadow-xl shadow-[#e0231c]/25">
               <i data-lucide="graduation-cap" class="w-9 h-9 text-white"></i>
             </div>
             <h3 class="text-2xl font-extrabold text-white tracking-tight">Sign In to EduPortal OS</h3>
@@ -726,7 +705,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
           <!-- Role Selector -->
           <div class="grid grid-cols-3 gap-2 p-1.5 bg-white/5 rounded-2xl mb-6 border border-white/10">
             <button id="btn-role-admin" onclick="setRole('admin')" class="py-2.5 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">Admin</button>
-            <button id="btn-role-faculty" onclick="setRole('faculty')" class="py-2.5 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md">Faculty</button>
+            <button id="btn-role-faculty" onclick="setRole('faculty')" class="py-2.5 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] text-white shadow-md">Faculty</button>
             <button id="btn-role-student" onclick="setRole('student')" class="py-2.5 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">Student</button>
           </div>
 
@@ -739,7 +718,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
               <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Password</label>
               <input type="password" id="login-password" required class="glass-input w-full font-medium" placeholder="••••••••">
             </div>
-            <button type="submit" class="btn-primary w-full mt-2 py-3.5 flex items-center justify-center gap-2 bg-gradient-to-r from-[#e0231c] to-indigo-600">
+            <button type="submit" class="btn-primary w-full mt-2 py-3.5 flex items-center justify-center gap-2 bg-gradient-to-r from-[#e0231c] to-[#ff5a3c]">
               <span>Sign In to Portal</span>
               <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </button>
@@ -762,21 +741,27 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
   </div><!-- /#top -->
 </div><!-- /#landing-container -->
 
-<!-- ============================================================ AUTHENTICATED APP SCREEN -->
-<div id="app-screen" class="hidden flex min-h-screen relative z-30 bg-[#05070a]">
+<!-- ============================================================ AUTHENTICATED APP SCREEN (KAGE INTEGRATED) -->
+<div id="app-screen" class="hidden flex min-h-screen relative z-30 bg-[#05070a]/80 backdrop-blur-xl">
   <!-- SIDEBAR -->
-  <aside id="sidebar" class="w-64 glass-panel border-r border-white/10 flex flex-col justify-between transition-all duration-300 z-30 shrink-0">
+  <aside id="sidebar" class="w-64 glass-panel border-r border-white/10 flex flex-col justify-between transition-all duration-300 z-30 shrink-0 bg-[#070b0e]/85 backdrop-blur-2xl">
     <div>
       <!-- Brand Header -->
       <div class="h-16 flex items-center justify-between px-6 border-b border-white/10">
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#e0231c] to-indigo-600 flex items-center justify-center shadow-md">
-            <i data-lucide="layers" class="w-5 h-5 text-white"></i>
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#e0231c] to-[#ff5a3c] flex items-center justify-center shadow-lg shadow-[#e0231c]/30">
+            <svg viewBox="0 0 32 32" class="w-5 h-5" fill="none">
+              <circle cx="16" cy="17" r="6" fill="#ffffff" fill-opacity="0.9"/>
+              <path d="M4 9h24M7 14h18M16 6v20" stroke="#dfe7e0" stroke-width="1.8"/>
+            </svg>
           </div>
-          <span class="font-extrabold text-lg text-white tracking-tight">EduPortal</span>
+          <div class="flex flex-col">
+            <span class="font-extrabold text-sm text-white tracking-widest uppercase">KAGE <span class="text-[#ff5a3c]">OS</span></span>
+            <span class="text-[9px] font-mono text-slate-400 jp">影の道 · 学術の扉</span>
+          </div>
         </div>
         <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
-          <i data-lucide="panel-left-close" class="w-5 h-5"></i>
+          <i data-lucide="panel-left-close" class="w-4 h-4"></i>
         </button>
       </div>
 
@@ -787,9 +772,9 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
     </div>
 
     <!-- User Footer -->
-    <div class="p-4 border-t border-white/10 flex items-center justify-between glass-panel">
+    <div class="p-4 border-t border-white/10 flex items-center justify-between glass-panel bg-white/[0.02]">
       <div class="flex items-center gap-3 overflow-hidden">
-        <div id="user-avatar" class="w-9 h-9 rounded-full bg-[#e0231c]/30 border border-[#e0231c]/50 flex items-center justify-center font-bold text-[#ff5a3c] shrink-0">
+        <div id="user-avatar" class="w-9 h-9 rounded-full bg-[#e0231c]/20 border border-[#e0231c]/40 flex items-center justify-center font-bold text-[#ff5a3c] shrink-0">
           U
         </div>
         <div class="truncate">
@@ -797,16 +782,16 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
           <p id="user-display-role" class="text-xs text-slate-400 capitalize">Role</p>
         </div>
       </div>
-      <button onclick="handleLogout()" title="Logout" class="text-slate-400 hover:text-rose-400 p-2 rounded-lg hover:bg-white/5 transition-colors">
+      <button onclick="handleLogout()" title="Logout" class="text-slate-400 hover:text-[#ff5a3c] p-2 rounded-lg hover:bg-white/5 transition-colors">
         <i data-lucide="log-out" class="w-5 h-5"></i>
       </button>
     </div>
   </aside>
 
   <!-- CONTENT WRAPPER -->
-  <div class="flex-1 flex flex-col min-w-0 bg-[#05070a]">
+  <div class="flex-1 flex flex-col min-w-0 bg-transparent">
     <!-- TOP HEADER BAR -->
-    <header class="h-16 glass-panel border-b border-white/10 flex items-center justify-between px-8 sticky top-0 z-20">
+    <header class="h-16 glass-panel border-b border-white/10 flex items-center justify-between px-8 sticky top-0 z-20 bg-[#070b0e]/70 backdrop-blur-xl">
       <div class="flex items-center gap-4">
         <h2 id="page-title" class="text-xl font-bold text-white tracking-tight">Dashboard Overview</h2>
       </div>
@@ -822,11 +807,11 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
         <div class="relative">
           <button onclick="toggleNotificationPanel()" class="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
             <i data-lucide="bell" class="w-5 h-5"></i>
-            <span id="unread-count-badge" class="hidden absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full ring-4 ring-[#05070a]"></span>
+            <span id="unread-count-badge" class="hidden absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-[#e0231c] rounded-full ring-4 ring-[#05070a]"></span>
           </button>
 
           <!-- Notifications Dropdown Panel -->
-          <div id="notification-dropdown" class="hidden absolute right-0 mt-3 w-80 sm:w-96 glass-panel rounded-2xl shadow-2xl border border-white/15 p-4 z-50 animate-fade-in">
+          <div id="notification-dropdown" class="hidden absolute right-0 mt-3 w-80 sm:w-96 glass-panel rounded-3xl shadow-2xl border border-white/15 p-4 z-50 animate-fade-in bg-slate-950/95">
             <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
               <h4 class="font-bold text-sm text-white">Notifications</h4>
               <button onclick="markAllNotificationsRead()" class="text-xs text-[#ff5a3c] hover:underline font-medium">Mark all as read</button>
@@ -843,7 +828,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
     </header>
 
     <!-- MAIN DYNAMIC CONTENT CONTAINER -->
-    <main id="main-content" class="flex-1 p-8 overflow-y-auto">
+    <main id="main-content" class="flex-1 p-8 overflow-y-auto bg-transparent">
       <!-- Rendered dynamically -->
     </main>
   </div>
@@ -853,8 +838,8 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 <div class="rail" id="rail"></div>
 
 <!-- Modal Container for SPA dialogs -->
-<div id="modal-container" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-  <div class="glass-panel w-full max-w-2xl rounded-2xl shadow-2xl border border-white/15 overflow-hidden">
+<div id="modal-container" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
+  <div class="glass-panel w-full max-w-2xl rounded-3xl shadow-2xl border border-white/15 overflow-hidden bg-[#070b0e]/95">
     <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
       <h3 id="modal-title" class="font-bold text-base text-white">Modal</h3>
       <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
@@ -4730,26 +4715,24 @@ setTimeout(() => {
     const STUDENT_NAV = [
       { section: 'MY ACADEMICS', items: [
         { tab: 'dashboard', label: 'Overview', icon: 'home' },
-        { tab: 'announcements', label: 'Campus Notices', icon: 'megaphone' },
+        { tab: 'announcements', label: 'Campus Circulars', icon: 'megaphone' },
         { tab: 'course-enrollment', label: 'Course Catalog', icon: 'book-plus' },
         { tab: 'grades', label: 'Internal Marks', icon: 'award' },
         { tab: 'hall-ticket', label: 'University Hall Ticket', icon: 'ticket' },
         { tab: 'results', label: 'Semester Results & Grades', icon: 'file-check' },
-        { tab: 'what-if', label: 'What-If Simulator', icon: 'zap' },
-        { tab: 'attendance-calc', label: 'Attendance Shortage', icon: 'calculator' }
+        { tab: 'attendance-calc', label: 'Attendance Standing', icon: 'calendar-check' }
       ]},
-      { section: 'MY CAMPUS', items: [
+      { section: 'CAMPUS & LECTURES', items: [
         { tab: 'where-is-my-class', label: 'Where Is My Class?', icon: 'map-pin' },
         { tab: 'timetable', label: 'Class Schedule', icon: 'clock' },
         { tab: 'events', label: 'Campus Events', icon: 'star' },
-        { tab: 'od-status', label: 'My OD Workflow', icon: 'clipboard-list' },
-        { tab: 'kage-experience', label: 'Kyoto Temple 3D (Kage)', icon: 'compass' }
+        { tab: 'od-status', label: 'My OD Workflow', icon: 'clipboard-list' }
       ]},
-      { section: 'SUPPORT & VAULT', items: [
+      { section: 'HONORS & VAULT', items: [
         { tab: 'certificates', label: 'My Certificates', icon: 'medal' },
         { tab: 'achievements', label: 'My Portfolio', icon: 'trophy' },
         { tab: 'documents', label: 'Digital Vault', icon: 'file-text' },
-        { tab: 'issues', label: 'Support Tickets', icon: 'help-circle' }
+        { tab: 'issues', label: 'Campus Support Desk', icon: 'help-circle' }
       ]}
     ];
 
@@ -7484,29 +7467,32 @@ setTimeout(() => {
 
     // --- STUDENT VIEWS ---
     async function renderStudentDashboard(container) {
-      const [currentClass, announcements] = await Promise.all([
+      const [currentClass, announcements, ticketData] = await Promise.all([
         api('GET', '/timetable/student/current-class'),
-        api('GET', '/announcements')
+        api('GET', '/announcements'),
+        api('GET', '/grades/hall-ticket').catch(() => ({ courses: [] }))
       ]);
+
+      const approvedTickets = (ticketData.courses || []).filter(c => c.request_status === 'approved');
 
       container.innerHTML = `
         <div class="space-y-8 animate-fade-in">
           <!-- Personalized Greeting Header -->
-          <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-blue-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-[#e0231c] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
             <div>
               <div class="flex items-center gap-2">
-                <span class="badge badge-emerald text-[10px] uppercase tracking-wider">STUDENT PORTAL</span>
+                <span class="badge badge-vermilion text-[10px] uppercase tracking-wider">STUDENT PORTAL</span>
                 <span class="text-xs text-slate-400 font-mono font-bold">${S.user.admin_id || ''}</span>
               </div>
-              <h3 class="text-2xl font-extrabold text-white mt-1">Good Morning, ${S.user.name} 👋</h3>
-              <p class="text-xs text-slate-400">Review your 5 academic divisions, generate exam hall tickets, and track lectures.</p>
+              <h3 class="text-2xl font-extrabold text-white mt-1">Welcome back, ${S.user.name}</h3>
+              <p class="text-xs text-slate-400">Track your coursework, access your examination hall ticket, and review academic notices.</p>
             </div>
             <div class="flex items-center gap-3">
-              <button onclick="switchTab('hall-ticket')" class="btn-primary flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600">
+              <button onclick="switchTab('hall-ticket')" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2">
                 <i data-lucide="ticket" class="w-4 h-4"></i>
                 <span>University Hall Ticket</span>
               </button>
-              <button onclick="switchTab('course-enrollment')" class="btn-secondary flex items-center gap-2">
+              <button onclick="switchTab('course-enrollment')" class="btn-secondary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2">
                 <i data-lucide="book-plus" class="w-4 h-4"></i>
                 <span>Course Catalog</span>
               </button>
@@ -7515,28 +7501,29 @@ setTimeout(() => {
 
           <!-- Official Campus Announcements Banner for Student -->
           ${announcements && announcements.length > 0 ? `
-            <div class="glass-panel p-5 rounded-2xl border border-purple-500/30 bg-purple-950/15 space-y-3">
+            <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
               <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2 text-purple-400 font-bold text-sm">
+                <div class="flex items-center gap-2 text-[#ff5a3c] font-bold text-sm">
                   <i data-lucide="megaphone" class="w-4 h-4"></i>
-                  <span>Institutional Notices & Circulars</span>
+                  <span>Official Campus Circulars & Notices</span>
                 </div>
-                <button onclick="switchTab('announcements')" class="text-xs text-purple-300 hover:underline font-semibold">View All Notices →</button>
+                <button onclick="switchTab('announcements')" class="text-xs text-slate-400 hover:text-white font-semibold">View All Notices →</button>
               </div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 ${announcements.slice(0, 2).map(a => `
-                  <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
+                  <div class="glass-card p-4 rounded-2xl border border-white/10 space-y-2">
                     <div class="flex items-center justify-between">
-                      <span class="badge ${a.priority === 'urgent' ? 'badge-rose' : a.priority === 'academic' ? 'badge-blue' : 'badge-purple'} text-[9px]">
-                        ${a.priority ? a.priority.toUpperCase() : 'INFO'}
+                      <span class="badge ${a.priority === 'urgent' ? 'badge-rose' : a.priority === 'academic' ? 'badge-blue' : 'badge-vermilion'} text-[9px]">
+                        ${a.priority ? a.priority.toUpperCase() : 'CIRCULAR'}
                       </span>
                       <span class="text-[10px] text-slate-400 font-mono">${new Date(a.created_at).toLocaleDateString()}</span>
                     </div>
                     <h5 class="font-bold text-white text-xs">${a.title}</h5>
                     <p class="text-[11px] text-slate-300 line-clamp-2">${a.content}</p>
                     ${a.pdf_b64 ? `
-                      <button onclick="downloadOrViewPDF('${a.pdf_b64}', '${a.pdf_name}')" class="text-[10px] text-purple-400 hover:underline font-semibold pt-1 block">
-                        📄 View Attached PDF
+                      <button onclick="downloadOrViewPDF('${a.pdf_b64}', '${a.pdf_name}')" class="text-[10px] text-[#ff5a3c] hover:underline font-semibold pt-1 flex items-center gap-1">
+                        <i data-lucide="file-text" class="w-3 h-3"></i>
+                        <span>View Attached Circular PDF</span>
                       </button>
                     ` : ''}
                   </div>
@@ -7546,20 +7533,20 @@ setTimeout(() => {
           ` : ''}
 
           <!-- PROMINENT "WHERE IS MY CLASS?" CARD -->
-          <div class="glass-panel p-8 rounded-2xl border border-blue-500/30 bg-gradient-to-r from-blue-900/20 via-slate-900/40 to-slate-900/60 shadow-xl relative overflow-hidden">
+          <div class="glass-panel p-8 rounded-3xl border border-[#e0231c]/30 bg-gradient-to-r from-red-950/20 via-slate-950/60 to-slate-950/80 shadow-2xl relative overflow-hidden">
             <div class="flex items-center justify-between mb-4">
-              <span class="badge badge-blue text-xs uppercase tracking-wider">📍 CURRENT CLASS STATUS</span>
-              <span class="text-xs text-blue-400 font-mono">Live Sync</span>
+              <span class="badge badge-vermilion text-xs uppercase tracking-wider">📍 CURRENT LECTURE VENUE</span>
+              <span class="text-xs text-[#ff5a3c] font-mono">Live Timetable Sync</span>
             </div>
 
-            ${currentClass.current ? `
+            ${currentClass && currentClass.current ? `
               <div class="space-y-3">
                 <h4 class="text-3xl font-black text-white tracking-tight">${currentClass.current.subject_name}</h4>
-                <p class="text-sm text-slate-300">Faculty: <span class="font-semibold text-white">${currentClass.current.faculty_name || 'Instructor'}</span></p>
+                <p class="text-sm text-slate-300">Course Instructor: <span class="font-semibold text-white">${currentClass.current.faculty_name || 'Instructor'}</span></p>
                 <div class="flex items-center gap-6 mt-4 pt-4 border-t border-white/10 text-sm">
                   <div class="flex items-center gap-2 text-emerald-400 font-bold">
-                    <i data-lucide="building" class="w-5 h-5"></i>
-                    <span>Room ${currentClass.current.room_name} (${currentClass.current.building || 'Main Block'})</span>
+                    <i data-lucide="building-2" class="w-5 h-5"></i>
+                    <span>Room ${currentClass.current.room_name} (${currentClass.current.building || 'Academic Block'})</span>
                   </div>
                   <div class="flex items-center gap-2 text-slate-300">
                     <i data-lucide="clock" class="w-5 h-5 text-blue-400"></i>
@@ -7572,28 +7559,28 @@ setTimeout(() => {
                 <div class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-3 text-slate-400">
                   <i data-lucide="coffee" class="w-6 h-6"></i>
                 </div>
-                <h4 class="text-lg font-bold text-white">No active class right now</h4>
-                <p class="text-xs text-slate-400 mt-1">Check your full schedule in the Timetable tab.</p>
+                <h4 class="text-lg font-bold text-white">No active class session scheduled right now</h4>
+                <p class="text-xs text-slate-400 mt-1">Check your full daily schedule in the Class Schedule tab.</p>
               </div>
             `}
           </div>
 
-          <!-- Quick Access Widgets -->
+          <!-- Quick Access Cards -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <button onclick="switchTab('grades')" class="glass-card p-6 rounded-2xl text-left border border-white/10 hover:border-blue-500/30 transition-all">
-              <div class="p-3 rounded-xl bg-blue-500/10 text-blue-400 w-fit mb-3"><i data-lucide="award" class="w-6 h-6"></i></div>
-              <h4 class="text-base font-bold text-white">5-Tier Internal Marks</h4>
-              <p class="text-xs text-slate-400 mt-1">Assessments, Capstone & Labs (/400)</p>
+            <button onclick="switchTab('grades')" class="glass-card p-6 rounded-3xl text-left space-y-2">
+              <div class="p-3 rounded-2xl bg-[#e0231c]/10 text-[#ff5a3c] w-fit mb-2"><i data-lucide="award" class="w-6 h-6"></i></div>
+              <h4 class="text-base font-bold text-white">Continuous Assessment Marks</h4>
+              <p class="text-xs text-slate-400">View your verified continuous internal progress.</p>
             </button>
-            <button onclick="switchTab('hall-ticket')" class="glass-card p-6 rounded-2xl text-left border border-white/10 hover:border-purple-500/30 transition-all">
-              <div class="p-3 rounded-xl bg-purple-500/10 text-purple-400 w-fit mb-3"><i data-lucide="ticket" class="w-6 h-6"></i></div>
+            <button onclick="switchTab('hall-ticket')" class="glass-card p-6 rounded-3xl text-left space-y-2">
+              <div class="p-3 rounded-2xl bg-blue-500/10 text-blue-400 w-fit mb-2"><i data-lucide="ticket" class="w-6 h-6"></i></div>
               <h4 class="text-base font-bold text-white">University Hall Ticket</h4>
-              <p class="text-xs text-slate-400 mt-1">Download official exam hall ticket</p>
+              <p class="text-xs text-slate-400">View examination admit card and hall seating.</p>
             </button>
-            <button onclick="switchTab('attendance-calc')" class="glass-card p-6 rounded-2xl text-left border border-white/10 hover:border-emerald-500/30 transition-all">
-              <div class="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 w-fit mb-3"><i data-lucide="calculator" class="w-6 h-6"></i></div>
-              <h4 class="text-base font-bold text-white">Attendance Shortage</h4>
-              <p class="text-xs text-slate-400 mt-1">Track 75% exam eligibility</p>
+            <button onclick="switchTab('attendance-calc')" class="glass-card p-6 rounded-3xl text-left space-y-2">
+              <div class="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 w-fit mb-2"><i data-lucide="calendar-check" class="w-6 h-6"></i></div>
+              <h4 class="text-base font-bold text-white">Attendance Standing</h4>
+              <p class="text-xs text-slate-400">Monitor your 75% examination eligibility.</p>
             </button>
           </div>
         </div>
