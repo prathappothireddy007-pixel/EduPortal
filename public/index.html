@@ -7657,8 +7657,6 @@ setTimeout(() => {
         api('GET', '/grades/hall-ticket').catch(() => ({ courses: [] }))
       ]);
 
-      const approvedTickets = (ticketData.courses || []).filter(c => c.request_status === 'approved');
-
       container.innerHTML = `
         <div class="space-y-8 animate-fade-in">
           <!-- Personalized Greeting Header -->
@@ -8405,6 +8403,477 @@ setTimeout(() => {
       if (S.token && S.user) initApp();
     });
   
+
+
+    // --- STUDENT ATTENDANCE SHORTAGE CALCULATOR ---
+    async function renderAttendanceCalculator(container) {
+      const data = await api('GET', `/academic/attendance-shortage/${S.user.id}`);
+      const pct = data.currentPct || 0;
+      const isSafe = pct >= (data.threshold || 75);
+
+      container.innerHTML = `
+        <div class="space-y-6 max-w-2xl mx-auto animate-fade-in">
+          <div class="glass-panel p-8 rounded-3xl border ${isSafe ? 'border-emerald-500/30' : 'border-[#e0231c]/40'} text-center relative overflow-hidden shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+              <span class="badge ${isSafe ? 'badge-emerald' : 'badge-rose'} text-[10px] uppercase tracking-[0.2em]">
+                ${isSafe ? 'EXAMINATION ELIGIBLE' : 'ATTENDANCE SHORTAGE'}
+              </span>
+              <span class="text-xs font-mono text-slate-400">Target: ${data.threshold || 75}%</span>
+            </div>
+
+            <div class="my-6">
+              <div class="inline-flex items-center justify-center w-36 h-36 rounded-full border-4 ${isSafe ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-[#e0231c]/40 bg-[#e0231c]/10'} mb-2">
+                <span class="text-4xl font-normal ${isSafe ? 'text-emerald-400' : 'text-[#ff5a3c]'} font-mono">${pct}%</span>
+              </div>
+              <h3 class="text-xl font-normal text-white tracking-wide mt-2">Overall Academic Attendance</h3>
+              <p class="text-xs ${isSafe ? 'text-emerald-300' : 'text-[#ff5a3c]'} font-medium mt-1">${data.message || ''}</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-white/10 text-left">
+              <div class="glass-card p-4 rounded-2xl">
+                <p class="text-xs text-slate-400 uppercase tracking-wider">Total Recorded Sessions</p>
+                <p class="text-2xl font-normal text-white font-mono mt-1">${data.totalClasses || 0}</p>
+              </div>
+              <div class="glass-card p-4 rounded-2xl">
+                <p class="text-xs text-slate-400 uppercase tracking-wider">Present / Approved OD</p>
+                <p class="text-2xl font-normal text-emerald-400 font-mono mt-1">${data.attendedClasses || 0}</p>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-white/5 border border-white/10 text-xs text-slate-300 text-left mt-4 space-y-1.5">
+              <p class="font-medium text-white">• Minimum Statutory Requirement: <span class="text-amber-300">${data.threshold || 75}%</span> to sit for Semester Examinations.</p>
+              <p>• On-Duty (OD) days approved by faculty count as present in attendance calculations.</p>
+            </div>
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    // --- STUDENT WHERE IS MY CLASS LOCATOR ---
+    async function renderWhereIsMyClass(container) {
+      const res = await api('GET', '/timetable/student/current-class');
+      const cur = res.current;
+
+      container.innerHTML = `
+        <div class="max-w-2xl mx-auto space-y-6 animate-fade-in">
+          <div class="glass-panel p-8 rounded-3xl border border-[#e0231c]/30 shadow-2xl relative overflow-hidden">
+            <div class="flex items-center justify-between mb-6">
+              <span class="badge badge-vermilion text-[10px] uppercase tracking-[0.2em]">📍 REAL-TIME VENUE LOCATOR</span>
+              <span class="text-xs font-mono text-[#ff5a3c]">Live Campus Sync</span>
+            </div>
+
+            ${cur ? `
+              <div class="space-y-6">
+                <div class="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                  <span class="badge badge-emerald text-[10px] uppercase tracking-wider">ACTIVE LECTURE SESSION</span>
+                  <h3 class="text-3xl font-normal text-white tracking-wide">${cur.subject_name}</h3>
+                  <p class="text-xs text-slate-300">Instructor: <span class="font-medium text-white">${cur.faculty_name || 'Assigned Faculty'}</span></p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="glass-card p-5 rounded-2xl space-y-1">
+                    <div class="flex items-center gap-2 text-emerald-400 font-medium text-xs tracking-wider uppercase">
+                      <i data-lucide="building-2" class="w-4 h-4"></i>
+                      <span>Classroom / Lab</span>
+                    </div>
+                    <p class="text-2xl font-normal text-white tracking-wide">Room ${cur.room_name}</p>
+                    <p class="text-xs text-slate-400">${cur.building || 'Main Academic Block'}${cur.floor ? ` • Floor ${cur.floor}` : ''}</p>
+                  </div>
+
+                  <div class="glass-card p-5 rounded-2xl space-y-1">
+                    <div class="flex items-center gap-2 text-blue-400 font-medium text-xs tracking-wider uppercase">
+                      <i data-lucide="clock" class="w-4 h-4"></i>
+                      <span>Time Window</span>
+                    </div>
+                    <p class="text-2xl font-normal text-white tracking-wide font-mono">${cur.start_time} - ${cur.end_time}</p>
+                    <p class="text-xs text-slate-400">Current Ongoing Period</p>
+                  </div>
+                </div>
+              </div>
+            ` : `
+              <div class="text-center py-10 space-y-4">
+                <div class="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-slate-400">
+                  <i data-lucide="coffee" class="w-8 h-8"></i>
+                </div>
+                <div>
+                  <h4 class="text-xl font-normal text-white tracking-wide">No Active Class Session Right Now</h4>
+                  <p class="text-xs text-slate-400 mt-1 max-w-md mx-auto">There are no classes scheduled for your section at this exact hour. Check your full schedule below.</p>
+                </div>
+                <button onclick="switchTab('timetable')" class="btn-secondary text-xs py-2.5 px-4 rounded-xl">
+                  <i data-lucide="calendar" class="w-4 h-4"></i>
+                  <span>View Full Weekly Timetable</span>
+                </button>
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    // --- STUDENT TIMETABLE SCHEDULE ---
+    async function renderStudentTimetable(container) {
+      const entries = await api('GET', `/timetable${S.user.class_id ? `?class_id=${S.user.class_id}` : ''}`);
+      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-[#e0231c] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="badge badge-vermilion text-[10px] uppercase tracking-[0.2em]">WEEKLY TIMETABLE</span>
+                <span class="text-xs text-slate-400 font-mono">${S.user.admin_id || ''}</span>
+              </div>
+              <h3 class="text-2xl font-normal text-white tracking-wide mt-1">My Weekly Academic Schedule</h3>
+              <p class="text-xs text-slate-300">Room locations, assigned professors, and schedule periods for your section.</p>
+            </div>
+            <button onclick="switchTab('where-is-my-class')" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase">
+              <i data-lucide="map-pin" class="w-4 h-4"></i>
+              <span>Where Is My Class Now?</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            ${days.map(day => {
+              const dayEntries = (entries || []).filter(e => (e.day_of_week || '').toLowerCase() === day.toLowerCase())
+                .sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+              
+              return `
+                <div class="glass-panel p-5 rounded-3xl border border-white/10 space-y-3 flex flex-col">
+                  <div class="flex items-center justify-between border-b border-white/10 pb-2.5">
+                    <h4 class="font-medium text-white tracking-wider text-sm uppercase">${day}</h4>
+                    <span class="text-[10px] text-slate-400 font-mono">${dayEntries.length} Period${dayEntries.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div class="space-y-2.5 flex-1">
+                    ${dayEntries.length > 0 ? dayEntries.map(e => `
+                      <div class="glass-card p-3.5 rounded-2xl border border-white/10 space-y-1">
+                        <div class="flex items-center justify-between text-xs">
+                          <span class="font-medium text-white tracking-wide truncate">${e.subject_name || 'Subject'}</span>
+                          <span class="font-mono text-[#ff5a3c] text-[11px]">${e.start_time} - ${e.end_time}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                          <span class="text-emerald-400 font-medium">Room ${e.room_name || e.classroom_name || 'TBA'}</span>
+                          <span class="truncate">${e.faculty_name || 'Instructor'}</span>
+                        </div>
+                      </div>
+                    `).join('') : `
+                      <div class="text-center py-6 text-slate-500 text-xs">No lectures scheduled</div>
+                    `}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    // --- STUDENT CAMPUS EVENTS ---
+    async function renderStudentEvents(container) {
+      const events = await api('GET', '/events');
+
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-blue-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="badge badge-blue text-[10px] uppercase tracking-[0.2em]">CAMPUS ACTIVITIES</span>
+                <span class="text-xs text-slate-400 font-mono">Workshops & Symposiums</span>
+              </div>
+              <h3 class="text-2xl font-normal text-white tracking-wide mt-1">Campus Events & Technical Symposiums</h3>
+              <p class="text-xs text-slate-300">Register for hackathons, engineering workshops, guest lectures, and institutional conferences.</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            ${(events || []).length > 0 ? (events || []).map(ev => `
+              <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4 flex flex-col justify-between">
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="badge ${ev.event_type === 'hackathon' ? 'badge-rose' : ev.event_type === 'workshop' ? 'badge-blue' : 'badge-vermilion'} text-[9px] uppercase tracking-wider">
+                      ${ev.event_type || 'EVENT'}
+                    </span>
+                    <span class="text-[11px] text-slate-400 font-mono">${ev.event_date ? new Date(ev.event_date).toLocaleDateString() : ''}</span>
+                  </div>
+                  <h4 class="text-lg font-medium text-white tracking-wide">${ev.title}</h4>
+                  <p class="text-xs text-slate-300 line-clamp-3">${ev.description || 'No description provided.'}</p>
+                </div>
+
+                <div class="space-y-3 pt-3 border-t border-white/10">
+                  <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span class="flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-400"></i> ${ev.venue || 'Campus Auditorium'}</span>
+                    ${ev.start_time ? `<span class="font-mono text-slate-300">${ev.start_time}</span>` : ''}
+                  </div>
+
+                  ${ev.is_registered ? `
+                    <div class="w-full py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-medium text-center flex items-center justify-center gap-2">
+                      <i data-lucide="check-circle" class="w-4 h-4"></i>
+                      <span>Registered & Confirmed</span>
+                    </div>
+                  ` : `
+                    <button onclick="registerForEvent(${ev.id})" class="btn-primary w-full text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 tracking-wider uppercase">
+                      <i data-lucide="user-plus" class="w-4 h-4"></i>
+                      <span>Register for Event</span>
+                    </button>
+                  `}
+                </div>
+              </div>
+            `).join('') : `
+              <div class="col-span-full glass-panel p-12 rounded-3xl text-center text-slate-400">
+                <i data-lucide="calendar-x" class="w-12 h-12 mx-auto mb-3 text-slate-500"></i>
+                <h4 class="text-base font-normal text-white">No Upcoming Campus Events</h4>
+                <p class="text-xs text-slate-400 mt-1">Check back later for newly announced hackathons and conferences.</p>
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    async function registerForEvent(eventId) {
+      try {
+        await api('POST', `/events/${eventId}/register`);
+        toast('Successfully registered for event!', 'success');
+        renderPage();
+      } catch (err) {
+        toast(err.message || 'Failed to register', 'error');
+      }
+    }
+
+    // --- STUDENT ON-DUTY (OD) WORKFLOW ---
+    async function renderStudentOD(container) {
+      const odList = await api('GET', '/od');
+
+      container.innerHTML = `
+        <div class="space-y-6 animate-fade-in">
+          <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-emerald-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="badge badge-emerald text-[10px] uppercase tracking-[0.2em]">ON-DUTY WORKFLOW</span>
+                <span class="text-xs text-slate-400 font-mono">3-Stage Verification Engine</span>
+              </div>
+              <h3 class="text-2xl font-normal text-white tracking-wide mt-1">My On-Duty (OD) Requests</h3>
+              <p class="text-xs text-slate-300">Submit official OD letters for symposiums, sports, and technical competitions with GPS check-in.</p>
+            </div>
+            <button onclick="openSubmitODModal()" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              <span>Submit New OD Request</span>
+            </button>
+          </div>
+
+          <div class="space-y-4">
+            ${(odList || []).length > 0 ? (odList || []).map(o => `
+              <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+                  <div>
+                    <h4 class="font-medium text-white text-base tracking-wide">${o.event_name}</h4>
+                    <p class="text-xs text-slate-400">Date: <span class="font-mono text-slate-300">${o.date || new Date(o.created_at).toLocaleDateString()}</span></p>
+                  </div>
+                  <span class="badge ${
+                    o.status === 'approved' || o.status === 'completed' || o.status === 'geo_submitted' 
+                      ? 'badge-emerald' 
+                      : o.status === 'rejected' 
+                      ? 'badge-rose' 
+                      : 'badge-amber'
+                  } text-[10px] uppercase tracking-wider">
+                    ${(o.status || 'PENDING').toUpperCase()}
+                  </span>
+                </div>
+
+                <!-- 3-Stage Progress Stepper -->
+                <div class="grid grid-cols-3 gap-2 pt-1 text-center">
+                  <div class="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                    <div class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-xs font-bold">✓</div>
+                    <p class="text-[11px] font-medium text-white">1. Letter Submitted</p>
+                    <p class="text-[9px] text-slate-400">Document Uploaded</p>
+                  </div>
+                  <div class="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                    <div class="w-6 h-6 rounded-full ${o.status !== 'pending' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-300'} flex items-center justify-center mx-auto text-xs font-bold">
+                      ${o.status !== 'pending' ? '✓' : '2'}
+                    </div>
+                    <p class="text-[11px] font-medium text-white">2. Faculty Review</p>
+                    <p class="text-[9px] text-slate-400">${o.status !== 'pending' ? 'Reviewed' : 'Awaiting Approval'}</p>
+                  </div>
+                  <div class="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                    <div class="w-6 h-6 rounded-full ${o.status === 'geo_submitted' || o.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400'} flex items-center justify-center mx-auto text-xs font-bold">
+                      ${o.status === 'geo_submitted' || o.status === 'completed' ? '✓' : '3'}
+                    </div>
+                    <p class="text-[11px] font-medium text-white">3. Geo Verification</p>
+                    <p class="text-[9px] text-slate-400">${o.status === 'geo_submitted' || o.status === 'completed' ? 'Verified' : 'Pending Check-in'}</p>
+                  </div>
+                </div>
+
+                ${o.status === 'approved' ? `
+                  <div class="pt-2">
+                    <button onclick="triggerGeoCamera(${o.id})" class="btn-primary w-full text-xs py-3 rounded-xl flex items-center justify-center gap-2 tracking-wider uppercase">
+                      <i data-lucide="map-pin" class="w-4 h-4"></i>
+                      <span>Complete GPS Geo-Verification Check-In</span>
+                    </button>
+                  </div>
+                ` : ''}
+              </div>
+            `).join('') : `
+              <div class="glass-panel p-12 rounded-3xl text-center text-slate-400">
+                <i data-lucide="clipboard-list" class="w-12 h-12 mx-auto mb-3 text-slate-500"></i>
+                <h4 class="text-base font-normal text-white">No On-Duty Requests Submitted</h4>
+                <p class="text-xs text-slate-400 mt-1">Submit your permission letters when representing the college in external events.</p>
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    async function openSubmitODModal() {
+      const events = await api('GET', '/events').catch(() => []);
+      const registeredEvents = (events || []).filter(e => e.is_registered);
+
+      openModal('Submit On-Duty (OD) Request', `
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Registered Event (Optional)</label>
+            <select id="m-od-event-id" class="glass-input w-full" onchange="handleODEventChange(this.value)">
+              <option value="">-- Custom Event / Other --</option>
+              ${registeredEvents.map(e => `<option value="${e.id}" data-name="${e.title}">${e.title} (${e.event_date ? new Date(e.event_date).toLocaleDateString() : ''})</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Event / Competition Name</label>
+            <input type="text" id="m-od-event-name" class="glass-input w-full" placeholder="e.g. National Hackathon 2026" required>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Permission Letter / Proof Photo</label>
+            <input type="file" id="m-od-file" accept="image/*,application/pdf" class="glass-input w-full" required>
+          </div>
+        </div>
+      `, `
+        <button onclick="saveOD()" class="btn-primary text-xs py-2.5 px-6 rounded-xl uppercase tracking-wider">
+          <span>Submit OD Application</span>
+        </button>
+      `);
+      lucide.createIcons();
+    }
+
+    function handleODEventChange(val) {
+      const select = document.getElementById('m-od-event-id');
+      const selectedOption = select.options[select.selectedIndex];
+      const nameInput = document.getElementById('m-od-event-name');
+      if (val && selectedOption && selectedOption.dataset.name) {
+        nameInput.value = selectedOption.dataset.name;
+      }
+    }
+
+    async function saveOD() {
+      const eventId = document.getElementById('m-od-event-id')?.value || null;
+      const eventName = document.getElementById('m-od-event-name')?.value;
+      const fileInput = document.getElementById('m-od-file');
+
+      if (!eventName) return toast('Event name is required', 'warning');
+      if (!fileInput || !fileInput.files[0]) return toast('Permission letter or photo required', 'warning');
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          await api('POST', '/od', {
+            eventId: eventId ? parseInt(eventId, 10) : null,
+            eventName,
+            letterB64: e.target.result
+          });
+          toast('OD Request Submitted Successfully!', 'success');
+          closeModal();
+          renderPage();
+        } catch(err) {
+          toast(err.message || 'Failed to submit OD', 'error');
+        }
+      };
+      reader.readAsDataURL(fileInput.files[0]);
+    }
+
+    async function triggerGeoCamera(odId) {
+      if (!navigator.geolocation) return toast('Geolocation is not supported by your browser', 'error');
+      
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        try {
+          await api('POST', `/od/${odId}/geo-photo`, {
+            geoB64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            lat, lng
+          });
+          toast('GPS Geo-Verification Successful!', 'success');
+          renderPage();
+        } catch(e) {
+          toast(e.message || 'Verification failed', 'error');
+        }
+      }, (err) => toast('GPS location permission is required for OD verification', 'error'));
+    }
+
+    // --- WHAT-IF GRADE SIMULATOR ---
+    async function renderWhatIfSimulator(container) {
+      container.innerHTML = `
+        <div class="space-y-6 max-w-xl mx-auto animate-fade-in">
+          <div class="glass-panel p-8 rounded-3xl border border-[#e0231c]/30 shadow-2xl space-y-6">
+            <div>
+              <span class="badge badge-vermilion text-[10px] uppercase tracking-[0.2em]">GRADE SIMULATOR</span>
+              <h3 class="text-2xl font-normal text-white tracking-wide mt-1">What-If Grade Simulator</h3>
+              <p class="text-xs text-slate-300 mt-1">Simulate how your target score in upcoming exams will impact your overall semester GPA.</p>
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Target Score in Next Exam (0 - 100)</label>
+                <input type="number" id="sim-score" value="85" min="0" max="100" class="glass-input w-full text-xl font-mono text-[#ff5a3c]">
+              </div>
+              <button onclick="runSimulation()" class="btn-primary w-full py-3 rounded-xl uppercase tracking-wider text-xs">Run Grade Projection</button>
+            </div>
+
+            <div id="sim-result" class="hidden pt-6 border-t border-white/10 space-y-4 animate-fade-in">
+              <div class="grid grid-cols-2 gap-4">
+                <div class="glass-card p-4 rounded-2xl">
+                  <p class="text-xs text-slate-400 uppercase tracking-wider">Current Standing</p>
+                  <p id="sim-cur-avg" class="text-2xl font-mono font-normal text-white mt-1">0%</p>
+                  <span id="sim-cur-grade" class="badge badge-blue text-[10px] mt-2">Grade -</span>
+                </div>
+                <div class="glass-card p-4 rounded-2xl border border-emerald-500/30">
+                  <p class="text-xs text-slate-400 uppercase tracking-wider">Projected Standing</p>
+                  <p id="sim-proj-avg" class="text-2xl font-mono font-normal text-emerald-400 mt-1">0%</p>
+                  <span id="sim-proj-grade" class="badge badge-emerald text-[10px] mt-2">Grade -</span>
+                </div>
+              </div>
+              <p id="sim-diff-text" class="text-xs text-center text-slate-300 font-medium"></p>
+            </div>
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    async function runSimulation() {
+      const score = parseFloat(document.getElementById('sim-score').value);
+      if (isNaN(score) || score < 0 || score > 100) return toast('Enter score between 0 and 100', 'warning');
+
+      try {
+        const res = await api('POST', '/academic/simulate', { additionalScore: score });
+        document.getElementById('sim-result').classList.remove('hidden');
+        document.getElementById('sim-cur-avg').innerText = `${res.currentAvg}%`;
+        document.getElementById('sim-cur-grade').innerText = `Grade ${res.currentGrade}`;
+        document.getElementById('sim-proj-avg').innerText = `${res.projectedAvg}%`;
+        document.getElementById('sim-proj-grade').innerText = `Grade ${res.projectedGrade}`;
+        
+        const diff = res.difference;
+        document.getElementById('sim-diff-text').innerText = diff >= 0 
+          ? `📈 This exam will increase your cumulative average by +${diff}%` 
+          : `📉 This exam will change your cumulative average by ${diff}%`;
+      } catch(e) {
+        toast(e.message || 'Simulation failed', 'error');
+      }
+    }
+
 </script>
 </body>
 </html>
