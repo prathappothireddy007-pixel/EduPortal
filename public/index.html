@@ -178,39 +178,78 @@
 </head>
 <body class="min-h-screen flex flex-col antialiased selection:bg-blue-500 selection:text-white">
 
-  <!-- LOGIN / AUTH CONTAINER -->
-  <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#06091a]">
-    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-[#06091a] to-[#06091a] pointer-events-none"></div>
-    <div class="glass-panel w-full max-w-md p-8 rounded-2xl shadow-2xl relative border border-white/10">
-      <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 mb-4 shadow-lg shadow-blue-500/30">
-          <i data-lucide="graduation-cap" class="w-9 h-9 text-white"></i>
+  <!-- LANDING & AUTH CONTAINER (FEATURING KAGE 3D TEMPLE EXPERIENCE) -->
+  <div id="auth-screen" class="fixed inset-0 z-50 overflow-hidden bg-[#030609]">
+    <!-- Kage 3D Landing Page Running Live in Background -->
+    <iframe id="kage-landing-iframe" src="/landing-pages/kage.html" class="absolute inset-0 w-full h-full border-0 z-0"></iframe>
+
+    <!-- Top Floating Header over Kage -->
+    <header class="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-6 py-4 pointer-events-auto">
+      <div class="flex items-center gap-3 backdrop-blur-md bg-black/40 border border-white/10 px-4 py-2 rounded-full shadow-lg">
+        <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-[#e0231c] to-[#ff5a3c] flex items-center justify-center text-white shadow-md">
+          <i data-lucide="graduation-cap" class="w-4 h-4 text-white"></i>
         </div>
-        <h1 class="text-2xl font-extrabold text-white tracking-tight">EduPortal OS</h1>
-        <p class="text-sm text-slate-400 mt-1">Smart Academic & Campus Management System</p>
+        <span class="font-extrabold text-sm text-white tracking-tight">EduPortal <span class="text-[#ff5a3c] font-normal text-xs ml-1">× Kage 3D</span></span>
       </div>
 
-      <!-- Role Selector -->
-      <div class="grid grid-cols-3 gap-1.5 p-1 bg-white/5 rounded-xl mb-6 border border-white/10">
-        <button id="btn-role-admin" onclick="setRole('admin')" class="py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white">Admin</button>
-        <button id="btn-role-faculty" onclick="setRole('faculty')" class="py-2 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white shadow-md">Faculty</button>
-        <button id="btn-role-student" onclick="setRole('student')" class="py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white">Student</button>
-      </div>
-
-      <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2" id="login-id-label">Admin / Faculty ID</label>
-          <input type="text" id="login-id" required class="glass-input w-full" placeholder="Enter User ID">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Password</label>
-          <input type="password" id="login-password" required class="glass-input w-full" placeholder="••••••••">
-        </div>
-        <button type="submit" class="btn-primary w-full mt-4 flex items-center justify-center gap-2">
-          <span>Sign In to Portal</span>
-          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+      <div class="flex items-center gap-3">
+        <button id="btn-toggle-explore" onclick="toggleAuthModal()" class="backdrop-blur-md bg-black/50 border border-white/15 hover:border-white/30 text-white text-xs font-semibold px-4 py-2.5 rounded-full transition-all shadow-lg flex items-center gap-2">
+          <i data-lucide="compass" class="w-3.5 h-3.5 text-[#ff5a3c]"></i>
+          <span id="explore-btn-text">Explore 3D Sanctuary</span>
         </button>
-      </form>
+
+        <button onclick="showAuthModal()" class="btn-primary text-xs py-2.5 px-5 rounded-full shadow-xl bg-gradient-to-r from-[#e0231c] to-indigo-600 hover:opacity-95 flex items-center gap-2 border border-white/10">
+          <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+          <span>Sign In to Portal</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Floating Auth Card Modal -->
+    <div id="auth-modal-wrapper" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-all duration-300 pointer-events-auto">
+      <div class="glass-panel w-full max-w-md p-8 rounded-3xl shadow-2xl relative border border-white/15 bg-slate-950/85 backdrop-blur-2xl">
+        <!-- Close / Explore button on card -->
+        <button onclick="toggleAuthModal()" title="Explore 3D Scene" class="absolute top-5 right-5 text-slate-400 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition-all">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+
+        <div class="text-center mb-6">
+          <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#e0231c] to-indigo-600 mb-3 shadow-lg shadow-[#e0231c]/25">
+            <i data-lucide="graduation-cap" class="w-8 h-8 text-white"></i>
+          </div>
+          <h1 class="text-2xl font-extrabold text-white tracking-tight">EduPortal OS</h1>
+          <p class="text-xs text-slate-400 mt-1">Autonomous Academic & Campus Management System</p>
+        </div>
+
+        <!-- Role Selector -->
+        <div class="grid grid-cols-3 gap-1.5 p-1 bg-white/5 rounded-xl mb-5 border border-white/10">
+          <button id="btn-role-admin" onclick="setRole('admin')" class="py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white">Admin</button>
+          <button id="btn-role-faculty" onclick="setRole('faculty')" class="py-2 rounded-lg text-xs font-bold transition-all bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md">Faculty</button>
+          <button id="btn-role-student" onclick="setRole('student')" class="py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white">Student</button>
+        </div>
+
+        <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5" id="login-id-label">Admin / Faculty ID</label>
+            <input type="text" id="login-id" required class="glass-input w-full font-medium" placeholder="Enter User ID">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Password</label>
+            <input type="password" id="login-password" required class="glass-input w-full font-medium" placeholder="••••••••">
+          </div>
+          <button type="submit" class="btn-primary w-full mt-2 py-3 flex items-center justify-center gap-2 bg-gradient-to-r from-[#e0231c] to-indigo-600">
+            <span>Sign In to Portal</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </form>
+
+        <div class="mt-4 pt-3 border-t border-white/10 text-center">
+          <button onclick="toggleAuthModal()" class="text-xs text-[#ff5a3c] hover:underline font-medium flex items-center justify-center gap-1.5 mx-auto">
+            <i data-lucide="compass" class="w-3.5 h-3.5"></i>
+            <span>Walk through Kyoto Mountain Temple 3D</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -266,6 +305,12 @@
         </div>
 
         <div class="flex items-center gap-4">
+          <!-- 3D Kyoto Temple Quick Switcher -->
+          <button onclick="switchTab('kage-experience')" class="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 border-[#e0231c]/30 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 transition-all shadow-sm">
+            <span class="w-2 h-2 rounded-full bg-[#e0231c] animate-pulse"></span>
+            <span>⛩️ 3D Kyoto Temple</span>
+          </button>
+
           <!-- Notifications Bell Button -->
           <div class="relative">
             <button onclick="toggleNotificationPanel()" class="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
@@ -424,6 +469,27 @@
       }
     }
 
+    function toggleAuthModal() {
+      const modal = document.getElementById('auth-modal-wrapper');
+      const btnText = document.getElementById('explore-btn-text');
+      if (!modal) return;
+      if (modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+        if (btnText) btnText.innerText = 'Explore 3D Sanctuary';
+      } else {
+        modal.classList.add('hidden');
+        if (btnText) btnText.innerText = 'Open Portal Sign In';
+      }
+    }
+
+    function showAuthModal() {
+      const modal = document.getElementById('auth-modal-wrapper');
+      const btnText = document.getElementById('explore-btn-text');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      if (btnText) btnText.innerText = 'Explore 3D Sanctuary';
+    }
+
     function handleLogout() {
       S.token = null;
       S.user = null;
@@ -431,6 +497,7 @@
       localStorage.removeItem('edu_user');
       document.getElementById('app-screen').classList.add('hidden');
       document.getElementById('auth-screen').classList.remove('hidden');
+      showAuthModal();
       toast('Signed out successfully', 'info');
     }
 
@@ -447,7 +514,8 @@
         { tab: 'gradebook', label: '5-Tier Gradebook', icon: 'award' },
         { tab: 'classrooms', label: 'Campus Classrooms', icon: 'building-2' },
         { tab: 'academic-risk', label: 'Academic Risk Engine', icon: 'alert-triangle' },
-        { tab: 'events', label: 'Institutional Events', icon: 'star' }
+        { tab: 'events', label: 'Institutional Events', icon: 'star' },
+        { tab: 'kage-experience', label: 'Kyoto Temple 3D (Kage)', icon: 'compass' }
       ]},
       { section: 'SUPPORT & VAULT', items: [
         { tab: 'issues', label: 'Campus Support Desk', icon: 'message-square' },
@@ -479,7 +547,8 @@
       { section: 'CAMPUS OPERATIONS', items: [
         { tab: 'classrooms', label: 'Classrooms Status', icon: 'building-2' },
         { tab: 'timetable', label: 'Timetable Allocations', icon: 'clock' },
-        { tab: 'events', label: 'Events & Registration', icon: 'star' }
+        { tab: 'events', label: 'Events & Registration', icon: 'star' },
+        { tab: 'kage-experience', label: 'Kyoto Temple 3D (Kage)', icon: 'compass' }
       ]},
       { section: 'INSIGHTS & SUPPORT', items: [
         { tab: 'academic-risk', label: 'Academic Risk Engine', icon: 'alert-triangle' },
@@ -505,7 +574,8 @@
         { tab: 'where-is-my-class', label: 'Where Is My Class?', icon: 'map-pin' },
         { tab: 'timetable', label: 'Class Schedule', icon: 'clock' },
         { tab: 'events', label: 'Campus Events', icon: 'star' },
-        { tab: 'od-status', label: 'My OD Workflow', icon: 'clipboard-list' }
+        { tab: 'od-status', label: 'My OD Workflow', icon: 'clipboard-list' },
+        { tab: 'kage-experience', label: 'Kyoto Temple 3D (Kage)', icon: 'compass' }
       ]},
       { section: 'SUPPORT & VAULT', items: [
         { tab: 'certificates', label: 'My Certificates', icon: 'medal' },
@@ -629,6 +699,7 @@
             case 'certificates': title.innerText = 'Certificate Generation & Verification'; await renderCertificates(main); break;
             case 'audit-logs': title.innerText = 'Security & System Audit Logs'; await renderAuditLogs(main); break;
             case 'settings': title.innerText = 'System Global Settings'; await renderSettings(main); break;
+            case 'kage-experience': title.innerText = 'Kyoto Temple 3D (Kage)'; renderKageExperience(main); break;
             default: await renderAdminDashboard(main);
           }
         } else if (S.user.role === 'faculty') {
@@ -649,6 +720,7 @@
             case 'documents': title.innerText = 'Institutional Digital Vault'; await renderDocuments(main); break;
             case 'achievements': title.innerText = 'Student Achievements Review'; await renderAchievements(main); break;
             case 'certificates': title.innerText = 'Certificate Generation & Verification'; await renderCertificates(main); break;
+            case 'kage-experience': title.innerText = 'Kyoto Temple 3D (Kage)'; renderKageExperience(main); break;
             default: await renderFacultyDashboard(main);
           }
         } else {
@@ -669,12 +741,42 @@
             case 'achievements': title.innerText = 'My Achievement Portfolio'; await renderStudentAchievements(main); break;
             case 'documents': title.innerText = 'My Secure Documents Vault'; await renderStudentDocuments(main); break;
             case 'issues': title.innerText = 'Support Tickets'; await renderStudentIssues(main); break;
+            case 'kage-experience': title.innerText = 'Kyoto Temple 3D (Kage)'; renderKageExperience(main); break;
             default: await renderStudentDashboard(main);
           }
         }
       } catch (e) {
         main.innerHTML = `<div class="glass-panel p-8 rounded-2xl text-center"><p class="text-rose-400 font-semibold mb-2">Error rendering page</p><p class="text-xs text-slate-400">${e.message}</p></div>`;
       }
+      lucide.createIcons();
+    }
+
+    // --- KAGE 3D SHADER EXPERIENCE VIEW ---
+    function renderKageExperience(container) {
+      container.innerHTML = `
+        <div class="space-y-4 animate-fade-in">
+          <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-[#e0231c] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="badge text-[10px] uppercase tracking-wider bg-[#e0231c]/20 text-[#ff5a3c] border border-[#e0231c]/30">THREEUI 3D SHADER EXPERIENCE</span>
+                <span class="text-xs text-slate-400 font-mono">Live WebGL • Five-Chapter Night Walk</span>
+              </div>
+              <h3 class="text-xl font-black text-white mt-1">Kage — Where Stillness Reveals the Unseen</h3>
+              <p class="text-xs text-slate-400">Authored Kyoto mountain temple sanctuary with live Three.js lighting, temple lanterns, and parallax vegetation.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="/landing-pages/kage.html" target="_blank" class="btn-primary text-xs py-2.5 px-4 flex items-center gap-2 bg-gradient-to-r from-[#e0231c] to-indigo-600 shadow-lg">
+                <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                <span>Open Dedicated Window</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="glass-panel rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative" style="height: calc(100vh - 14rem); min-height: 560px;">
+            <iframe src="/landing-pages/kage.html" class="w-full h-full border-0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"></iframe>
+          </div>
+        </div>
+      `;
       lucide.createIcons();
     }
 
