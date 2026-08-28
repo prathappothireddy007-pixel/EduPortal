@@ -209,9 +209,9 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 #pre{
   position:fixed; inset:0; z-index:100; background:#05070a;
   display:flex; align-items:center; justify-content:center;
-  transition:opacity .8s var(--ease), visibility .8s;
+  transition:opacity .6s var(--ease), visibility .6s;
 }
-#pre.done{ opacity:0; visibility:hidden; pointer-events:none; }
+#pre.done{ opacity:0 !important; visibility:hidden !important; pointer-events:none !important; }
 .pre-in{ width:min(420px,74vw); text-align:center; }
 .pre-mark{ margin:0 auto 26px; width:44px; height:44px; opacity:.9; }
 .pre-mark svg{ width:100%; height:100%; display:block; }
@@ -707,7 +707,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
     </section>
 
     <!-- ============================================================ Chapter V: Portal Gateway -->
-    <section class="sec fin" id="portal" data-cam="0">
+    <section class="sec fin" id="portal">
       <div class="sec-head" data-rv="fade">
         <span class="k"><b>Chapter 05</b> · The Gateway to EduPortal OS</span>
         <div class="rule"></div>
@@ -4369,7 +4369,7 @@ function queue() { TIMER ? setTimeout(() => frame(performance.now()), 16) : requ
 
 /* ======================================================== 14 · booting */
 const JOBS = [
-  ['Reading the type', () => document.fonts && document.fonts.load('600 320px Wordmark')],
+  ['Reading the type', () => Promise.race([document.fonts ? document.fonts.load('600 320px Wordmark') : Promise.resolve(), new Promise(r => setTimeout(r, 80))])],
   ['Pouring the ground', () => { initGL(); WORLD.uT = { value: 0 }; buildRig(); buildLights(); }],
   ['Cutting the approach', () => buildShell()],
   ['Raising the hall', () => buildTemple()],
@@ -4435,7 +4435,14 @@ function boot() {
       console.error('[kage] job "' + j[0] + '" failed', err);
       if (i <= 1) return fallback(err);          /* no renderer, no scene */
     }
-    (r && r.then) ? r.then(done, done) : done();
+    if (r && typeof r.then === 'function') {
+      let resolved = false;
+      const onDone = () => { if (!resolved) { resolved = true; done(); } };
+      r.then(onDone, onDone);
+      setTimeout(onDone, 250);
+    } else {
+      done();
+    }
   };
   setTimeout(step, 60);
 }
@@ -4485,6 +4492,16 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
 else addEventListener('DOMContentLoaded', boot);
 })();
 
+
+// Safety Watchdog to guarantee preloader dismisses within 1.8 seconds if anything takes longer
+setTimeout(() => {
+  const pre = document.getElementById('pre');
+  if (pre && !pre.classList.contains('done')) {
+    pre.classList.add('done');
+    document.body.classList.remove('is-locked');
+    document.querySelectorAll('[data-rv], .mask-line').forEach(e => e.classList.add('rv-in'));
+  }
+}, 1800);
 </script>
 
 <!-- Interactive Helper Functions & EduPortal SPA Application Logic -->
