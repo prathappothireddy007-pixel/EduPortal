@@ -473,22 +473,250 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 #app-screen [class*="bg-blue-600"],
 #app-screen [class*="from-blue-600"],
 #app-screen [class*="from-purple-600"],
-#app-screen .btn-primary {
+#app-screen .btn-primary,
+.btn-primary {
   background: linear-gradient(135deg, #e0231c 0%, #ff5a3c 100%) !important;
   color: #FFFFFF !important;
-  border: none !important;
-  box-shadow: 0 4px 18px rgba(224, 35, 28, 0.35) !important;
-  font-weight: 500 !important;
-  border-radius: 0.75rem !important;
+  font-family: 'Onest', sans-serif !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  border-radius: 0.85rem !important;
+  box-shadow: 0 4px 16px rgba(224, 35, 28, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+  cursor: pointer !important;
+  position: relative !important;
+  overflow: hidden !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+}
+
+#app-screen .btn-primary::after,
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -120%;
+  width: 80%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+
+#app-screen .btn-primary:hover::after,
+.btn-primary:hover::after {
+  left: 140%;
 }
 
 #app-screen [class*="bg-blue-600"]:hover,
 #app-screen [class*="from-blue-600"]:hover,
 #app-screen [class*="from-purple-600"]:hover,
-#app-screen .btn-primary:hover {
-  transform: translateY(-1px) !important;
-  box-shadow: 0 6px 24px rgba(224, 35, 28, 0.55) !important;
-  opacity: 0.96 !important;
+#app-screen .btn-primary:hover,
+.btn-primary:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 8px 28px rgba(224, 35, 28, 0.65), 0 0 18px rgba(255, 90, 60, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+  filter: brightness(1.06) !important;
+}
+
+#app-screen [class*="bg-blue-600"]:active,
+#app-screen [class*="from-blue-600"]:active,
+#app-screen [class*="from-purple-600"]:active,
+#app-screen .btn-primary:active,
+.btn-primary:active {
+  transform: translateY(1.5px) scale(0.96) !important;
+  box-shadow: 0 2px 8px rgba(224, 35, 28, 0.4), inset 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  filter: brightness(0.95) !important;
+}
+
+/* Secondary Obsidian Glass Buttons */
+#app-screen .btn-secondary,
+.btn-secondary {
+  background: rgba(223, 231, 224, 0.05) !important;
+  color: var(--bone) !important;
+  font-family: 'Onest', sans-serif !important;
+  font-size: 11.5px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  border: 1px solid rgba(223, 231, 224, 0.16) !important;
+  border-radius: 0.85rem !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(223, 231, 224, 0.1) !important;
+  cursor: pointer !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+}
+
+#app-screen .btn-secondary:hover,
+.btn-secondary:hover {
+  background: rgba(223, 231, 224, 0.12) !important;
+  border-color: rgba(224, 35, 28, 0.5) !important;
+  color: #FFFFFF !important;
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), 0 0 15px rgba(224, 35, 28, 0.2) !important;
+}
+
+#app-screen .btn-secondary:active,
+.btn-secondary:active {
+  transform: translateY(1.5px) scale(0.96) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Kyoto Cyberpunk Tabs & Interactive Navigation Pills */
+#app-screen button[onclick*="switchGbTab"],
+#app-screen button[onclick*="switchTab"],
+#app-screen button[onclick*="setTimetableDay"],
+#app-screen button[onclick*="setTimetableScope"],
+#app-screen button[onclick*="switchReportTab"],
+#app-screen .tab-btn {
+  font-family: 'Onest', sans-serif !important;
+  font-size: 11.5px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  border-radius: 0.8rem !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  position: relative !important;
+  border: 1px solid rgba(223, 231, 224, 0.08) !important;
+  cursor: pointer !important;
+}
+
+/* Inactive Tab Hover */
+#app-screen button[onclick*="switchGbTab"]:not([class*="bg-purple-600"]):not([class*="bg-[#e0231c]"]):hover,
+#app-screen button[onclick*="setTimetableDay"]:not([class*="bg-blue-600"]):hover,
+#app-screen button[onclick*="setTimetableScope"]:not([class*="bg-indigo-600"]):hover {
+  background: rgba(223, 231, 224, 0.1) !important;
+  border-color: rgba(223, 231, 224, 0.25) !important;
+  color: #FFFFFF !important;
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Active Tab Highlight (Glow & Vermilion gradient) */
+#app-screen [class*="bg-purple-600"],
+#app-screen [class*="bg-indigo-600"],
+#app-screen button[onclick*="setTimetableDay"][class*="bg-blue-600"],
+#app-screen .tab-btn.active {
+  background: linear-gradient(135deg, #e0231c 0%, #ff5a3c 100%) !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 4px 18px rgba(224, 35, 28, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+  transform: translateY(-1px) scale(1.02) !important;
+}
+
+/* Active Tab Press */
+#app-screen button[onclick*="switchGbTab"]:active,
+#app-screen button[onclick*="setTimetableDay"]:active,
+#app-screen button[onclick*="setTimetableScope"]:active,
+#app-screen .tab-btn:active {
+  transform: translateY(1.5px) scale(0.96) !important;
+}
+
+/* Sidebar Nav Items */
+#app-screen aside#sidebar button {
+  font-family: 'Onest', sans-serif !important;
+  letter-spacing: 0.04em !important;
+  transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  position: relative !important;
+  border-radius: 0.85rem !important;
+}
+
+/* Inactive sidebar item hover */
+#app-screen aside#sidebar button:hover {
+  background: rgba(223, 231, 224, 0.07) !important;
+  color: #FFFFFF !important;
+  transform: translateX(4px) !important;
+  box-shadow: inset 2px 0 0 rgba(255, 90, 60, 0.45), 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Active sidebar item */
+#app-screen aside#sidebar button[class*="border-[#e0231c]"],
+#app-screen aside#sidebar button[class*="bg-[#e0231c]/20"],
+#app-screen aside#sidebar button.active {
+  background: linear-gradient(90deg, rgba(224, 35, 28, 0.26) 0%, rgba(224, 35, 28, 0.05) 100%) !important;
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+  border-left: 3px solid #e0231c !important;
+  border-top: 1px solid rgba(224, 35, 28, 0.35) !important;
+  border-bottom: 1px solid rgba(224, 35, 28, 0.15) !important;
+  border-right: 1px solid rgba(224, 35, 28, 0.1) !important;
+  box-shadow: 0 0 25px rgba(224, 35, 28, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+  transform: translateX(2px) !important;
+}
+
+#app-screen aside#sidebar button:active {
+  transform: scale(0.97) !important;
+}
+
+/* Universal Tactile Haptic Press for all clickable buttons, cards & pills */
+button:active,
+.chip:active,
+.glass-card:active,
+.stat-card:active,
+a.btn-primary:active,
+a.btn-secondary:active {
+  transform: scale(0.97) translateY(1px) !important;
+  transition: transform 0.08s ease !important;
+}
+
+/* Badges & Status Pills */
+.badge {
+  font-family: 'Onest', monospace, sans-serif !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  padding: 4px 9px !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+.badge-vermilion {
+  background: rgba(224, 35, 28, 0.18) !important;
+  color: #ff5a3c !important;
+  border: 1px solid rgba(224, 35, 28, 0.45) !important;
+  box-shadow: 0 0 12px rgba(224, 35, 28, 0.2) !important;
+}
+
+.badge-emerald {
+  background: rgba(16, 185, 129, 0.14) !important;
+  color: #34d399 !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.15) !important;
+}
+
+.badge-amber {
+  background: rgba(245, 158, 11, 0.14) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.15) !important;
+}
+
+.badge-blue,
+.badge-purple {
+  background: rgba(224, 35, 28, 0.14) !important;
+  color: #ff7a5c !important;
+  border: 1px solid rgba(224, 35, 28, 0.3) !important;
+  box-shadow: 0 0 10px rgba(224, 35, 28, 0.15) !important;
+}
+
+.badge-rose {
+  background: rgba(244, 63, 94, 0.18) !important;
+  color: #fb7185 !important;
+  border: 1px solid rgba(244, 63, 94, 0.4) !important;
+  box-shadow: 0 0 12px rgba(244, 63, 94, 0.2) !important;
 }
 
 /* Modal styling */
