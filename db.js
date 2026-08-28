@@ -356,6 +356,9 @@ const initDB = async () => {
       `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS geo_deadline TIMESTAMP`,
       `ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS is_expired BOOLEAN DEFAULT FALSE`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS plain_pass VARCHAR(255)`,
+      `ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_student_id_date_key`,
+      `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS slot VARCHAR(10) DEFAULT 'A'`,
+      `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS subject_id INTEGER`,
       `CREATE TABLE IF NOT EXISTS hall_ticket_requests (
         id SERIAL PRIMARY KEY,
         student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,

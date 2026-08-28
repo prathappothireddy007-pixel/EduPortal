@@ -152,22 +152,25 @@ router.post('/submit-phase1', authenticate, requireFaculty, async (req, res) => 
       'assessment_marks',
       'Assessment Marks Recorded 📝',
       `Assessment marks (${d1}/100) recorded for "${subjectName}".`,
-      result.rows[0].id
+      'phase1_marks_entered',
+      '📝 Phase 1 Assessment Marks Recorded',
+      `Phase 1 marks (Assessments: ${d1}/100, Class Lab: ${d3}/100) recorded for "${subject.rows[0].name}".`,
+      subjectId
     );
 
-    await logAction(req.user.id, req.user.name, req.user.role, 'submit_phase1_grades', 'grades', result.rows[0].id);
+    await logAction(req.user.id, req.user.name, req.user.role, 'submit_phase1_individual', 'grades', result.rows[0].id);
 
     res.json({
-      message: 'Phase 1 marks (Assessments & Class Lab) submitted successfully. You can now close the course for exams.',
+      message: 'Phase 1 marks recorded for student!',
       grade: result.rows[0]
     });
   } catch (err) {
-    console.error('[Submit Phase 1] Error:', err);
+    console.error('[Submit Phase 1 Individual] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// ── 2. CLOSE COURSE / CLOSE LAUNCH: Permitted only after Phase 1 marks are submitted ──
+// ── 2. CLOSE COURSE / CLOSE LAUNCH: Locks enrollments & finalizes Phase 1 ──
 router.post('/close-course/:subjectId', authenticate, requireFaculty, async (req, res) => {
   const { subjectId } = req.params;
   const { examDate, examSession, examHall } = req.body;
@@ -176,13 +179,11 @@ router.post('/close-course/:subjectId', authenticate, requireFaculty, async (req
     const subject = await pool.query('SELECT * FROM subjects WHERE id=$1', [subjectId]);
     if (!subject.rows[0]) return res.status(404).json({ error: 'Course not found' });
 
-    if (!subject.rows[0].is_phase1_submitted) {
-      return res.status(400).json({
-        error: 'Cannot close course yet. Faculty must first enter Assessment and Class Lab marks for students.'
-      });
+    if (req.user.role === 'faculty' && subject.rows[0].faculty_id && subject.rows[0].faculty_id !== req.user.id) {
+      return res.status(403).json({ error: 'You are only authorized to manage your own courses.' });
     }
 
-    const finalExamDate = examDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const finalExamDate = (examDate && String(examDate).trim()) ? String(examDate).trim() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const finalExamSession = examSession || 'FN (09:30 AM - 12:30 PM)';
     const finalExamHall = examHall || 'University Exam Block - Hall A';
 
@@ -190,6 +191,7 @@ router.post('/close-course/:subjectId', authenticate, requireFaculty, async (req
       `UPDATE subjects SET
          is_closed = TRUE,
          is_launched = FALSE,
+         is_phase1_submitted = TRUE,
          exam_date = $1,
          exam_session = $2,
          exam_hall = $3
@@ -420,7 +422,11 @@ router.post('/submit-phase2', authenticate, requireFaculty, async (req, res) => 
   const d4 = Math.min(100, Math.max(0, parseFloat(div4UnivLab) || 0));
 
   try {
-    const subject = await pool.query('SELECT name, is_closed FROM subjects WHERE id=$1', [subjectId]);
+    const subject = await pool.query('SELECT name, faculty_id, is_closed FROM subjects WHERE id=$1', [subjectId]);
+    if (!subject.rows[0]) return res.status(404).json({ error: 'Subject not found' });
+    if (req.user.role === 'faculty' && subject.rows[0].faculty_id && subject.rows[0].faculty_id !== req.user.id) {
+      return res.status(403).json({ error: 'You are only authorized to enter marks for your own courses.' });
+    }
     if (!subject.rows[0]?.is_closed) {
       return res.status(400).json({ error: 'Course launch must be closed before entering Phase 2 (Capstone & University Lab) marks.' });
     }
@@ -482,8 +488,11 @@ router.post('/submit-phase3-results', authenticate, requireFaculty, async (req, 
   if (!subjectId) return res.status(400).json({ error: 'subjectId is required' });
 
   try {
-    const subject = await pool.query('SELECT name, code FROM subjects WHERE id=$1', [subjectId]);
+    const subject = await pool.query('SELECT name, code, faculty_id FROM subjects WHERE id=$1', [subjectId]);
     if (!subject.rows[0]) return res.status(404).json({ error: 'Subject not found' });
+    if (req.user.role === 'faculty' && subject.rows[0].faculty_id && subject.rows[0].faculty_id !== req.user.id) {
+      return res.status(403).json({ error: 'You are only authorized to enter marks for your own courses.' });
+    }
 
     if (Array.isArray(studentMarks) && studentMarks.length > 0) {
       for (const sm of studentMarks) {
@@ -554,8 +563,11 @@ router.post('/submit-phase3-individual', authenticate, requireFaculty, async (re
   const d5 = Math.min(100, Math.max(0, parseFloat(div5UnivExam) || 0));
 
   try {
-    const subject = await pool.query('SELECT name, code FROM subjects WHERE id=$1', [subjectId]);
+    const subject = await pool.query('SELECT name, code, faculty_id FROM subjects WHERE id=$1', [subjectId]);
     if (!subject.rows[0]) return res.status(404).json({ error: 'Subject not found' });
+    if (req.user.role === 'faculty' && subject.rows[0].faculty_id && subject.rows[0].faculty_id !== req.user.id) {
+      return res.status(403).json({ error: 'You are only authorized to enter marks for your own courses.' });
+    }
 
     const gradeRow = await pool.query(
       'SELECT id, div1_assessments, div2_capstone, div3_class_lab, div4_univ_lab FROM grades WHERE student_id=$1 AND subject_id=$2',

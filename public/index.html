@@ -854,11 +854,11 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
           <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
             <div>
               <label class="block text-xs font-medium text-slate-400 uppercase tracking-[0.16em] mb-2" id="login-id-label">Admin / Faculty ID</label>
-              <input type="text" id="login-id" required class="glass-input w-full font-medium" placeholder="Enter User ID">
+              <input type="text" id="login-id" required class="glass-input w-full font-medium">
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-400 uppercase tracking-[0.16em] mb-2">Password</label>
-              <input type="password" id="login-password" required class="glass-input w-full font-medium" placeholder="••••••••">
+              <input type="password" id="login-password" required class="glass-input w-full font-medium">
             </div>
             <button type="submit" class="btn-primary w-full mt-2 py-3.5 flex items-center justify-center gap-2 bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] uppercase tracking-[0.14em] text-xs">
               <span>Sign In to Portal</span>
@@ -4781,13 +4781,13 @@ setTimeout(() => {
 
       if (role === 'admin') {
         lbl.innerText = 'Institutional Admin ID or Email Address';
-        inp.placeholder = 'e.g. 192411184 or admin@eduportal.com';
+        inp.placeholder = '';
       } else if (role === 'faculty') {
         lbl.innerText = 'Faculty ID or Institutional Email';
-        inp.placeholder = 'e.g. 2024FACCSE001';
+        inp.placeholder = '';
       } else {
         lbl.innerText = 'Student Register Number (Reg No) or Email';
-        inp.placeholder = 'e.g. 2024CSE001';
+        inp.placeholder = '';
       }
     }
 
@@ -8884,7 +8884,7 @@ setTimeout(() => {
 
 
 // =========================================================================
-// ENHANCED MODULES: Slots A-Z, Map Search & Geotag OD, Individual Marks
+// ENHANCED MODULES: Slots A-Z, Slot-Wise Attendance, Faculty Scoping, Map Search & Geotag OD, Individual Marks
 // =========================================================================
 
 var SLOTS_LIST = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
@@ -8894,6 +8894,7 @@ var odMapInstance = null;
 var odMarkerInstance = null;
 var studentSlotFilter = 'ALL';
 var currentGradebookTab = 'phase1';
+var currentAttendanceSubjectId = null;
 
 // ── 1. FACULTY / ADMIN: SUBJECTS & COURSE MASTER CATALOG (SLOTS A-Z) ──────
 async function renderSubjects(container) {
@@ -8906,7 +8907,7 @@ async function renderSubjects(container) {
 
   container.innerHTML = `
     <div class="space-y-6 animate-fade-in">
-      <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-[#e0231c] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-[#e0231c] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
         <div>
           <div class="flex items-center gap-2">
             <span class="badge badge-vermilion text-[10px] uppercase tracking-[0.2em]">SLOTS A TO Z</span>
@@ -8915,7 +8916,7 @@ async function renderSubjects(container) {
           <h3 class="text-2xl font-normal text-white tracking-wide mt-1">Course Catalog & Slot Allocations</h3>
           <p class="text-xs text-slate-300">Launch courses into designated Slots (A through Z) and configure target eligible student departments.</p>
         </div>
-        <button onclick="openAddSubjectModal()" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase">
+        <button onclick="openAddSubjectModal()" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase shadow-md">
           <i data-lucide="book-plus" class="w-4 h-4"></i>
           <span>Launch Course in Slot</span>
         </button>
@@ -8948,8 +8949,9 @@ async function renderSubjects(container) {
         ${filteredSubjects.map(s => {
           const slot = (s.slot || 'A').toUpperCase();
           const targetDept = s.target_dept || 'ALL';
+          const isMine = S.user.role === 'admin' || (s.faculty_id && s.faculty_id === S.user.id);
           return `
-            <div class="glass-card p-6 rounded-3xl flex flex-col justify-between border border-white/10 hover:border-[#e0231c]/40 transition-all space-y-4">
+            <div class="glass-card p-6 rounded-3xl flex flex-col justify-between border ${isMine ? 'border-[#e0231c]/30 shadow-lg' : 'border-white/10 opacity-80'} hover:border-[#e0231c]/60 transition-all space-y-4">
               <div class="space-y-3">
                 <div class="flex items-center justify-between gap-2">
                   <div class="flex items-center gap-2">
@@ -8958,9 +8960,12 @@ async function renderSubjects(container) {
                       ${s.course_code || 'CS3451'}
                     </span>
                   </div>
-                  <span class="badge ${s.is_launched !== false ? 'badge-emerald' : 'badge-amber'} text-[10px] uppercase tracking-wider">
-                    ${s.is_launched !== false ? 'ACTIVE' : 'DRAFT'}
-                  </span>
+                  <div class="flex items-center gap-1.5">
+                    ${isMine ? `<span class="badge badge-vermilion text-[9px] uppercase font-bold">MY COURSE</span>` : ''}
+                    <span class="badge ${s.is_launched !== false ? 'badge-emerald' : 'badge-amber'} text-[10px] uppercase tracking-wider">
+                      ${s.is_launched !== false ? 'ACTIVE' : 'DRAFT'}
+                    </span>
+                  </div>
                 </div>
 
                 <div>
@@ -8971,26 +8976,32 @@ async function renderSubjects(container) {
                 <div class="space-y-1.5 pt-2 border-t border-white/10 text-xs">
                   <div class="flex items-center justify-between text-slate-300">
                     <span class="text-slate-400">Instructor:</span>
-                    <span class="font-medium text-white">${s.faculty_name || 'Assigned Staff'}</span>
+                    <span class="font-medium ${isMine ? 'text-[#ff5a3c]' : 'text-white'}">${s.faculty_name || 'Assigned Staff'}</span>
                   </div>
                   <div class="flex items-center justify-between text-slate-300">
                     <span class="text-slate-400">Eligible Dept:</span>
                     <span class="badge ${targetDept === 'ALL' ? 'badge-blue' : 'badge-vermilion'} text-[10px]">${targetDept}</span>
                   </div>
                   <div class="flex items-center justify-between text-slate-300">
-                    <span class="text-slate-400">Type / Enrollments:</span>
+                    <span class="text-slate-400">Enrolled Students:</span>
                     <span class="text-emerald-400 font-medium">${s.enrolled_count || 0} Student${s.enrolled_count !== 1 ? 's' : ''}</span>
                   </div>
                 </div>
               </div>
 
               <div class="pt-3 border-t border-white/10 flex items-center justify-between gap-2">
-                <button onclick="toggleCourseLaunch(${s.id}, ${s.is_launched !== false ? 'false' : 'true'})" class="btn-secondary text-xs py-1.5 px-3 rounded-lg flex-1">
-                  ${s.is_launched !== false ? 'Close Launch' : 'Launch Course'}
-                </button>
-                <button onclick="deleteSubject(${s.id})" class="p-1.5 rounded-lg text-slate-400 hover:text-[#e0231c] hover:bg-white/5">
-                  <i data-lucide="trash-2" class="w-4 h-4"></i>
-                </button>
+                ${isMine ? `
+                  <button onclick="toggleCourseLaunch(${s.id}, ${s.is_launched !== false ? 'false' : 'true'})" class="btn-secondary text-xs py-1.5 px-3 rounded-lg flex-1">
+                    ${s.is_launched !== false ? 'Close Launch' : 'Launch Course'}
+                  </button>
+                  <button onclick="deleteSubject(${s.id})" class="p-1.5 rounded-lg text-slate-400 hover:text-[#e0231c] hover:bg-white/5" title="Delete Course">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>
+                ` : `
+                  <div class="w-full text-center py-1.5 text-xs text-slate-500 italic">
+                    Assigned to ${s.faculty_name || 'other faculty'}
+                  </div>
+                `}
               </div>
             </div>
           `;
@@ -9021,6 +9032,8 @@ async function openAddSubjectModal() {
   } catch(e) {
     facultyList = [];
   }
+
+  const isFac = S.user.role === 'faculty';
 
   openModal('Launch / Create Course in Slot (A-Z)', `
     <div class="space-y-4 text-left">
@@ -9060,9 +9073,13 @@ async function openAddSubjectModal() {
         <!-- Assigned Faculty -->
         <div>
           <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Course Instructor</label>
-          <select id="m-sub-fac" class="glass-input w-full font-medium">
-            ${facultyList.map(f => `<option value="${f.id}">${f.name} (${f.admin_id || 'Faculty'})</option>`).join('')}
-            ${facultyList.length === 0 ? `<option value="${S.user.id}">${S.user.name} (Current User)</option>` : ''}
+          <select id="m-sub-fac" class="glass-input w-full font-medium" ${isFac ? 'disabled' : ''}>
+            ${isFac ? `
+              <option value="${S.user.id}" selected>${S.user.name} (${S.user.admin_id || 'You'})</option>
+            ` : `
+              ${facultyList.map(f => `<option value="${f.id}">${f.name} (${f.admin_id || 'Faculty'})</option>`).join('')}
+              ${facultyList.length === 0 ? `<option value="${S.user.id}">${S.user.name} (Current User)</option>` : ''}
+            `}
           </select>
         </div>
       </div>
@@ -9108,7 +9125,7 @@ async function saveSubject() {
   const name = document.getElementById('m-sub-name')?.value.trim();
   const slot = document.getElementById('m-sub-slot')?.value || 'A';
   const subjectType = document.getElementById('m-sub-type')?.value || 'classroom';
-  const facultyId = document.getElementById('m-sub-fac')?.value;
+  const facultyId = S.user.role === 'faculty' ? S.user.id : document.getElementById('m-sub-fac')?.value;
   const targetDept = document.getElementById('m-sub-group')?.value || 'ALL';
   const description = document.getElementById('m-sub-desc')?.value.trim() || '';
   const isLaunched = document.getElementById('m-sub-launch')?.checked;
@@ -9143,7 +9160,7 @@ async function deleteSubject(id) {
     toast('Course deleted', 'info');
     renderPage();
   } catch(e) {
-    toast('Failed to delete course', 'error');
+    toast(e.message || 'Failed to delete course', 'error');
   }
 }
 
@@ -9159,44 +9176,33 @@ async function renderStudentCourseEnrollment(container) {
 
   container.innerHTML = `
     <div class="space-y-6 animate-fade-in">
-      <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-blue-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-blue-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
         <div>
           <div class="flex items-center gap-2">
-            <span class="badge badge-blue text-[10px] uppercase tracking-[0.2em]">SLOTS A TO Z</span>
-            <span class="text-xs text-slate-400 font-mono">My Curriculum</span>
+            <span class="badge badge-blue text-[10px] uppercase tracking-[0.2em]">SLOT REGISTRATION</span>
+            <span class="text-xs text-blue-400 font-mono">${enrolledCourses.length} Registered Courses</span>
           </div>
-          <h3 class="text-2xl font-normal text-white tracking-wide mt-1">Course Catalog & Slot Registration</h3>
-          <p class="text-xs text-slate-300">Browse launched courses in Slots A through Z. Enroll in eligible subjects for your department.</p>
+          <h3 class="text-2xl font-normal text-white tracking-wide mt-1">Course Catalog & Slot Selection</h3>
+          <p class="text-xs text-slate-300">Enroll in available courses across Slots A through Z based on your engineering branch eligibility.</p>
         </div>
-        <span class="badge badge-blue text-xs font-semibold py-2 px-4 rounded-xl shadow-md">
-          ${enrolledCourses.length} Enrolled Course${enrolledCourses.length !== 1 ? 's' : ''}
-        </span>
       </div>
 
-      <!-- Slot Filter Pills for Student -->
+      <!-- Slot Filter Pills A to Z -->
       <div class="glass-panel p-4 rounded-2xl border border-white/10 space-y-2">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Select Slot (A to Z):</span>
-          <span class="text-xs text-blue-400 font-mono">${filteredCourses.length} Available in View</span>
+          <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Browse by Slot (A - Z):</span>
+          <span class="text-xs text-blue-400 font-mono">${filteredCourses.length} Course${filteredCourses.length !== 1 ? 's' : ''} in View</span>
         </div>
         <div class="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin">
-          <button onclick="filterStudentSlot('ALL')" class="px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 transition-all ${studentSlotFilter === 'ALL' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
+          <button onclick="filterStudentSlot('ALL')" class="px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 transition-all ${studentSlotFilter === 'ALL' ? 'bg-blue-600 text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
             All Slots (${availableCourses.length})
           </button>
           ${SLOTS_LIST.map(slot => {
             const count = availableCourses.filter(c => (c.slot || 'A').toUpperCase() === slot).length;
-            const isEnrolledInSlot = enrolledCourses.some(c => (c.slot || 'A').toUpperCase() === slot);
             const active = studentSlotFilter === slot;
             return `
-              <button onclick="filterStudentSlot('${slot}')" class="px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 flex items-center gap-1 transition-all ${
-                active 
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md' 
-                  : isEnrolledInSlot 
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-                  : 'bg-white/5 text-slate-400 hover:text-white'
-              }">
-                <span>Slot ${slot}</span>
-                ${isEnrolledInSlot ? '<span class="text-[9px]">✓</span>' : count > 0 ? `<span class="opacity-75 text-[10px]">(${count})</span>` : ''}
+              <button onclick="filterStudentSlot('${slot}')" class="px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 transition-all ${active ? 'bg-blue-600 text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
+                Slot ${slot} ${count > 0 ? `<span class="opacity-75 text-[10px]">(${count})</span>` : ''}
               </button>
             `;
           }).join('')}
@@ -9204,18 +9210,13 @@ async function renderStudentCourseEnrollment(container) {
       </div>
 
       <!-- Course Cards Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         ${filteredCourses.map(c => {
           const slot = (c.slot || 'A').toUpperCase();
+          const targetDept = c.target_dept || 'ALL';
           const isEligible = c.is_dept_eligible !== false;
           return `
-            <div class="glass-card p-6 rounded-3xl flex flex-col justify-between border ${
-              c.is_enrolled 
-                ? 'border-emerald-500/40 bg-emerald-950/15' 
-                : isEligible 
-                ? 'border-white/10 hover:border-blue-500/40' 
-                : 'border-rose-500/20 bg-rose-950/10 opacity-75'
-            } transition-all space-y-4">
+            <div class="glass-card p-6 rounded-3xl flex flex-col justify-between border ${c.is_enrolled ? 'border-emerald-500/40 bg-emerald-950/10' : 'border-white/10'} hover:border-blue-500/40 transition-all space-y-4">
               <div class="space-y-3">
                 <div class="flex items-center justify-between gap-2">
                   <div class="flex items-center gap-2">
@@ -9224,63 +9225,53 @@ async function renderStudentCourseEnrollment(container) {
                       ${c.course_code || 'CS3451'}
                     </span>
                   </div>
-                  <span class="badge ${
-                    c.is_enrolled 
-                      ? 'badge-emerald' 
-                      : isEligible 
-                      ? 'badge-blue' 
-                      : 'badge-rose'
-                  } text-[10px] uppercase tracking-wider">
-                    ${c.is_enrolled ? '✓ ENROLLED' : isEligible ? 'ELIGIBLE' : 'DEPT RESTRICTED'}
-                  </span>
+                  ${c.is_enrolled ? `
+                    <span class="badge badge-emerald text-[10px] uppercase font-bold">ENROLLED</span>
+                  ` : isEligible ? `
+                    <span class="badge badge-blue text-[10px] uppercase">ELIGIBLE</span>
+                  ` : `
+                    <span class="badge badge-rose text-[10px] uppercase">RESTRICTED</span>
+                  `}
                 </div>
 
                 <div>
                   <h4 class="font-medium text-white text-base tracking-wide">${c.subject_name}</h4>
-                  <p class="text-xs text-slate-400 mt-1 line-clamp-2">${c.description || 'Curriculum engineering course module.'}</p>
+                  <p class="text-xs text-slate-400 mt-1 line-clamp-2">${c.description || 'Comprehensive curriculum & lab practical modules.'}</p>
                 </div>
 
                 <div class="space-y-1.5 pt-2 border-t border-white/10 text-xs">
                   <div class="flex items-center justify-between text-slate-300">
                     <span class="text-slate-400">Instructor:</span>
-                    <span class="font-medium text-white">${c.faculty_name || 'Course Faculty'}</span>
+                    <span class="font-medium text-white">${c.faculty_name || 'Academic Faculty'}</span>
                   </div>
                   <div class="flex items-center justify-between text-slate-300">
-                    <span class="text-slate-400">Target Department:</span>
-                    <span class="font-medium ${isEligible ? 'text-emerald-400' : 'text-rose-400'}">${c.target_dept || 'ALL'}</span>
+                    <span class="text-slate-400">Target Group:</span>
+                    <span class="badge ${targetDept === 'ALL' ? 'badge-blue' : 'badge-vermilion'} text-[10px]">${targetDept}</span>
                   </div>
                 </div>
               </div>
 
               <div class="pt-3 border-t border-white/10">
                 ${c.is_enrolled ? `
-                  <button onclick="unenrollCourse(${c.id})" class="btn-secondary w-full text-xs py-2.5 rounded-xl border-rose-500/30 text-rose-400 hover:bg-rose-500/10 flex items-center justify-center gap-2">
-                    <i data-lucide="user-minus" class="w-4 h-4"></i>
-                    <span>Drop Slot ${slot} Course</span>
+                  <button onclick="unenrollCourse(${c.id})" class="btn-secondary w-full text-xs py-2 rounded-xl text-rose-400 border-rose-500/30 hover:bg-rose-500/10 flex items-center justify-center gap-1.5">
+                    <i data-lucide="user-minus" class="w-3.5 h-3.5"></i>
+                    <span>Drop / Unenroll</span>
                   </button>
                 ` : isEligible ? `
-                  <button onclick="enrollCourse(${c.id})" class="btn-primary w-full text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 tracking-wider uppercase">
-                    <i data-lucide="user-plus" class="w-4 h-4"></i>
+                  <button onclick="enrollInCourse(${c.id})" class="btn-primary w-full text-xs py-2 rounded-xl flex items-center justify-center gap-1.5">
+                    <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
                     <span>Enroll in Slot ${slot}</span>
                   </button>
                 ` : `
-                  <div class="text-center py-2 text-rose-400 text-xs font-medium">
-                    Restricted to ${c.target_dept} students
-                  </div>
+                  <button disabled class="w-full py-2 rounded-xl text-xs font-medium bg-white/5 text-slate-500 border border-white/5 cursor-not-allowed text-center">
+                    Restricted to ${targetDept}
+                  </button>
                 `}
               </div>
             </div>
           `;
         }).join('')}
       </div>
-
-      ${filteredCourses.length === 0 ? `
-        <div class="glass-panel p-12 rounded-3xl text-center text-slate-400 space-y-3">
-          <i data-lucide="book-open" class="w-12 h-12 mx-auto text-slate-500"></i>
-          <h4 class="text-base font-normal text-white">No Courses Available in Slot ${studentSlotFilter}</h4>
-          <p class="text-xs text-slate-400">Faculty will launch courses for Slot ${studentSlotFilter} shortly.</p>
-        </div>
-      ` : ''}
     </div>
   `;
   lucide.createIcons();
@@ -9291,10 +9282,10 @@ function filterStudentSlot(slot) {
   renderPage();
 }
 
-async function enrollCourse(subjectId) {
+async function enrollInCourse(subjectId) {
   try {
     await api('POST', '/enrollment/enroll', { subjectId });
-    toast('Enrolled in course successfully! 🎉', 'success');
+    toast('Enrolled in course successfully! 🎓', 'success');
     renderPage();
   } catch(e) {
     toast(e.message || 'Failed to enroll', 'error');
@@ -9302,123 +9293,466 @@ async function enrollCourse(subjectId) {
 }
 
 async function unenrollCourse(subjectId) {
-  if (!confirm('Are you sure you want to drop this course?')) return;
+  if (!confirm('Are you sure you want to drop this course? Your attendance and grade records for this course will be removed.')) return;
   try {
     await api('POST', '/enrollment/unenroll', { subjectId });
-    toast('Course dropped', 'info');
+    toast('Unenrolled from course and attendance recalculated.', 'info');
     renderPage();
   } catch(e) {
-    toast('Failed to drop course', 'error');
+    toast(e.message || 'Failed to unenroll', 'error');
   }
 }
 
 
-// ── 3. ON-DUTY (OD) WORKFLOW WITH MAP SEARCH & 30-MIN 30M RADIUS CHECK ────
-async function renderStudentOD(container) {
-  const odList = await api('GET', '/od');
+// ── 3. SLOT-WISE ATTENDANCE ENTRY (FACULTY VIEW) ──────────────────────────
+async function renderAttendance(container) {
+  const [subjects, todayStats] = await Promise.all([
+    api('GET', '/subjects'),
+    api('GET', '/attendance/stats').catch(() => [])
+  ]);
+
+  const isFac = S.user.role === 'faculty';
+  const mySubjects = isFac ? subjects.filter(s => s.faculty_id === S.user.id) : subjects;
+
+  if (!currentAttendanceSubjectId && mySubjects.length > 0) {
+    currentAttendanceSubjectId = mySubjects[0].id;
+  }
+
+  const activeSubject = mySubjects.find(s => s.id === currentAttendanceSubjectId) || mySubjects[0] || {};
+  let rosterData = { students: [] };
+
+  if (activeSubject.id) {
+    try {
+      rosterData = await api('GET', `/attendance/course-roster/${activeSubject.id}`);
+    } catch(e) {
+      rosterData = { students: [] };
+    }
+  }
+
+  const slot = (activeSubject.slot || 'A').toUpperCase();
+  const enrolledStudents = rosterData.students || [];
 
   container.innerHTML = `
     <div class="space-y-6 animate-fade-in">
       <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-emerald-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
         <div>
           <div class="flex items-center gap-2">
-            <span class="badge badge-emerald text-[10px] uppercase tracking-[0.2em]">ON-DUTY (OD) WORKFLOW</span>
-            <span class="text-xs text-slate-400 font-mono">30-Minute / 30m Radius Engine</span>
+            <span class="badge badge-emerald text-[10px] uppercase tracking-[0.2em]">SLOT-WISE ATTENDANCE ENGINE</span>
+            <span class="text-xs text-emerald-400 font-mono">Slot ${slot}</span>
           </div>
-          <h3 class="text-2xl font-normal text-white tracking-wide mt-1">My On-Duty (OD) Requests & Geo-Checkin</h3>
-          <p class="text-xs text-slate-300">Select class slot, pinpoint event venue on interactive map, and complete 30-meter geo-verification within 30 minutes of attendance marking.</p>
+          <h3 class="text-2xl font-normal text-white tracking-wide mt-1">Course & Slot Attendance Entry</h3>
+          <p class="text-xs text-slate-300">Mark slot-wise attendance for students enrolled in your course. Auto-syncs with the 30-minute 30m OD verification window.</p>
         </div>
-        <button onclick="openSubmitODModal()" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase shadow-lg">
+      </div>
+
+      <!-- Course & Slot Selector Bar -->
+      <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+          <div class="sm:col-span-6 space-y-1.5">
+            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Select Course & Slot to Mark:</label>
+            <select id="att-subject-select" class="glass-input w-full font-bold text-white text-xs" onchange="changeAttendanceSubject(this.value)">
+              ${mySubjects.map(s => `
+                <option value="${s.id}" ${s.id === activeSubject.id ? 'selected' : ''}>
+                  [Slot ${(s.slot || 'A').toUpperCase()}] ${s.code || ''} — ${s.name} (${s.enrolled_count || 0} Enrolled)
+                </option>
+              `).join('')}
+              ${mySubjects.length === 0 ? '<option value="">No courses assigned to you</option>' : ''}
+            </select>
+          </div>
+
+          <div class="sm:col-span-3 space-y-1.5">
+            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Session Date:</label>
+            <input type="date" id="att-date-input" value="${new Date().toISOString().split('T')[0]}" class="glass-input w-full font-mono text-xs">
+          </div>
+
+          <div class="sm:col-span-3 flex items-end gap-2 pt-5 sm:pt-0">
+            <button onclick="markAllAttendanceStatus('Present')" class="btn-secondary flex-1 text-xs py-2 rounded-xl text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10">
+              All Present
+            </button>
+            <button onclick="markAllAttendanceStatus('Absent')" class="btn-secondary flex-1 text-xs py-2 rounded-xl text-rose-400 border-rose-500/30 hover:bg-rose-500/10">
+              All Absent
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enrolled Students Slot Attendance Table -->
+      <div class="glass-panel rounded-3xl border border-white/10 overflow-hidden shadow-2xl space-y-4 p-6">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="badge badge-purple font-mono font-bold text-xs px-3 py-1">SLOT ${slot}</span>
+            <span class="text-sm font-medium text-white">${activeSubject.name || 'Course Roster'} (${enrolledStudents.length} Students)</span>
+          </div>
+          <button onclick="submitSlotAttendance(${activeSubject.id || 0}, '${slot}')" class="btn-primary text-xs py-2.5 px-6 rounded-xl flex items-center gap-2 uppercase tracking-wider shadow-md">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>Save Slot ${slot} Attendance</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
+              <tr>
+                <th class="p-3.5">Student Register No</th>
+                <th class="p-3.5">Student Name</th>
+                <th class="p-3.5">Department</th>
+                <th class="p-3.5">Slot ${slot} Attendance %</th>
+                <th class="p-3.5 text-center">Attendance Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 whitespace-nowrap">
+              ${enrolledStudents.length === 0 ? `
+                <tr>
+                  <td colspan="5" class="p-8 text-center text-slate-500">
+                    No students enrolled in Slot ${slot} for this course yet.
+                  </td>
+                </tr>
+              ` : enrolledStudents.map(stu => `
+                <tr class="hover:bg-white/[0.02] transition-colors" id="att-row-${stu.id}">
+                  <td class="p-3.5">
+                    <span class="font-mono text-xs font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                      ${stu.admin_id}
+                    </span>
+                  </td>
+                  <td class="p-3.5 font-medium text-white text-sm">${stu.name}</td>
+                  <td class="p-3.5"><span class="badge badge-purple">${stu.department || 'CSE'}</span></td>
+                  <td class="p-3.5">
+                    <div class="flex items-center gap-2">
+                      <div class="w-24 bg-white/10 rounded-full h-1.5 overflow-hidden">
+                        <div class="h-full rounded-full ${stu.attendancePercentage >= 75 ? 'bg-emerald-400' : 'bg-rose-500'}" style="width: ${stu.attendancePercentage}%"></div>
+                      </div>
+                      <span class="font-mono font-bold ${stu.attendancePercentage >= 75 ? 'text-emerald-400' : 'text-rose-400'}">
+                        ${stu.attendancePercentage}%
+                      </span>
+                      <span class="text-slate-500 text-[10px]">(${stu.attendedSessions || 0}/${stu.totalSessions || 0})</span>
+                    </div>
+                  </td>
+                  <td class="p-3.5 text-center">
+                    <div class="inline-flex items-center p-1 rounded-xl bg-white/5 border border-white/10 gap-1">
+                      <label class="cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-emerald-500/20 has-[:checked]:bg-emerald-500 has-[:checked]:text-white">
+                        <input type="radio" name="att_status_${stu.id}" value="Present" checked class="sr-only">
+                        <span>Present</span>
+                      </label>
+                      <label class="cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-rose-500/20 has-[:checked]:bg-rose-500 has-[:checked]:text-white">
+                        <input type="radio" name="att_status_${stu.id}" value="Absent" class="sr-only">
+                        <span>Absent</span>
+                      </label>
+                      <label class="cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-amber-500/20 has-[:checked]:bg-amber-500 has-[:checked]:text-white">
+                        <input type="radio" name="att_status_${stu.id}" value="OD" class="sr-only">
+                        <span>On-Duty</span>
+                      </label>
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+  lucide.createIcons();
+}
+
+function changeAttendanceSubject(subId) {
+  currentAttendanceSubjectId = parseInt(subId, 10);
+  renderPage();
+}
+
+function markAllAttendanceStatus(status) {
+  const inputs = document.querySelectorAll(`input[type="radio"][value="${status}"]`);
+  inputs.forEach(i => i.checked = true);
+  toast(`Marked all students as ${status}`, 'info');
+}
+
+async function submitSlotAttendance(subjectId, slot) {
+  if (!subjectId) return toast('Please select a valid course', 'warning');
+
+  const date = document.getElementById('att-date-input')?.value || new Date().toISOString().split('T')[0];
+  const rows = document.querySelectorAll(`[id^="att-row-"]`);
+  const records = [];
+
+  rows.forEach(row => {
+    const studentId = parseInt(row.id.replace('att-row-', ''), 10);
+    const checkedRadio = document.querySelector(`input[name="att_status_${studentId}"]:checked`);
+    const status = checkedRadio ? checkedRadio.value : 'Present';
+    records.push({ studentId, status, date, slot, subjectId });
+  });
+
+  if (records.length === 0) return toast('No students to mark attendance for', 'warning');
+
+  try {
+    const res = await api('POST', '/attendance', { subjectId, slot, date, records });
+    toast(res.message || `Slot ${slot} attendance recorded successfully! ✅`, 'success');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to save attendance', 'error');
+  }
+}
+
+
+// ── 4. STUDENT DASHBOARD (OPENING DASHBOARD) WITH SLOT-WISE ATTENDANCE ─────
+async function renderStudentDashboard(container) {
+  const [currentClass, announcements, ticketData, standingData] = await Promise.all([
+    api('GET', '/timetable/student/current-class').catch(() => null),
+    api('GET', '/announcements').catch(() => []),
+    api('GET', '/grades/hall-ticket').catch(() => ({ courses: [] })),
+    api('GET', '/attendance/student-standing').catch(() => ({ overallPercentage: 100, slotBreakdown: [] }))
+  ]);
+
+  const slots = standingData.slotBreakdown || [];
+
+  container.innerHTML = `
+    <div class="space-y-8 animate-fade-in">
+      <!-- Welcome Header -->
+      <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-[#e0231c] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="badge badge-vermilion text-[10px] uppercase tracking-[0.2em]">STUDENT PORTAL</span>
+            <span class="text-xs text-slate-400 font-mono">${S.user.admin_id || ''}</span>
+          </div>
+          <h3 class="text-2xl font-normal text-white tracking-wide mt-1">Welcome back, ${S.user.name}</h3>
+          <p class="text-xs text-slate-300">Track your slot-wise course attendance, verify examination hall tickets, and review academic standing.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="glass-card px-4 py-2 rounded-2xl border border-white/10 text-right">
+            <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Cumulative Attendance</span>
+            <span class="text-xl font-mono font-bold ${standingData.overallPercentage >= 75 ? 'text-emerald-400' : 'text-rose-400'}">${standingData.overallPercentage}%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slot-Wise Attendance Standing Cards (Opening Dashboard) -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i data-lucide="calendar-check" class="w-5 h-5 text-[#ff5a3c]"></i>
+            <h4 class="text-lg font-medium text-white tracking-wide">Slot-Wise Attendance Standing</h4>
+          </div>
+          <span class="text-xs text-slate-400 font-mono">${slots.length} Enrolled Slot${slots.length !== 1 ? 's' : ''}</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          ${slots.map(s => {
+            const isEligible = s.percentage >= 75;
+            return `
+              <div class="glass-card p-6 rounded-3xl border ${isEligible ? 'border-white/10 hover:border-emerald-500/40' : 'border-rose-500/40 bg-rose-950/10'} transition-all space-y-4">
+                <div class="flex items-center justify-between">
+                  <span class="badge badge-purple font-mono font-bold text-xs px-2.5 py-1">SLOT ${s.slot}</span>
+                  <span class="font-mono text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">${s.courseCode || 'CS3451'}</span>
+                </div>
+
+                <div>
+                  <h5 class="text-base font-medium text-white tracking-wide truncate">${s.courseName}</h5>
+                  <p class="text-xs text-slate-400 mt-0.5">${s.facultyName || 'Course Instructor'}</p>
+                </div>
+
+                <div class="space-y-2 pt-2 border-t border-white/10">
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-slate-400">Attendance:</span>
+                    <span class="font-mono font-bold text-sm ${isEligible ? 'text-emerald-400' : 'text-rose-400'}">${s.percentage}%</span>
+                  </div>
+                  <div class="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+                    <div class="h-full rounded-full ${isEligible ? 'bg-emerald-400' : 'bg-rose-500'}" style="width: ${s.percentage}%"></div>
+                  </div>
+                  <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                    <span>${s.presentCount + s.odCount} / ${s.totalSessions} Sessions Attended</span>
+                    ${isEligible ? `
+                      <span class="text-emerald-400 font-medium">Eligible ✅</span>
+                    ` : `
+                      <span class="text-rose-400 font-medium">At Risk ⚠️</span>
+                    `}
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+
+          ${slots.length === 0 ? `
+            <div class="col-span-full glass-panel p-8 rounded-3xl text-center text-slate-400">
+              <p class="text-sm">You have not enrolled in any course slots yet.</p>
+              <button onclick="switchTab('course-enrollment')" class="btn-primary text-xs py-2 px-4 rounded-xl mt-3">
+                Browse Course Catalog
+              </button>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+
+      <!-- Current Class & Hall Ticket Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Live Class Now -->
+        <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
+          <div class="flex items-center justify-between border-b border-white/10 pb-3">
+            <span class="text-xs uppercase font-medium tracking-[0.2em] text-slate-400">Live Period Schedule</span>
+            <span class="badge badge-emerald">Real-time</span>
+          </div>
+          ${currentClass && currentClass.subject_name ? `
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xl font-medium text-white">${currentClass.subject_name}</span>
+                <span class="badge badge-purple">${currentClass.slot ? 'Slot ' + currentClass.slot : 'Active'}</span>
+              </div>
+              <p class="text-xs text-slate-300">Room: <b class="text-emerald-400">${currentClass.room_name || currentClass.classroom_name || 'Assigned Hall'}</b></p>
+              <p class="text-xs text-slate-400 font-mono">${currentClass.start_time} - ${currentClass.end_time}</p>
+            </div>
+          ` : `
+            <div class="text-center py-6 text-slate-500 text-xs">
+              No lecture in session right now.
+            </div>
+          `}
+        </div>
+
+        <!-- Hall Ticket Clearance -->
+        <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
+          <div class="flex items-center justify-between border-b border-white/10 pb-3">
+            <span class="text-xs uppercase font-medium tracking-[0.2em] text-slate-400">Examination Clearance</span>
+            <span class="badge badge-blue">University Hall Ticket</span>
+          </div>
+          <p class="text-xs text-slate-300">When faculty closes course launches for exams, you can request and download your verified Hall Tickets.</p>
+          <button onclick="switchTab('hall-ticket')" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 w-full">
+            <i data-lucide="ticket" class="w-4 h-4"></i>
+            <span>View University Hall Tickets</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  lucide.createIcons();
+}
+
+
+// ── 5. STUDENT ATTENDANCE CALCULATOR / STANDING VIEW ─────────────────────
+async function renderAttendanceCalculator(container) {
+  const standingData = await api('GET', '/attendance/student-standing').catch(() => ({ overallPercentage: 100, slotBreakdown: [] }));
+  const slots = standingData.slotBreakdown || [];
+
+  container.innerHTML = `
+    <div class="space-y-6 animate-fade-in">
+      <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-emerald-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="badge badge-emerald text-[10px] uppercase tracking-[0.2em]">ATTENDANCE STANDING</span>
+            <span class="text-xs text-emerald-400 font-mono">75% Mandatory Minimum</span>
+          </div>
+          <h3 class="text-2xl font-normal text-white tracking-wide mt-1">Slot-Wise Attendance Standing</h3>
+          <p class="text-xs text-slate-300">Detailed standing breakdown per enrolled course slot and 75% examination eligibility status.</p>
+        </div>
+        <div class="glass-card px-6 py-3 rounded-2xl border border-white/10 text-center">
+          <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Cumulative Standing</span>
+          <span class="text-3xl font-mono font-bold ${standingData.overallPercentage >= 75 ? 'text-emerald-400' : 'text-rose-400'}">${standingData.overallPercentage}%</span>
+        </div>
+      </div>
+
+      <!-- Slot Breakdown Table -->
+      <div class="glass-panel rounded-3xl border border-white/10 overflow-hidden shadow-2xl p-6 space-y-4">
+        <h4 class="text-base font-medium text-white tracking-wide">Enrolled Course Slots Standing</h4>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
+              <tr>
+                <th class="p-3.5">Slot</th>
+                <th class="p-3.5">Course Code</th>
+                <th class="p-3.5">Subject Name</th>
+                <th class="p-3.5">Instructor</th>
+                <th class="p-3.5">Sessions (Attended / Total)</th>
+                <th class="p-3.5">Attendance %</th>
+                <th class="p-3.5 text-right">Exam Clearance</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 whitespace-nowrap">
+              ${slots.length === 0 ? `
+                <tr><td colspan="7" class="p-8 text-center text-slate-500">No enrolled slots found.</td></tr>
+              ` : slots.map(s => `
+                <tr class="hover:bg-white/[0.02] transition-colors">
+                  <td class="p-3.5"><span class="badge badge-purple font-mono font-bold">SLOT ${s.slot}</span></td>
+                  <td class="p-3.5 font-mono text-blue-400 font-bold">${s.courseCode || 'CS3451'}</td>
+                  <td class="p-3.5 font-medium text-white">${s.courseName}</td>
+                  <td class="p-3.5 text-slate-400">${s.facultyName || 'Faculty'}</td>
+                  <td class="p-3.5 font-mono">${s.presentCount + s.odCount} / ${s.totalSessions}</td>
+                  <td class="p-3.5">
+                    <span class="font-mono font-bold text-sm ${s.percentage >= 75 ? 'text-emerald-400' : 'text-rose-400'}">${s.percentage}%</span>
+                  </td>
+                  <td class="p-3.5 text-right">
+                    ${s.percentage >= 75 ? `
+                      <span class="badge badge-emerald text-[10px] uppercase">ELIGIBLE FOR EXAMS ✅</span>
+                    ` : `
+                      <span class="badge badge-rose text-[10px] uppercase">BELOW 75% ⚠️</span>
+                    `}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+  lucide.createIcons();
+}
+
+
+// ── 6. ON-DUTY (OD) WORKFLOW: MAP SEARCH & 30m / 30-MIN STRICT CHECK-IN ──
+async function renderStudentOD(container) {
+  const [odList, events] = await Promise.all([
+    api('GET', '/od'),
+    api('GET', '/events').catch(() => [])
+  ]);
+
+  container.innerHTML = `
+    <div class="space-y-6 animate-fade-in">
+      <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-amber-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="badge badge-amber text-[10px] uppercase tracking-[0.2em]">ON-DUTY (OD) GOVERNANCE</span>
+            <span class="text-xs text-amber-400 font-mono">30m Radius Verification</span>
+          </div>
+          <h3 class="text-2xl font-normal text-white tracking-wide mt-1">Student On-Duty (OD) Requests & Geo-Verification</h3>
+          <p class="text-xs text-slate-300">Select event slot, pin location via interactive map search, and complete check-in within 30 minutes of faculty attendance marking.</p>
+        </div>
+        <button onclick="openSubmitODModal()" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase shadow-md">
           <i data-lucide="plus-circle" class="w-4 h-4"></i>
           <span>Submit New OD Request</span>
         </button>
       </div>
 
-      <div class="space-y-6">
-        ${(odList || []).length > 0 ? (odList || []).map(o => {
-          const slot = (o.slot || 'A').toUpperCase();
+      <!-- OD Requests List -->
+      <div class="grid grid-cols-1 gap-6">
+        ${odList.map(o => {
+          const slot = (o.slot || 'ALL').toUpperCase();
           const hasAttendanceMarked = Boolean(o.attendance_marked_at);
-          let minsRemaining = null;
-          let isExpired = Boolean(o.is_expired);
-
-          if (hasAttendanceMarked && o.geo_deadline) {
-            const deadlineMs = new Date(o.geo_deadline).getTime();
-            const nowMs = Date.now();
-            minsRemaining = Math.max(0, Math.round((deadlineMs - nowMs) / 60000));
-            if (minsRemaining <= 0) isExpired = true;
-          }
-
+          const deadline = o.geo_deadline ? new Date(o.geo_deadline).getTime() : 0;
+          const now = Date.now();
+          const isWindowActive = hasAttendanceMarked && o.status === 'approved' && now <= deadline;
+          const isExpired = hasAttendanceMarked && now > deadline && o.status === 'approved';
           const isCompleted = o.status === 'completed' || o.status === 'geo_submitted';
           const isRejected = o.status === 'rejected' || o.status === 'geo_rejected';
 
           return `
-            <div class="glass-panel p-6 rounded-3xl border ${isCompleted ? 'border-emerald-500/30' : isRejected ? 'border-rose-500/30' : 'border-white/10'} space-y-5">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-                <div>
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="badge badge-purple font-mono font-bold text-xs">SLOT ${slot}</span>
-                    <span class="badge ${
-                      isCompleted 
-                        ? 'badge-emerald' 
-                        : isRejected 
-                        ? 'badge-rose' 
-                        : o.status === 'approved' 
-                        ? 'badge-blue' 
-                        : 'badge-amber'
-                    } text-[10px] uppercase tracking-wider">
-                      ${(o.status || 'PENDING').toUpperCase()}
-                    </span>
+            <div class="glass-card p-6 rounded-3xl border ${isWindowActive ? 'border-amber-500 shadow-xl bg-amber-950/10' : isCompleted ? 'border-emerald-500/40' : isRejected ? 'border-rose-500/40' : 'border-white/10'} space-y-4">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <span class="badge badge-purple font-mono font-bold text-xs px-3 py-1">SLOT ${slot}</span>
+                  <div>
+                    <h4 class="text-lg font-medium text-white tracking-wide">${o.event_name || 'Academic OD Event'}</h4>
+                    <p class="text-xs text-slate-400 font-mono">${o.date ? new Date(o.date).toLocaleDateString() : 'Today'} | Venue: ${o.location_name || 'Pinned on Map'}</p>
                   </div>
-                  <h4 class="font-medium text-white text-lg tracking-wide">${o.event_name}</h4>
-                  <p class="text-xs text-slate-300 flex items-center gap-1.5 mt-0.5">
-                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-400"></i>
-                    <span>${o.location_name || 'Selected OD Venue'}</span>
-                    ${o.lat && o.lng ? `<span class="text-slate-500 font-mono">(${o.lat.toFixed(4)}, ${o.lng.toFixed(4)})</span>` : ''}
-                  </p>
                 </div>
-                <div class="text-right text-xs text-slate-400 font-mono">
-                  <div>Date: <span class="text-white">${o.date || new Date(o.created_at).toLocaleDateString()}</span></div>
-                  <div>Radius: <span class="text-emerald-400 font-bold">≤ 30 Meters</span></div>
+
+                <div class="flex items-center gap-2">
+                  <span class="badge ${isCompleted ? 'badge-emerald' : isWindowActive ? 'badge-amber animate-pulse' : isRejected ? 'badge-rose' : 'badge-blue'} text-xs uppercase font-mono">
+                    ${isCompleted ? 'VERIFIED (PRESENT)' : isWindowActive ? '⏳ 30-MIN WINDOW ACTIVE' : isExpired ? 'EXPIRED' : o.status.toUpperCase()}
+                  </span>
                 </div>
               </div>
 
-              <!-- 3-Stage Progress Stepper -->
-              <div class="grid grid-cols-3 gap-3 text-center">
-                <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
-                  <div class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-xs font-bold">✓</div>
-                  <p class="text-xs font-medium text-white">1. Map Pin & Letter</p>
-                  <p class="text-[10px] text-slate-400 font-mono">Slot ${slot} Registered</p>
-                </div>
-                <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
-                  <div class="w-6 h-6 rounded-full ${o.status !== 'pending' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-300'} flex items-center justify-center mx-auto text-xs font-bold">
-                    ${o.status !== 'pending' ? '✓' : '2'}
+              ${isWindowActive ? `
+                <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div class="space-y-1">
+                    <p class="text-xs font-bold text-amber-300">⏳ Attendance Marked! You must verify location within 30 minutes (≤ 30m radius)</p>
+                    <p class="text-[11px] text-slate-300">Target Venue Coordinates: <b>Lat ${o.lat || '0'}, Lng ${o.lng || '0'}</b></p>
                   </div>
-                  <p class="text-xs font-medium text-white">2. Faculty Approval</p>
-                  <p class="text-[10px] text-slate-400">${o.status !== 'pending' ? (o.status === 'rejected' ? 'Rejected' : 'Approved') : 'Awaiting Faculty'}</p>
-                </div>
-                <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
-                  <div class="w-6 h-6 rounded-full ${isCompleted ? 'bg-emerald-500/20 text-emerald-400' : isRejected ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-500/20 text-slate-400'} flex items-center justify-center mx-auto text-xs font-bold">
-                    ${isCompleted ? '✓' : isRejected ? '✗' : '3'}
-                  </div>
-                  <p class="text-xs font-medium text-white">3. GPS 30m Check-in</p>
-                  <p class="text-[10px] text-slate-400">${isCompleted ? `Verified (${o.distance_meters || 0}m)` : isRejected ? 'Cancelled' : 'Pending Attendance'}</p>
-                </div>
-              </div>
-
-              <!-- Real-Time 30-Minute Timer & Geo-Action Box -->
-              ${o.status === 'approved' && hasAttendanceMarked && !isExpired ? `
-                <div class="p-5 rounded-2xl bg-gradient-to-r from-[#e0231c]/20 to-amber-600/20 border border-[#e0231c]/50 space-y-3 animate-pulse">
-                  <div class="flex items-center justify-between">
-                    <span class="badge badge-rose text-xs font-bold uppercase tracking-wider flex items-center gap-1">
-                      <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                      <span>30-MIN VERIFICATION WINDOW ACTIVE</span>
-                    </span>
-                    <span class="text-base font-mono font-bold text-amber-300">${minsRemaining} Mins Remaining</span>
-                  </div>
-                  <p class="text-xs text-slate-200">
-                    Faculty has recorded attendance! You must complete your GPS check-in at <b>${o.location_name || 'your chosen venue'}</b> within a <b>30-meter radius</b> before the timer reaches 0, or your OD will be cancelled.
-                  </p>
-                  <button onclick="triggerStrictGeoCheckin(${o.id}, ${o.lat || 'null'}, ${o.lng || 'null'})" class="btn-primary w-full py-3 rounded-xl uppercase tracking-wider text-xs font-bold flex items-center justify-center gap-2 shadow-xl">
+                  <button onclick="triggerStrictGeoCheckin(${o.id}, ${o.lat}, ${o.lng})" class="btn-primary bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 shrink-0 shadow-lg">
                     <i data-lucide="map-pin" class="w-4 h-4"></i>
                     <span>Verify GPS Location Now (≤ 30m Radius)</span>
                   </button>
@@ -9434,9 +9768,6 @@ async function renderStudentOD(container) {
                       <p class="text-[11px] text-slate-400">When faculty marks session attendance, your 30-minute 30-meter verification window will activate.</p>
                     </div>
                   </div>
-                  <button onclick="triggerStrictGeoCheckin(${o.id}, ${o.lat || 'null'}, ${o.lng || 'null'})" class="btn-secondary text-xs py-2 px-3 rounded-xl shrink-0">
-                    Pre-Check GPS
-                  </button>
                 </div>
               ` : isRejected ? `
                 <div class="p-4 rounded-2xl bg-rose-950/20 border border-rose-500/30 text-xs text-rose-300">
@@ -9453,13 +9784,15 @@ async function renderStudentOD(container) {
               ` : ''}
             </div>
           `;
-        }).join('') : `
+        }).join('')}
+
+        ${odList.length === 0 ? `
           <div class="glass-panel p-12 rounded-3xl text-center text-slate-400 space-y-3">
-            <i data-lucide="clipboard-list" class="w-12 h-12 mx-auto text-slate-500"></i>
+            <i data-lucide="clipboard-x" class="w-12 h-12 mx-auto text-slate-500"></i>
             <h4 class="text-base font-normal text-white">No On-Duty Requests Submitted</h4>
-            <p class="text-xs text-slate-400">Click "Submit New OD Request" to apply for Slot OD with map location picker.</p>
+            <p class="text-xs text-slate-400">Click "Submit New OD Request" to apply for an academic or competition OD.</p>
           </div>
-        `}
+        ` : ''}
       </div>
     </div>
   `;
@@ -9467,138 +9800,128 @@ async function renderStudentOD(container) {
 }
 
 async function openSubmitODModal() {
-  let events = [];
-  try {
-    events = await api('GET', '/events');
-  } catch(e) {
-    events = [];
-  }
-  const registeredEvents = (events || []).filter(e => e.is_registered);
+  const events = await api('GET', '/events').catch(() => []);
+  const registeredEvents = events.filter(e => e.is_registered);
 
-  openModal('Submit On-Duty (OD) Request with Map Location', `
+  openModal('Submit On-Duty (OD) Request with Map Geotag', `
     <div class="space-y-4 text-left">
       <div class="grid grid-cols-2 gap-3">
-        <!-- Target Slot (A to Z) -->
+        <!-- OD Slot -->
         <div>
-          <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">For Which Slot? <span class="text-[#e0231c]">*</span></label>
+          <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">OD Course Slot <span class="text-[#e0231c]">*</span></label>
           <select id="m-od-slot" class="glass-input w-full font-bold text-[#ff5a3c]">
-            ${SLOTS_LIST.map(s => `<option value="${s}">Slot ${s}</option>`).join('')}
-            <option value="ALL">All Slots (Full Day OD)</option>
+            <option value="ALL">All Day / Full Session</option>
+            ${SLOTS_LIST.map(slot => `<option value="${slot}">Slot ${slot}</option>`).join('')}
           </select>
         </div>
 
-        <!-- Registered Event Selector -->
+        <!-- OD Date -->
         <div>
-          <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Registered Event (Optional)</label>
-          <select id="m-od-event-id" class="glass-input w-full font-medium" onchange="handleODEventChange(this.value)">
-            <option value="">-- Custom Event / Other --</option>
-            ${registeredEvents.map(e => `<option value="${e.id}" data-name="${e.title}" data-lat="${e.lat || ''}" data-lng="${e.lng || ''}" data-venue="${e.venue || ''}">${e.title}</option>`).join('')}
-          </select>
+          <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">OD Date <span class="text-[#e0231c]">*</span></label>
+          <input type="date" id="m-od-date" value="${new Date().toISOString().split('T')[0]}" class="glass-input w-full font-mono font-medium text-xs">
         </div>
+      </div>
+
+      <!-- Event Association -->
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Associated Campus Event (Optional)</label>
+        <select id="m-od-event-id" onchange="handleODEventChange(this.value)" class="glass-input w-full font-medium">
+          <option value="">-- Independent Academic / External OD --</option>
+          ${registeredEvents.map(e => `
+            <option value="${e.id}" data-name="${e.title}" data-lat="${e.lat || ''}" data-lng="${e.lng || ''}" data-venue="${e.venue || ''}">
+              ${e.title} (${e.venue || 'Campus'})
+            </option>
+          `).join('')}
+        </select>
       </div>
 
       <!-- Event Name -->
       <div>
         <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Event / Symposium / Competition Name <span class="text-[#e0231c]">*</span></label>
-        <input type="text" id="m-od-event-name" class="glass-input w-full font-medium" placeholder="e.g. National Smart India Hackathon Grand Finale" required>
+        <input type="text" id="m-od-event-name" placeholder="e.g. National Hackathon, Technical Paper Presentation" class="glass-input w-full font-medium" required>
       </div>
 
-      <!-- INTERACTIVE MAP WITH LOCATION SEARCH -->
-      <div class="space-y-2 pt-1">
-        <div class="flex items-center justify-between">
-          <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Pinpoint OD Location on Map <span class="text-[#e0231c]">*</span></label>
-          <span id="od-coords-display" class="text-xs text-emerald-400 font-mono">📍 Lat: 13.0827, Lng: 80.2707</span>
-        </div>
+      <!-- Letter Upload -->
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">OD Proof / Invitation Letter</label>
+        <input type="file" id="m-od-file" accept="image/*,.pdf" class="glass-input w-full text-xs">
+      </div>
 
-        <!-- Search Bar for Map -->
+      <!-- Interactive Map & Place Search -->
+      <div class="space-y-2 pt-2 border-t border-white/10">
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider flex items-center justify-between">
+          <span>📍 Pin Event Location on Map</span>
+          <span class="text-[10px] text-amber-400 font-normal">30m Radius Check-In Required</span>
+        </label>
+
+        <!-- Search Bar -->
         <div class="flex items-center gap-2">
-          <input type="text" id="od-map-search-input" placeholder="Search institution, stadium, or venue address..." class="glass-input flex-1 font-medium text-xs">
-          <button type="button" onclick="searchODLocation()" class="btn-secondary text-xs py-2 px-3 rounded-xl flex items-center gap-1 shrink-0">
+          <input type="text" id="od-map-search-input" placeholder="Search location (e.g. Anna University, IIT Madras, Nehru Stadium)..." class="glass-input flex-1 text-xs">
+          <button type="button" onclick="searchODLocation()" class="btn-secondary text-xs py-2 px-3 shrink-0 flex items-center gap-1">
             <i data-lucide="search" class="w-3.5 h-3.5"></i>
-            <span>Search Map</span>
+            <span>Search</span>
           </button>
         </div>
 
         <!-- Leaflet Map Container -->
-        <div id="od-leaflet-map" class="w-full h-52 rounded-2xl overflow-hidden border border-white/15 relative z-10"></div>
-        <p class="text-[11px] text-slate-400">Search above or click / drag the pin on the map to set the exact venue. (30-meter radius will be enforced).</p>
+        <div id="od-leaflet-map" class="w-full h-56 rounded-2xl border border-white/10 overflow-hidden relative z-0"></div>
 
-        <!-- Hidden input storage for GPS & Location Name -->
+        <!-- Selected Coordinates Display -->
+        <div class="flex items-center justify-between text-xs text-slate-400 font-mono bg-white/5 p-2.5 rounded-xl border border-white/10">
+          <span id="od-coords-display">📍 Lat: 13.0827, Lng: 80.2707</span>
+          <span class="text-amber-400 font-bold text-[11px]">Radius: 30 meters</span>
+        </div>
+
         <input type="hidden" id="od-lat" value="13.0827">
         <input type="hidden" id="od-lng" value="80.2707">
-        <input type="hidden" id="od-location-name" value="Anna University / Chennai Campus">
-      </div>
-
-      <!-- Permission Letter Upload -->
-      <div>
-        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Official Permission Letter / ID Card Photo <span class="text-[#e0231c]">*</span></label>
-        <input type="file" id="m-od-file" accept="image/*,application/pdf" class="glass-input w-full font-medium" required>
+        <input type="hidden" id="od-location-name" value="Campus Event Venue">
       </div>
     </div>
   `, `
-    <button onclick="saveOD()" class="btn-primary text-xs py-2.5 px-6 rounded-xl uppercase tracking-wider flex items-center gap-2">
+    <button onclick="submitODWithMap()" class="btn-primary text-xs py-2.5 px-6 rounded-xl uppercase tracking-wider flex items-center gap-2">
       <i data-lucide="send" class="w-4 h-4"></i>
       <span>Submit OD Application</span>
     </button>
   `);
   lucide.createIcons();
-  initODMap(13.0827, 80.2707);
+
+  setTimeout(() => {
+    initODMap(13.0827, 80.2707);
+  }, 250);
 }
 
-function initODMap(initialLat = 13.0827, initialLng = 80.2707) {
-  setTimeout(() => {
-    const mapDiv = document.getElementById('od-leaflet-map');
-    if (!mapDiv || typeof L === 'undefined') return;
+function initODMap(lat, lng) {
+  const mapContainer = document.getElementById('od-leaflet-map');
+  if (!mapContainer || typeof L === 'undefined') return;
 
-    if (odMapInstance) {
-      odMapInstance.remove();
-      odMapInstance = null;
-    }
+  if (odMapInstance) {
+    odMapInstance.remove();
+    odMapInstance = null;
+  }
 
-    odMapInstance = L.map('od-leaflet-map').setView([initialLat, initialLng], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap'
-    }).addTo(odMapInstance);
+  odMapInstance = L.map('od-leaflet-map').setView([lat, lng], 14);
 
-    odMarkerInstance = L.marker([initialLat, initialLng], { draggable: true }).addTo(odMapInstance);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(odMapInstance);
 
-    function updateCoords(lat, lng, name) {
-      const latEl = document.getElementById('od-lat');
-      const lngEl = document.getElementById('od-lng');
-      const nameEl = document.getElementById('od-location-name');
-      const dispEl = document.getElementById('od-coords-display');
-      if (latEl) latEl.value = Number(lat).toFixed(6);
-      if (lngEl) lngEl.value = Number(lng).toFixed(6);
-      if (name && nameEl) nameEl.value = name;
-      if (dispEl) dispEl.innerText = `📍 Lat: ${Number(lat).toFixed(4)}, Lng: ${Number(lng).toFixed(4)}`;
-    }
+  odMarkerInstance = L.marker([lat, lng], { draggable: true }).addTo(odMapInstance);
 
-    odMarkerInstance.on('dragend', async (e) => {
-      const pos = e.target.getLatLng();
-      updateCoords(pos.lat, pos.lng);
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.lat}&lon=${pos.lng}`);
-        const data = await res.json();
-        if (data && data.display_name) {
-          updateCoords(pos.lat, pos.lng, data.display_name.split(',').slice(0, 3).join(','));
-        }
-      } catch(err) {}
-    });
+  odMarkerInstance.on('dragend', function (e) {
+    const pos = e.target.getLatLng();
+    updateODMarkerPosition(pos.lat, pos.lng);
+  });
 
-    odMapInstance.on('click', async (e) => {
-      const { lat, lng } = e.latlng;
-      odMarkerInstance.setLatLng([lat, lng]);
-      updateCoords(lat, lng);
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-        const data = await res.json();
-        if (data && data.display_name) {
-          updateCoords(lat, lng, data.display_name.split(',').slice(0, 3).join(','));
-        }
-      } catch(err) {}
-    });
-  }, 250);
+  odMapInstance.on('click', function(e) {
+    updateODMarkerPosition(e.latlng.lat, e.latlng.lng);
+  });
+}
+
+function updateODMarkerPosition(lat, lng) {
+  if (odMarkerInstance) odMarkerInstance.setLatLng([lat, lng]);
+  document.getElementById('od-lat').value = lat.toFixed(6);
+  document.getElementById('od-lng').value = lng.toFixed(6);
+  document.getElementById('od-coords-display').innerText = `📍 Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
 }
 
 async function searchODLocation() {
@@ -9643,44 +9966,47 @@ function handleODEventChange(val) {
       }
       document.getElementById('od-lat').value = lat.toFixed(6);
       document.getElementById('od-lng').value = lng.toFixed(6);
-      if (opt.dataset.venue) document.getElementById('od-location-name').value = opt.dataset.venue;
+      document.getElementById('od-location-name').value = opt.dataset.venue || opt.dataset.name;
       document.getElementById('od-coords-display').innerText = `📍 Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
     }
   }
 }
 
-async function saveOD() {
-  const slot = document.getElementById('m-od-slot')?.value || 'A';
+async function submitODWithMap() {
+  const slot = document.getElementById('m-od-slot')?.value || 'ALL';
+  const date = document.getElementById('m-od-date')?.value || new Date().toISOString().split('T')[0];
   const eventId = document.getElementById('m-od-event-id')?.value || null;
-  const eventName = document.getElementById('m-od-event-name')?.value;
-  const lat = document.getElementById('od-lat')?.value;
-  const lng = document.getElementById('od-lng')?.value;
-  const locationName = document.getElementById('od-location-name')?.value || 'Selected Venue';
+  const eventName = document.getElementById('m-od-event-name')?.value.trim();
+  const lat = parseFloat(document.getElementById('od-lat')?.value) || 13.0827;
+  const lng = parseFloat(document.getElementById('od-lng')?.value) || 80.2707;
+  const locationName = document.getElementById('od-location-name')?.value.trim() || 'Pinned Venue';
   const fileInput = document.getElementById('m-od-file');
 
-  if (!eventName || !eventName.trim()) return toast('Event name is required', 'warning');
-  if (!fileInput || !fileInput.files[0]) return toast('Permission letter or photo is required', 'warning');
+  if (!eventName) return toast('Event / Symposium name is required', 'warning');
 
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    try {
-      await api('POST', '/od', {
-        slot,
-        eventId: eventId ? parseInt(eventId, 10) : null,
-        eventName: eventName.trim(),
-        lat: lat ? parseFloat(lat) : null,
-        lng: lng ? parseFloat(lng) : null,
-        locationName,
-        letterB64: e.target.result
-      });
-      toast(`OD Request for Slot ${slot} Submitted Successfully! 🚀`, 'success');
-      closeModal();
-      renderPage();
-    } catch(err) {
-      toast(err.message || 'Failed to submit OD', 'error');
-    }
-  };
-  reader.readAsDataURL(fileInput.files[0]);
+  let letterB64 = '';
+  if (fileInput && fileInput.files && fileInput.files[0]) {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      letterB64 = reader.result;
+      await sendODPayload({ slot, date, eventId, eventName, lat, lng, locationName, letterB64 });
+    };
+    reader.readAsDataURL(fileInput.files[0]);
+    return;
+  }
+
+  await sendODPayload({ slot, date, eventId, eventName, lat, lng, locationName, letterB64 });
+}
+
+async function sendODPayload(payload) {
+  try {
+    await api('POST', '/od', payload);
+    toast(`OD request for Slot ${payload.slot} submitted with 30m Geotag! 🗺️`, 'success');
+    closeModal();
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to submit OD request', 'error');
+  }
 }
 
 async function triggerStrictGeoCheckin(odId, targetLat, targetLng) {
@@ -9709,7 +10035,7 @@ async function triggerStrictGeoCheckin(odId, targetLat, targetLng) {
 }
 
 
-// ── 4. GRADEBOOK: INDIVIDUAL & BATCH MARKS SUBMISSION ─────────────────────
+// ── 7. GRADEBOOK: INDIVIDUAL & BATCH MARKS SUBMISSION ─────────────────────
 function switchGbTab(tab) {
   currentGradebookTab = tab;
   ['phase1', 'hallticket', 'phase2', 'phase3'].forEach(t => {
@@ -9727,14 +10053,17 @@ async function renderGradebook(container) {
     api('GET', '/grades/hall-ticket/requests')
   ]);
 
+  const isFac = S.user.role === 'faculty';
+  const mySubjects = isFac ? subjects.filter(s => s.faculty_id === S.user.id) : subjects;
+
   const students = allUsers.filter(u => u.role === 'student');
   const pendingHtCount = htRequests.filter(r => r.status === 'requested').length;
 
-  if (!currentGbSubjectId && subjects.length > 0) {
-    currentGbSubjectId = subjects[0].id;
+  if (!currentGbSubjectId && mySubjects.length > 0) {
+    currentGbSubjectId = mySubjects[0].id;
   }
 
-  const activeSubject = subjects.find(s => s.id === currentGbSubjectId) || subjects[0] || {};
+  const activeSubject = mySubjects.find(s => s.id === currentGbSubjectId) || mySubjects[0] || {};
   const currentGrades = grades.filter(g => g.subject_id === activeSubject.id);
 
   container.innerHTML = `
@@ -9763,11 +10092,12 @@ async function renderGradebook(container) {
           <div class="flex items-center gap-2 flex-1 max-w-lg">
             <label class="text-xs font-medium text-slate-400 uppercase tracking-wider shrink-0">Selected Course:</label>
             <select id="gb-course-select" class="glass-input w-full font-bold text-white text-xs" onchange="changeGbSubject(this.value)">
-              ${subjects.map(s => `
+              ${mySubjects.map(s => `
                 <option value="${s.id}" ${s.id === activeSubject.id ? 'selected' : ''}>
                   [Slot ${s.slot || 'A'}] ${s.code || ''} — ${s.name} ${s.is_closed ? '(Closed)' : '(Active)'}
                 </option>
               `).join('')}
+              ${mySubjects.length === 0 ? '<option value="">No courses assigned to you</option>' : ''}
             </select>
           </div>
           <span class="badge ${activeSubject.is_closed ? 'badge-rose' : 'badge-emerald'} text-xs font-mono">
@@ -9784,267 +10114,261 @@ async function renderGradebook(container) {
             <span>2. Hall Ticket Requests (${pendingHtCount} Pending)</span>
             ${pendingHtCount > 0 ? '<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>' : ''}
           </button>
-          <button onclick="switchGbTab('phase2')" class="px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-all ${currentGradebookTab === 'phase2' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
+          <button onclick="switchGbTab('phase2')" class="px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-all ${currentGradebookTab === 'phase2' ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
             <span>3. Phase 2 Marks (Capstone & Univ Lab)</span>
           </button>
-          <button onclick="switchGbTab('phase3')" class="px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-all ${currentGradebookTab === 'phase3' ? 'bg-emerald-600 text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
-            <span>4. Main Univ Exam & Publish Results</span>
+          <button onclick="switchGbTab('phase3')" class="px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-all ${currentGradebookTab === 'phase3' ? 'bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
+            <span>4. Phase 3 (Univ Exam) & Publish Results</span>
           </button>
         </div>
       </div>
 
-      <!-- TAB 1: PHASE 1 MARKS ENTRY TABLE (INDIVIDUAL & BATCH) -->
-      <div id="gb-tab-phase1" class="${currentGradebookTab === 'phase1' ? '' : 'hidden'} glass-panel p-6 rounded-3xl border border-blue-500/20 space-y-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h4 class="text-base font-medium text-white flex items-center gap-2">
-              <i data-lucide="edit-3" class="w-5 h-5 text-blue-400"></i>
-              <span>Step 1: Continuous Assessment (Div 1) & Class Lab (Div 3) Marks</span>
-            </h4>
-            <p class="text-xs text-slate-400 mt-0.5">Enter marks student-by-student with individual Submit buttons or batch submit all students.</p>
+      <!-- TAB 1: PHASE 1 MARKS ENTRY (DIV 1 & DIV 3) -->
+      <div id="gb-tab-phase1" class="${currentGradebookTab === 'phase1' ? '' : 'hidden'} space-y-4">
+        <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h4 class="text-lg font-medium text-white tracking-wide">Phase 1: Continuous Assessment Marks</h4>
+              <p class="text-xs text-slate-400">Div 1 (Assessments /100) + Div 3 (Class Lab /100) = Max 200 Points.</p>
+            </div>
+            <button onclick="saveAllPhase1Grades(${activeSubject.id || 0})" class="btn-primary text-xs py-2.5 px-6 rounded-xl flex items-center gap-2 uppercase tracking-wider shadow-md">
+              <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+              <span>Submit All Students (Phase 1)</span>
+            </button>
           </div>
-          <button onclick="saveAllPhase1Grades(${activeSubject.id})" class="btn-primary text-xs py-2 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md">
-            <i data-lucide="check-check" class="w-4 h-4"></i>
-            <span>Submit All Students (Phase 1)</span>
-          </button>
-        </div>
 
-        <div class="overflow-x-auto rounded-2xl border border-white/10">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
-              <tr>
-                <th class="p-4">Student</th>
-                <th class="p-4">Reg Number</th>
-                <th class="p-4">Department</th>
-                <th class="p-4">Div 1: Assessments (/100)</th>
-                <th class="p-4">Div 3: Class Lab (/100)</th>
-                <th class="p-4">Total (/200)</th>
-                <th class="p-4 text-right">Individual Action</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-white/5 whitespace-nowrap">
-              ${students.map((st, idx) => {
-                const g = currentGrades.find(gr => gr.student_id === st.id) || {};
-                const d1 = g.div1_assessments !== undefined ? g.div1_assessments : '';
-                const d3 = g.div3_class_lab !== undefined ? g.div3_class_lab : '';
-                const total = (parseFloat(d1) || 0) + (parseFloat(d3) || 0);
-
-                return `
-                  <tr class="hover:bg-white/[0.02] transition-colors" id="p1-row-${st.id}">
-                    <td class="p-4 font-medium text-white">${st.name}</td>
-                    <td class="p-4 font-mono text-blue-400 font-bold">${st.admin_id || 'N/A'}</td>
-                    <td class="p-4 text-slate-400">${st.department || 'ALL'}</td>
-                    <td class="p-4">
-                      <input type="number" id="p1-d1-${st.id}" min="0" max="100" value="${d1}" placeholder="0-100" class="glass-input w-24 font-mono text-xs font-bold text-blue-400 text-center" oninput="calcP1Row(${st.id})">
-                    </td>
-                    <td class="p-4">
-                      <input type="number" id="p1-d3-${st.id}" min="0" max="100" value="${d3}" placeholder="0-100" class="glass-input w-24 font-mono text-xs font-bold text-purple-400 text-center" oninput="calcP1Row(${st.id})">
-                    </td>
-                    <td class="p-4 font-mono font-bold text-white text-sm" id="p1-tot-${st.id}">
-                      ${total}/200
-                    </td>
-                    <td class="p-4 text-right">
-                      <button onclick="saveIndividualPhase1Grade(${st.id}, ${activeSubject.id})" class="btn-secondary text-xs py-1.5 px-3 rounded-lg border-blue-500/30 text-blue-300 hover:bg-blue-500/10 flex items-center gap-1.5 ml-auto">
-                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                        <span>Submit</span>
-                      </button>
-                    </td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- TAB 2: HALL TICKET REQUESTS APPROVAL QUEUE -->
-      <div id="gb-tab-hallticket" class="${currentGradebookTab === 'hallticket' ? '' : 'hidden'} space-y-6">
-        <div class="glass-panel p-6 rounded-3xl border border-purple-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h4 class="text-base font-medium text-white flex items-center gap-2">
-              <i data-lucide="ticket" class="w-5 h-5 text-purple-400"></i>
-              <span>Step 2 & 3: Student Hall Ticket Requests</span>
-            </h4>
-            <p class="text-xs text-slate-400 mt-0.5">Approve examination hall ticket requests to issue cryptographic admit cards.</p>
-          </div>
-          <button onclick="openCloseCourseModal()" class="btn-primary text-xs py-2 px-4 rounded-xl flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600">
-            <i data-lucide="lock" class="w-4 h-4"></i>
-            <span>Close Course Launch</span>
-          </button>
-        </div>
-
-        <div class="glass-panel rounded-3xl border border-white/10 overflow-x-auto">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
-              <tr>
-                <th class="p-4">Student Name</th>
-                <th class="p-4">Register Number</th>
-                <th class="p-4">Course</th>
-                <th class="p-4">Request Date</th>
-                <th class="p-4">Status</th>
-                <th class="p-4 text-right">Faculty Action</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-white/5 whitespace-nowrap">
-              ${htRequests.length === 0 ? `
-                <tr><td colspan="6" class="p-8 text-center text-slate-500">No student hall ticket requests pending.</td></tr>
-              ` : htRequests.map(r => `
-                <tr class="hover:bg-white/[0.02]">
-                  <td class="p-4 font-medium text-white">${r.student_name}</td>
-                  <td class="p-4 font-mono text-blue-400 font-bold">${r.student_reg_no || 'N/A'}</td>
-                  <td class="p-4">
-                    <span class="font-mono text-purple-400">${r.course_code || ''}</span>
-                    <div class="text-white">${r.subject_name}</div>
-                  </td>
-                  <td class="p-4 text-slate-400">${new Date(r.request_date).toLocaleDateString()}</td>
-                  <td class="p-4">
-                    <span class="badge ${r.status === 'approved' ? 'badge-emerald' : 'badge-amber'} text-xs">
-                      ${r.status === 'approved' ? '✅ Approved' : '⏳ Pending'}
-                    </span>
-                  </td>
-                  <td class="p-4 text-right">
-                    ${r.status !== 'approved' ? `
-                      <button onclick="approveHallTicketRequest(${r.id})" class="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 ml-auto">
-                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                        <span>Approve Hall Ticket</span>
-                      </button>
-                    ` : `
-                      <span class="text-xs text-emerald-400 font-mono font-bold">UUID: ${r.hall_ticket_token ? r.hall_ticket_token.slice(0, 8) : 'ACTIVE'}</span>
-                    `}
-                  </td>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
+                <tr>
+                  <th class="p-3.5">Register No</th>
+                  <th class="p-3.5">Student Name</th>
+                  <th class="p-3.5">Div 1: Assessments (/100)</th>
+                  <th class="p-3.5">Div 3: Class Lab (/100)</th>
+                  <th class="p-3.5">Phase 1 Total (/200)</th>
+                  <th class="p-3.5 text-right">Individual Action</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody class="divide-y divide-white/5 whitespace-nowrap">
+                ${students.map(stu => {
+                  const g = currentGrades.find(gr => gr.student_id === stu.id) || {};
+                  const d1 = g.div1_assessments !== undefined ? g.div1_assessments : '';
+                  const d3 = g.div3_class_lab !== undefined ? g.div3_class_lab : '';
+                  const phase1Tot = (parseFloat(d1) || 0) + (parseFloat(d3) || 0);
+
+                  return `
+                    <tr class="hover:bg-white/[0.02] transition-colors" id="row-p1-${stu.id}">
+                      <td class="p-3.5 font-mono text-xs font-bold text-blue-400">${stu.admin_id}</td>
+                      <td class="p-3.5 font-medium text-white">${stu.name}</td>
+                      <td class="p-3.5">
+                        <input type="number" min="0" max="100" id="p1-d1-${stu.id}" value="${d1}" placeholder="0-100" class="glass-input w-28 font-mono text-xs font-bold text-blue-400" oninput="recalcRowP1(${stu.id})">
+                      </td>
+                      <td class="p-3.5">
+                        <input type="number" min="0" max="100" id="p1-d3-${stu.id}" value="${d3}" placeholder="0-100" class="glass-input w-28 font-mono text-xs font-bold text-indigo-400" oninput="recalcRowP1(${stu.id})">
+                      </td>
+                      <td class="p-3.5 font-mono font-bold text-sm text-white" id="p1-tot-${stu.id}">
+                        ${phase1Tot} / 200
+                      </td>
+                      <td class="p-3.5 text-right">
+                        <button onclick="saveIndividualPhase1Grade(${stu.id}, ${activeSubject.id || 0})" class="btn-secondary text-xs py-1.5 px-3 rounded-lg border-blue-500/30 text-blue-300 hover:bg-blue-500/10 flex items-center gap-1.5 ml-auto transition-all">
+                          <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                          <span>Submit</span>
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <!-- TAB 3: PHASE 2 MARKS ENTRY TABLE (INDIVIDUAL & BATCH) -->
-      <div id="gb-tab-phase2" class="${currentGradebookTab === 'phase2' ? '' : 'hidden'} glass-panel p-6 rounded-3xl border border-indigo-500/20 space-y-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h4 class="text-base font-medium text-white flex items-center gap-2">
-              <i data-lucide="award" class="w-5 h-5 text-indigo-400"></i>
-              <span>Step 4: Capstone (Div 2) & University Lab Exam (Div 4) Marks</span>
-            </h4>
-            <p class="text-xs text-slate-400 mt-0.5">Recorded after course closing. Save individually or batch submit all students.</p>
+      <!-- TAB 2: HALL TICKET REQUESTS -->
+      <div id="gb-tab-hallticket" class="${currentGradebookTab === 'hallticket' ? '' : 'hidden'} space-y-4">
+        <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-lg font-medium text-white tracking-wide">University Hall Ticket Requests</h4>
+              <p class="text-xs text-slate-400">Review student eligibility and approve hall ticket issuance with QR security seals.</p>
+            </div>
+            <button onclick="approveAllPendingHallTickets(${activeSubject.id || 0})" class="btn-primary text-xs py-2.5 px-6 rounded-xl flex items-center gap-2 uppercase tracking-wider shadow-md">
+              <i data-lucide="check-check" class="w-4 h-4"></i>
+              <span>Approve All Eligible Requests</span>
+            </button>
           </div>
-          <button onclick="saveAllPhase2Grades(${activeSubject.id})" class="btn-primary text-xs py-2 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase bg-gradient-to-r from-indigo-600 to-purple-600 shadow-md">
-            <i data-lucide="check-check" class="w-4 h-4"></i>
-            <span>Submit All Students (Phase 2)</span>
-          </button>
-        </div>
 
-        <div class="overflow-x-auto rounded-2xl border border-white/10">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
-              <tr>
-                <th class="p-4">Student</th>
-                <th class="p-4">Reg Number</th>
-                <th class="p-4">Div 2: Capstone (/100)</th>
-                <th class="p-4">Div 4: Univ Lab (/100)</th>
-                <th class="p-4">Total Internal (/400)</th>
-                <th class="p-4 text-right">Individual Action</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-white/5 whitespace-nowrap">
-              ${students.map((st, idx) => {
-                const g = currentGrades.find(gr => gr.student_id === st.id) || {};
-                const d1 = parseFloat(g.div1_assessments) || 0;
-                const d3 = parseFloat(g.div3_class_lab) || 0;
-                const d2 = g.div2_capstone !== undefined ? g.div2_capstone : '';
-                const d4 = g.div4_univ_lab !== undefined ? g.div4_univ_lab : '';
-                const totalInternal = d1 + d3 + (parseFloat(d2) || 0) + (parseFloat(d4) || 0);
-
-                return `
-                  <tr class="hover:bg-white/[0.02] transition-colors" id="p2-row-${st.id}">
-                    <td class="p-4 font-medium text-white">${st.name}</td>
-                    <td class="p-4 font-mono text-blue-400 font-bold">${st.admin_id || 'N/A'}</td>
-                    <td class="p-4">
-                      <input type="number" id="p2-d2-${st.id}" min="0" max="100" value="${d2}" placeholder="0-100" class="glass-input w-24 font-mono text-xs font-bold text-amber-400 text-center" oninput="calcP2Row(${st.id}, ${d1 + d3})">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
+                <tr>
+                  <th class="p-3.5">Student ID</th>
+                  <th class="p-3.5">Student Name</th>
+                  <th class="p-3.5">Course</th>
+                  <th class="p-3.5">Status</th>
+                  <th class="p-3.5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5 whitespace-nowrap">
+                ${htRequests.map(r => `
+                  <tr class="hover:bg-white/[0.02] transition-colors">
+                    <td class="p-3.5 font-mono text-xs font-bold text-purple-400">${r.student_reg_no || r.student_id}</td>
+                    <td class="p-3.5 font-medium text-white">${r.student_name}</td>
+                    <td class="p-3.5 font-mono">${r.course_code || ''} — ${r.subject_name}</td>
+                    <td class="p-3.5">
+                      <span class="badge ${r.status === 'approved' ? 'badge-emerald' : 'badge-amber'} text-[10px] uppercase font-mono">
+                        ${r.status}
+                      </span>
                     </td>
-                    <td class="p-4">
-                      <input type="number" id="p2-d4-${st.id}" min="0" max="100" value="${d4}" placeholder="0-100" class="glass-input w-24 font-mono text-xs font-bold text-indigo-400 text-center" oninput="calcP2Row(${st.id}, ${d1 + d3})">
-                    </td>
-                    <td class="p-4 font-mono font-bold text-emerald-400 text-sm" id="p2-tot-${st.id}">
-                      ${totalInternal}/400
-                    </td>
-                    <td class="p-4 text-right">
-                      <button onclick="saveIndividualPhase2Grade(${st.id}, ${activeSubject.id})" class="btn-secondary text-xs py-1.5 px-3 rounded-lg border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10 flex items-center gap-1.5 ml-auto">
-                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                        <span>Submit</span>
-                      </button>
+                    <td class="p-3.5 text-right">
+                      ${r.status === 'requested' ? `
+                        <button onclick="approveHallTicketRequest(${r.id})" class="btn-primary text-xs py-1.5 px-3 rounded-lg flex items-center gap-1 ml-auto">
+                          <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                          <span>Approve</span>
+                        </button>
+                      ` : `
+                        <span class="text-emerald-400 text-xs font-medium">Issued ✅</span>
+                      `}
                     </td>
                   </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
+                `).join('')}
+                ${htRequests.length === 0 ? '<tr><td colspan="5" class="p-8 text-center text-slate-500">No hall ticket requests at this time.</td></tr>' : ''}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <!-- TAB 4: PHASE 3 MARKS ENTRY TABLE (INDIVIDUAL & BATCH PUBLISH) -->
-      <div id="gb-tab-phase3" class="${currentGradebookTab === 'phase3' ? '' : 'hidden'} glass-panel p-6 rounded-3xl border border-emerald-500/20 space-y-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h4 class="text-base font-medium text-white flex items-center gap-2">
-              <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
-              <span>Step 5: Main University Examination (Div 5) & Publish Results</span>
-            </h4>
-            <p class="text-xs text-slate-400 mt-0.5">Submit exam marks per student or publish final semester grade transcripts for all students.</p>
+      <!-- TAB 3: PHASE 2 MARKS ENTRY (DIV 2 & DIV 4) -->
+      <div id="gb-tab-phase2" class="${currentGradebookTab === 'phase2' ? '' : 'hidden'} space-y-4">
+        <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h4 class="text-lg font-medium text-white tracking-wide">Phase 2: Capstone & Practical Lab Marks</h4>
+              <p class="text-xs text-slate-400">Div 2 (Capstone /100) + Div 4 (Univ Lab /100) = Max 200 Points. (Total Internal = 400)</p>
+            </div>
+            <button onclick="saveAllPhase2Grades(${activeSubject.id || 0})" class="btn-primary text-xs py-2.5 px-6 rounded-xl flex items-center gap-2 uppercase tracking-wider shadow-md">
+              <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+              <span>Submit All Students (Phase 2)</span>
+            </button>
           </div>
-          <button onclick="saveAllPhase3Grades(${activeSubject.id})" class="btn-primary text-xs py-2 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase bg-gradient-to-r from-emerald-600 to-teal-600 shadow-md">
-            <i data-lucide="award" class="w-4 h-4"></i>
-            <span>Publish Results for All Students</span>
-          </button>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
+                <tr>
+                  <th class="p-3.5">Register No</th>
+                  <th class="p-3.5">Student Name</th>
+                  <th class="p-3.5">Div 2: Capstone (/100)</th>
+                  <th class="p-3.5">Div 4: Univ Lab (/100)</th>
+                  <th class="p-3.5">Total Internal (/400)</th>
+                  <th class="p-3.5 text-right">Individual Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5 whitespace-nowrap">
+                ${students.map(stu => {
+                  const g = currentGrades.find(gr => gr.student_id === stu.id) || {};
+                  const d1 = parseFloat(g.div1_assessments) || 0;
+                  const d3 = parseFloat(g.div3_class_lab) || 0;
+                  const d2 = g.div2_capstone !== undefined ? g.div2_capstone : '';
+                  const d4 = g.div4_univ_lab !== undefined ? g.div4_univ_lab : '';
+                  const totalInternal = d1 + d3 + (parseFloat(d2) || 0) + (parseFloat(d4) || 0);
+
+                  return `
+                    <tr class="hover:bg-white/[0.02] transition-colors" id="row-p2-${stu.id}">
+                      <td class="p-3.5 font-mono text-xs font-bold text-emerald-400">${stu.admin_id}</td>
+                      <td class="p-3.5 font-medium text-white">${stu.name}</td>
+                      <td class="p-3.5">
+                        <input type="number" min="0" max="100" id="p2-d2-${stu.id}" value="${d2}" placeholder="0-100" class="glass-input w-28 font-mono text-xs font-bold text-teal-400" oninput="recalcRowP2(${stu.id}, ${d1 + d3})">
+                      </td>
+                      <td class="p-3.5">
+                        <input type="number" min="0" max="100" id="p2-d4-${stu.id}" value="${d4}" placeholder="0-100" class="glass-input w-28 font-mono text-xs font-bold text-emerald-400" oninput="recalcRowP2(${stu.id}, ${d1 + d3})">
+                      </td>
+                      <td class="p-3.5 font-mono font-bold text-sm text-emerald-400" id="p2-tot-${stu.id}">
+                        ${totalInternal} / 400
+                      </td>
+                      <td class="p-3.5 text-right">
+                        <button onclick="saveIndividualPhase2Grade(${stu.id}, ${activeSubject.id || 0})" class="btn-secondary text-xs py-1.5 px-3 rounded-lg border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10 flex items-center gap-1.5 ml-auto transition-all">
+                          <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                          <span>Submit</span>
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
         </div>
+      </div>
 
-        <div class="overflow-x-auto rounded-2xl border border-white/10">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
-              <tr>
-                <th class="p-4">Student</th>
-                <th class="p-4">Reg Number</th>
-                <th class="p-4">Internal (/400)</th>
-                <th class="p-4">Div 5: Univ Exam (/100)</th>
-                <th class="p-4">Grand Total (/500)</th>
-                <th class="p-4">Grade</th>
-                <th class="p-4 text-right">Individual Action</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-white/5 whitespace-nowrap">
-              ${students.map((st, idx) => {
-                const g = currentGrades.find(gr => gr.student_id === st.id) || {};
-                const totalInternal = parseFloat(g.total_internal) || 0;
-                const d5 = g.div5_univ_exam !== undefined ? g.div5_univ_exam : '';
-                const grandTotal = totalInternal + (parseFloat(d5) || 0);
-                const gradeLetter = g.grade_letter || (grandTotal >= 450 ? 'O' : grandTotal >= 400 ? 'A+' : grandTotal >= 350 ? 'A' : grandTotal >= 300 ? 'B+' : grandTotal >= 250 ? 'B' : 'RA');
+      <!-- TAB 4: PHASE 3 MARKS ENTRY (DIV 5) & PUBLISH RESULTS -->
+      <div id="gb-tab-phase3" class="${currentGradebookTab === 'phase3' ? '' : 'hidden'} space-y-4">
+        <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h4 class="text-lg font-medium text-white tracking-wide">Phase 3: Main University Examination & Final Results</h4>
+              <p class="text-xs text-slate-400">Div 5 (Univ Exam /100) + Total Internal (/400) = Grand Total (/500). Determines official grade letters.</p>
+            </div>
+            <button onclick="saveAllPhase3Grades(${activeSubject.id || 0})" class="btn-primary text-xs py-2.5 px-6 rounded-xl flex items-center gap-2 uppercase tracking-wider shadow-md bg-gradient-to-r from-[#e0231c] to-[#ff5a3c]">
+              <i data-lucide="award" class="w-4 h-4"></i>
+              <span>Publish Official Results (All Students)</span>
+            </button>
+          </div>
 
-                return `
-                  <tr class="hover:bg-white/[0.02] transition-colors" id="p3-row-${st.id}">
-                    <td class="p-4 font-medium text-white">${st.name}</td>
-                    <td class="p-4 font-mono text-blue-400 font-bold">${st.admin_id || 'N/A'}</td>
-                    <td class="p-4 font-mono text-slate-300">${totalInternal}/400</td>
-                    <td class="p-4">
-                      <input type="number" id="p3-d5-${st.id}" min="0" max="100" value="${d5}" placeholder="0-100" class="glass-input w-24 font-mono text-xs font-bold text-emerald-400 text-center" oninput="calcP3Row(${st.id}, ${totalInternal})">
-                    </td>
-                    <td class="p-4 font-mono font-bold text-white text-sm" id="p3-tot-${st.id}">
-                      ${grandTotal}/500
-                    </td>
-                    <td class="p-4" id="p3-grd-${st.id}">
-                      <span class="badge ${gradeLetter === 'RA' ? 'badge-rose' : 'badge-emerald'} text-xs font-bold">${gradeLetter}</span>
-                    </td>
-                    <td class="p-4 text-right">
-                      <button onclick="saveIndividualPhase3Grade(${st.id}, ${activeSubject.id})" class="btn-secondary text-xs py-1.5 px-3 rounded-lg border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10 flex items-center gap-1.5 ml-auto">
-                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                        <span>Submit</span>
-                      </button>
-                    </td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10 whitespace-nowrap">
+                <tr>
+                  <th class="p-3.5">Register No</th>
+                  <th class="p-3.5">Student Name</th>
+                  <th class="p-3.5">Internal Score (/400)</th>
+                  <th class="p-3.5">Div 5: Univ Exam (/100)</th>
+                  <th class="p-3.5">Grand Total (/500)</th>
+                  <th class="p-3.5">Grade Letter</th>
+                  <th class="p-3.5 text-right">Individual Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5 whitespace-nowrap">
+                ${students.map(stu => {
+                  const g = currentGrades.find(gr => gr.student_id === stu.id) || {};
+                  const d1 = parseFloat(g.div1_assessments) || 0;
+                  const d2 = parseFloat(g.div2_capstone) || 0;
+                  const d3 = parseFloat(g.div3_class_lab) || 0;
+                  const d4 = parseFloat(g.div4_univ_lab) || 0;
+                  const totalInternal = d1 + d2 + d3 + d4;
+                  const d5 = g.div5_univ_exam !== undefined ? g.div5_univ_exam : '';
+                  const grandTotal = totalInternal + (parseFloat(d5) || 0);
+                  const gradeLetter = g.grade_letter || (d5 !== '' ? calculateGradeLetter(grandTotal) : '-');
+
+                  return `
+                    <tr class="hover:bg-white/[0.02] transition-colors" id="row-p3-${stu.id}">
+                      <td class="p-3.5 font-mono text-xs font-bold text-[#ff5a3c]">${stu.admin_id}</td>
+                      <td class="p-3.5 font-medium text-white">${stu.name}</td>
+                      <td class="p-3.5 font-mono text-xs text-slate-300">${totalInternal} / 400</td>
+                      <td class="p-3.5">
+                        <input type="number" min="0" max="100" id="p3-d5-${stu.id}" value="${d5}" placeholder="0-100" class="glass-input w-28 font-mono text-xs font-bold text-[#ff5a3c]" oninput="recalcRowP3(${stu.id}, ${totalInternal})">
+                      </td>
+                      <td class="p-3.5 font-mono font-bold text-sm text-white" id="p3-tot-${stu.id}">
+                        ${grandTotal} / 500
+                      </td>
+                      <td class="p-3.5" id="p3-grade-${stu.id}">
+                        <span class="badge ${gradeLetter === 'RA' ? 'badge-rose' : 'badge-emerald'} font-mono font-bold text-xs">
+                          ${gradeLetter}
+                        </span>
+                      </td>
+                      <td class="p-3.5 text-right">
+                        <button onclick="saveIndividualPhase3Grade(${stu.id}, ${activeSubject.id || 0})" class="btn-secondary text-xs py-1.5 px-3 rounded-lg border-[#e0231c]/40 text-[#ff5a3c] hover:bg-[#e0231c]/10 flex items-center gap-1.5 ml-auto transition-all">
+                          <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                          <span>Submit</span>
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -10052,48 +10376,58 @@ async function renderGradebook(container) {
   lucide.createIcons();
 }
 
-function changeGbSubject(subjectId) {
-  currentGbSubjectId = parseInt(subjectId, 10);
+function changeGbSubject(id) {
+  currentGbSubjectId = parseInt(id, 10);
   renderPage();
 }
 
-function calcP1Row(studentId) {
+function calculateGradeLetter(score) {
+  const s = parseFloat(score) || 0;
+  if (s >= 450) return 'O';
+  if (s >= 400) return 'A+';
+  if (s >= 350) return 'A';
+  if (s >= 300) return 'B+';
+  if (s >= 250) return 'B';
+  return 'RA';
+}
+
+function recalcRowP1(studentId) {
   const d1 = parseFloat(document.getElementById(`p1-d1-${studentId}`)?.value) || 0;
   const d3 = parseFloat(document.getElementById(`p1-d3-${studentId}`)?.value) || 0;
   const totEl = document.getElementById(`p1-tot-${studentId}`);
-  if (totEl) totEl.innerText = `${d1 + d3}/200`;
+  if (totEl) totEl.innerText = `${d1 + d3} / 200`;
 }
 
-function calcP2Row(studentId, baseInternal) {
+function recalcRowP2(studentId, priorInternal) {
   const d2 = parseFloat(document.getElementById(`p2-d2-${studentId}`)?.value) || 0;
   const d4 = parseFloat(document.getElementById(`p2-d4-${studentId}`)?.value) || 0;
   const totEl = document.getElementById(`p2-tot-${studentId}`);
-  if (totEl) totEl.innerText = `${baseInternal + d2 + d4}/400`;
+  if (totEl) totEl.innerText = `${priorInternal + d2 + d4} / 400`;
 }
 
-function calcP3Row(studentId, totalInternal) {
+function recalcRowP3(studentId, totalInternal) {
   const d5 = parseFloat(document.getElementById(`p3-d5-${studentId}`)?.value) || 0;
   const grandTotal = totalInternal + d5;
   const totEl = document.getElementById(`p3-tot-${studentId}`);
-  const grdEl = document.getElementById(`p3-grd-${studentId}`);
-  const gradeLetter = grandTotal >= 450 ? 'O' : grandTotal >= 400 ? 'A+' : grandTotal >= 350 ? 'A' : grandTotal >= 300 ? 'B+' : grandTotal >= 250 ? 'B' : 'RA';
-  if (totEl) totEl.innerText = `${grandTotal}/500`;
-  if (grdEl) grdEl.innerHTML = `<span class="badge ${gradeLetter === 'RA' ? 'badge-rose' : 'badge-emerald'} text-xs font-bold">${gradeLetter}</span>`;
+  const gradeEl = document.getElementById(`p3-grade-${studentId}`);
+  if (totEl) totEl.innerText = `${grandTotal} / 500`;
+  if (gradeEl) {
+    const gl = calculateGradeLetter(grandTotal);
+    gradeEl.innerHTML = `<span class="badge ${gl === 'RA' ? 'badge-rose' : 'badge-emerald'} font-mono font-bold text-xs">${gl}</span>`;
+  }
 }
 
 async function saveIndividualPhase1Grade(studentId, subjectId) {
   const d1 = document.getElementById(`p1-d1-${studentId}`)?.value;
   const d3 = document.getElementById(`p1-d3-${studentId}`)?.value;
-  if (d1 === '' || d3 === '') return toast('Please enter marks for both Assessment and Class Lab', 'warning');
+
+  if (d1 === '' && d3 === '') return toast('Please enter marks before submitting', 'warning');
 
   try {
-    await api('POST', '/grades/submit-phase1', {
-      studentId,
-      subjectId,
-      div1Assessments: d1,
-      div3ClassLab: d3
+    const res = await api('POST', '/grades/submit-phase1-individual', {
+      studentId, subjectId, div1Assessments: d1, div3ClassLab: d3
     });
-    toast('Phase 1 marks saved for student! ✅', 'success');
+    toast(res.message || 'Phase 1 marks saved for student! 📝', 'success');
   } catch(e) {
     toast(e.message || 'Failed to save marks', 'error');
   }
@@ -10101,43 +10435,39 @@ async function saveIndividualPhase1Grade(studentId, subjectId) {
 
 async function saveAllPhase1Grades(subjectId) {
   const inputsD1 = document.querySelectorAll(`[id^="p1-d1-"]`);
-  let savedCount = 0;
+  const studentMarks = [];
 
-  for (const input of inputsD1) {
+  inputsD1.forEach(input => {
     const studentId = parseInt(input.id.replace('p1-d1-', ''), 10);
     const d1 = input.value;
     const d3 = document.getElementById(`p1-d3-${studentId}`)?.value;
-
     if (d1 !== '' || d3 !== '') {
-      try {
-        await api('POST', '/grades/submit-phase1', {
-          studentId,
-          subjectId,
-          div1Assessments: d1 || 0,
-          div3ClassLab: d3 || 0
-        });
-        savedCount++;
-      } catch(e) {}
+      studentMarks.push({ studentId, div1Assessments: d1, div3ClassLab: d3 });
     }
-  }
+  });
 
-  toast(`Submitted Phase 1 marks for ${savedCount} students! 🚀`, 'success');
-  renderPage();
+  if (studentMarks.length === 0) return toast('Please enter marks for at least one student', 'warning');
+
+  try {
+    await api('POST', '/grades/submit-phase1', { subjectId, studentMarks });
+    toast('Phase 1 marks submitted successfully for all students! 📝', 'success');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to save Phase 1 marks', 'error');
+  }
 }
 
 async function saveIndividualPhase2Grade(studentId, subjectId) {
   const d2 = document.getElementById(`p2-d2-${studentId}`)?.value;
   const d4 = document.getElementById(`p2-d4-${studentId}`)?.value;
-  if (d2 === '' || d4 === '') return toast('Please enter marks for both Capstone and Univ Lab', 'warning');
+
+  if (d2 === '' && d4 === '') return toast('Please enter Phase 2 marks before submitting', 'warning');
 
   try {
-    await api('POST', '/grades/submit-phase2', {
-      studentId,
-      subjectId,
-      div2Capstone: d2,
-      div4UnivLab: d4
+    const res = await api('POST', '/grades/submit-phase2', {
+      studentId, subjectId, div2Capstone: d2, div4UnivLab: d4
     });
-    toast('Phase 2 marks saved for student! ✅', 'success');
+    toast(res.message || 'Phase 2 marks saved for student! 🧪', 'success');
   } catch(e) {
     toast(e.message || 'Failed to save marks', 'error');
   }
@@ -10151,37 +10481,30 @@ async function saveAllPhase2Grades(subjectId) {
     const studentId = parseInt(input.id.replace('p2-d2-', ''), 10);
     const d2 = input.value;
     const d4 = document.getElementById(`p2-d4-${studentId}`)?.value;
-
     if (d2 !== '' || d4 !== '') {
       try {
-        await api('POST', '/grades/submit-phase2', {
-          studentId,
-          subjectId,
-          div2Capstone: d2 || 0,
-          div4UnivLab: d4 || 0
-        });
+        await api('POST', '/grades/submit-phase2', { studentId, subjectId, div2Capstone: d2, div4UnivLab: d4 });
         savedCount++;
       } catch(e) {}
     }
   }
 
-  toast(`Submitted Phase 2 marks for ${savedCount} students! 📊`, 'success');
+  if (savedCount === 0) return toast('Please enter marks for at least one student', 'warning');
+  toast(`Phase 2 marks saved for ${savedCount} students! 🧪`, 'success');
   renderPage();
 }
 
 async function saveIndividualPhase3Grade(studentId, subjectId) {
   const d5 = document.getElementById(`p3-d5-${studentId}`)?.value;
-  if (d5 === '') return toast('Please enter Univ Exam marks', 'warning');
+  if (d5 === '') return toast('Please enter University Exam mark before submitting', 'warning');
 
   try {
-    await api('POST', '/grades/submit-phase3-individual', {
-      studentId,
-      subjectId,
-      div5UnivExam: d5
+    const res = await api('POST', '/grades/submit-phase3-individual', {
+      studentId, subjectId, div5UnivExam: d5
     });
-    toast('University Exam marks saved for student! 🎓', 'success');
+    toast(res.message || 'University Exam marks saved and results published! 🎓', 'success');
   } catch(e) {
-    toast(e.message || 'Failed to save exam marks', 'error');
+    toast(e.message || 'Failed to save marks', 'error');
   }
 }
 
@@ -10208,7 +10531,100 @@ async function saveAllPhase3Grades(subjectId) {
   }
 }
 
-// ── 5. ADMIN FACULTY APPOINTMENTS & CREDENTIALS VAULT ────────────────────
+async function openCloseCourseModal() {
+  const subjects = await api('GET', '/subjects');
+  const isFac = S.user.role === 'faculty';
+  const mySubjects = isFac ? subjects.filter(s => s.faculty_id === S.user.id) : subjects;
+  const nextWeekDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  openModal('Close Course Launch for University Examinations', `
+    <div class="space-y-4 text-left">
+      <p class="text-xs text-slate-300">
+        Closing the launch locks initial enrollments, finalizes Phase 1 assessment marks, and allows students to send <b>Hall Ticket Requests</b> directly to you.
+      </p>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Select Course to Close</label>
+        <select id="m-close-subject" class="glass-input w-full font-medium">
+          ${mySubjects.map(s => `
+            <option value="${s.id}">${s.code ? s.code + ' — ' : ''}${s.name} ${s.is_closed ? '(Already Closed)' : s.is_phase1_submitted ? '(Phase 1 Ready ✅)' : '(Phase 1 Pending ⚠️)'}</option>
+          `).join('')}
+          ${mySubjects.length === 0 ? '<option value="">No courses available</option>' : ''}
+        </select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">University Exam Date</label>
+          <input type="date" id="m-close-date" value="${nextWeekDate}" class="glass-input w-full font-medium">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Exam Session</label>
+          <select id="m-close-session" class="glass-input w-full font-medium">
+            <option value="FN (09:30 AM - 12:30 PM)" selected>FN (09:30 AM - 12:30 PM)</option>
+            <option value="AN (01:30 PM - 04:30 PM)">AN (01:30 PM - 04:30 PM)</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Allocated Examination Hall</label>
+        <input type="text" id="m-close-hall" value="University Exam Block — Hall A" class="glass-input w-full font-medium">
+      </div>
+    </div>
+  `, `
+    <button onclick="closeCourseForExams()" class="btn-primary text-xs py-2.5 px-6 rounded-xl uppercase tracking-wider flex items-center gap-2 bg-gradient-to-r from-[#e0231c] to-[#ff5a3c]">
+      <i data-lucide="lock" class="w-4 h-4"></i>
+      <span>Close Course Launch for University Exams</span>
+    </button>
+  `);
+  lucide.createIcons();
+}
+
+async function closeCourseForExams() {
+  const subjectId = document.getElementById('m-close-subject')?.value;
+  const examDate = document.getElementById('m-close-date')?.value;
+  const examSession = document.getElementById('m-close-session')?.value;
+  const examHall = document.getElementById('m-close-hall')?.value;
+
+  if (!subjectId) return toast('Please select a course', 'warning');
+
+  try {
+    await api('POST', `/grades/close-course/${subjectId}`, { examDate, examSession, examHall });
+    toast('Course launch closed successfully! Students can now request Hall Tickets. 🎟️', 'success');
+    closeModal();
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to close course launch', 'error');
+  }
+}
+
+async function approveHallTicketRequest(requestId) {
+  try {
+    await api('POST', `/grades/hall-ticket/approve`, { requestId });
+    toast('Hall ticket approved and issued with QR code! 🎟️', 'success');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to approve hall ticket', 'error');
+  }
+}
+
+async function approveAllPendingHallTickets(subjectId) {
+  try {
+    const requests = await api('GET', '/grades/hall-ticket/requests');
+    const pending = requests.filter(r => r.status === 'requested');
+    for (const p of pending) {
+      await api('POST', '/grades/hall-ticket/approve', { requestId: p.id });
+    }
+    toast(`Approved ${pending.length} hall ticket requests! 🎟️`, 'success');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to approve all hall tickets', 'error');
+  }
+}
+
+
+// ── 8. ADMIN FACULTY APPOINTMENTS & CREDENTIALS VAULT ────────────────────
 async function renderFacultyUsers(container) {
   const allUsers = await api('GET', '/students');
   const facultyList = allUsers.filter(u => u.role === 'faculty');

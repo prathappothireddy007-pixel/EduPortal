@@ -56,7 +56,8 @@ router.post('/', authenticate, requireFaculty, async (req, res) => {
   try {
     const courseCode = (code || `CS${Math.floor(1000 + Math.random() * 9000)}`).toUpperCase().trim();
     const courseSlot = (slot || 'A').toUpperCase().trim().slice(0, 1);
-    const assignedFaculty = facultyId ? parseInt(facultyId, 10) : req.user.id;
+    // If faculty, always assign to themselves; admin can assign to any faculty
+    const assignedFaculty = req.user.role === 'admin' && facultyId ? parseInt(facultyId, 10) : req.user.id;
     const targetGroup = targetDept || 'ALL';
     const launched = isLaunched !== undefined ? Boolean(isLaunched) : true;
 
@@ -67,7 +68,7 @@ router.post('/', authenticate, requireFaculty, async (req, res) => {
       [name.trim(), courseCode, courseSlot, subjectType || 'classroom', assignedFaculty, targetGroup, launched, description || '', classId || null]
     );
 
-    await logAction(req.user.id, req.user.name, 'faculty', 'create_course', 'subjects', r.rows[0].id, null, { name, code: courseCode, slot: courseSlot, targetDept: targetGroup });
+    await logAction(req.user.id, req.user.name, req.user.role, 'create_course', 'subjects', r.rows[0].id, null, { name, code: courseCode, slot: courseSlot, targetDept: targetGroup });
     res.status(201).json(r.rows[0]);
   } catch (err) {
     console.error('[Subjects POST] Error:', err);
@@ -81,7 +82,17 @@ router.put('/:id', authenticate, requireFaculty, async (req, res) => {
   const { name, code, slot, subjectType, facultyId, targetDept, isLaunched, description } = req.body;
 
   try {
+    const check = await pool.query('SELECT * FROM subjects WHERE id=$1', [id]);
+    if (check.rows.length === 0) return res.status(404).json({ error: 'Subject not found' });
+
+    // Faculty can only edit their own subjects
+    if (req.user.role === 'faculty' && check.rows[0].faculty_id && check.rows[0].faculty_id !== req.user.id) {
+      return res.status(403).json({ error: 'You are only authorized to edit your own courses.' });
+    }
+
     const courseSlot = slot ? slot.toUpperCase().trim().slice(0, 1) : null;
+    const assignedFaculty = req.user.role === 'admin' ? facultyId : check.rows[0].faculty_id;
+
     const r = await pool.query(
       `UPDATE subjects SET
          name = COALESCE($1, name),
@@ -94,11 +105,10 @@ router.put('/:id', authenticate, requireFaculty, async (req, res) => {
          description = COALESCE($8, description)
        WHERE id = $9
        RETURNING *`,
-      [name ? name.trim() : null, code ? code.toUpperCase().trim() : null, courseSlot, subjectType, facultyId, targetDept, isLaunched, description, id]
+      [name ? name.trim() : null, code ? code.toUpperCase().trim() : null, courseSlot, subjectType, assignedFaculty, targetDept, isLaunched, description, id]
     );
 
-    if (r.rows.length === 0) return res.status(404).json({ error: 'Subject not found' });
-    await logAction(req.user.id, req.user.name, 'faculty', 'update_course', 'subjects', id);
+    await logAction(req.user.id, req.user.name, req.user.role, 'update_course', 'subjects', id);
     res.json(r.rows[0]);
   } catch (err) {
     console.error('[Subjects PUT] Error:', err);
@@ -109,8 +119,16 @@ router.put('/:id', authenticate, requireFaculty, async (req, res) => {
 // DELETE /:id - Delete subject
 router.delete('/:id', authenticate, requireFaculty, async (req, res) => {
   try {
+    const check = await pool.query('SELECT * FROM subjects WHERE id=$1', [req.params.id]);
+    if (check.rows.length === 0) return res.status(404).json({ error: 'Subject not found' });
+
+    // Faculty can only delete their own subjects
+    if (req.user.role === 'faculty' && check.rows[0].faculty_id && check.rows[0].faculty_id !== req.user.id) {
+      return res.status(403).json({ error: 'You are only authorized to delete your own courses.' });
+    }
+
     await pool.query('DELETE FROM subjects WHERE id=$1', [req.params.id]);
-    await logAction(req.user.id, req.user.name, 'faculty', 'delete_course', 'subjects', req.params.id);
+    await logAction(req.user.id, req.user.name, req.user.role, 'delete_course', 'subjects', req.params.id);
     res.json({ message: 'Subject deleted successfully' });
   } catch (err) {
     console.error('[Subjects DELETE] Error:', err);

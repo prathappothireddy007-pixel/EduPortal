@@ -64,15 +64,15 @@ router.get('/my-courses', authenticate, async (req, res) => {
   }
 });
 
-// GET / - All enrollments (faculty view) or own enrollments (student view)
+// GET / - All enrollments (faculty view for their subjects or admin view for all) or own enrollments (student view)
 router.get('/', authenticate, async (req, res) => {
   try {
     let r;
-    if (req.user.role === 'faculty') {
+    if (req.user.role === 'admin') {
       r = await pool.query(
         `SELECT er.id, er.status, er.created_at,
                 u_s.id as student_id, u_s.name as student_name, u_s.admin_id as reg_no, u_s.email as student_email,
-                s.id as subject_id, s.name as subject_name,
+                s.id as subject_id, s.name as subject_name, COALESCE(s.slot, 'A') as slot,
                 COALESCE(s.code, CONCAT('SUB', LPAD(s.id::text, 3, '0'))) as course_code,
                 u_f.name as faculty_name
          FROM enrollment_requests er
@@ -81,10 +81,25 @@ router.get('/', authenticate, async (req, res) => {
          LEFT JOIN users u_f ON s.faculty_id = u_f.id
          ORDER BY er.created_at DESC`
       );
+    } else if (req.user.role === 'faculty') {
+      r = await pool.query(
+        `SELECT er.id, er.status, er.created_at,
+                u_s.id as student_id, u_s.name as student_name, u_s.admin_id as reg_no, u_s.email as student_email,
+                s.id as subject_id, s.name as subject_name, COALESCE(s.slot, 'A') as slot,
+                COALESCE(s.code, CONCAT('SUB', LPAD(s.id::text, 3, '0'))) as course_code,
+                u_f.name as faculty_name
+         FROM enrollment_requests er
+         JOIN users u_s ON er.student_id = u_s.id
+         JOIN subjects s ON er.subject_id = s.id
+         LEFT JOIN users u_f ON s.faculty_id = u_f.id
+         WHERE s.faculty_id = $1 OR s.faculty_id IS NULL
+         ORDER BY er.created_at DESC`,
+        [req.user.id]
+      );
     } else {
       r = await pool.query(
         `SELECT er.id, er.status, er.created_at,
-                s.id as subject_id, s.name as subject_name,
+                s.id as subject_id, s.name as subject_name, COALESCE(s.slot, 'A') as slot,
                 COALESCE(s.code, CONCAT('SUB', LPAD(s.id::text, 3, '0'))) as course_code,
                 u_f.name as faculty_name
          FROM enrollment_requests er
@@ -153,7 +168,7 @@ router.post('/enroll', authenticate, async (req, res) => {
   }
 });
 
-// POST /unenroll - Student drops course
+// POST /unenroll - Student drops course and attendance changes dynamically
 router.post('/unenroll', authenticate, async (req, res) => {
   const { subjectId } = req.body;
   if (!subjectId) return res.status(400).json({ error: 'Subject ID required' });
@@ -163,7 +178,20 @@ router.post('/unenroll', authenticate, async (req, res) => {
       `DELETE FROM enrollment_requests WHERE student_id=$1 AND subject_id=$2`,
       [req.user.id, subjectId]
     );
-    res.json({ message: 'Unenrolled from course' });
+    // Delete associated course attendance so standing updates dynamically
+    await pool.query(
+      `DELETE FROM attendance WHERE student_id=$1 AND subject_id=$2`,
+      [req.user.id, subjectId]
+    );
+    await pool.query(
+      `DELETE FROM grades WHERE student_id=$1 AND subject_id=$2`,
+      [req.user.id, subjectId]
+    );
+    await pool.query(
+      `DELETE FROM hall_ticket_requests WHERE student_id=$1 AND subject_id=$2`,
+      [req.user.id, subjectId]
+    );
+    res.json({ message: 'Unenrolled from course and attendance recalculated.' });
   } catch (err) {
     console.error('[Unenroll] Error:', err);
     res.status(500).json({ error: 'Server error' });
@@ -173,6 +201,10 @@ router.post('/unenroll', authenticate, async (req, res) => {
 // DELETE /:id - Faculty removes enrollment
 router.delete('/:id', authenticate, requireFaculty, async (req, res) => {
   try {
+    const enr = await pool.query('SELECT student_id, subject_id FROM enrollment_requests WHERE id=$1', [req.params.id]);
+    if (enr.rows.length > 0) {
+      await pool.query('DELETE FROM attendance WHERE student_id=$1 AND subject_id=$2', [enr.rows[0].student_id, enr.rows[0].subject_id]);
+    }
     await pool.query('DELETE FROM enrollment_requests WHERE id=$1', [req.params.id]);
     res.json({ message: 'Enrollment removed' });
   } catch (err) {
