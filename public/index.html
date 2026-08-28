@@ -11042,6 +11042,363 @@ async function runAutoGenerateTimetable() {
   }
 }
 
+// ── STUDENT UNIVERSITY EXAMINATION HALL TICKET VIEW & PRINT ENGINE ──
+let currentStudentTicketData = null;
+
+async function renderStudentHallTicket(container) {
+  let ticket = { courses: [], student: S.user, attendancePct: 85, isEligible: true, qrVerificationCode: 'HT-VERIFIED' };
+  try {
+    ticket = await api('GET', '/grades/hall-ticket');
+  } catch(e) {
+    ticket = { courses: [], student: S.user, attendancePct: 0, isEligible: false, qrVerificationCode: 'N/A' };
+  }
+
+  currentStudentTicketData = ticket;
+  const approvedCourses = (ticket.courses || []).filter(c => c.request_status === 'approved');
+  const isEligible = ticket.attendancePct >= 75;
+
+  container.innerHTML = `
+    <div class="space-y-6 animate-fade-in max-w-4xl mx-auto">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="badge badge-purple text-[10px] uppercase tracking-wider">OFFICIAL ADMIT CARD</span>
+            <span class="badge ${isEligible ? 'badge-emerald' : 'badge-rose'} text-[10px] font-mono font-bold">
+              ${ticket.attendancePct}% Attendance (${isEligible ? 'Eligible' : 'Shortage < 75%'})
+            </span>
+          </div>
+          <h3 class="text-2xl font-normal text-white tracking-wide mt-1">University Examination Hall Ticket</h3>
+          <p class="text-xs text-slate-300">Statutory examination admit card. Issued after faculty course launch closure & attendance verification (≥ 75%).</p>
+        </div>
+        ${approvedCourses.length > 0 ? `
+          <button onclick="printOfficialHallTicket()" class="btn-primary text-xs py-2.5 px-5 rounded-xl uppercase tracking-wider flex items-center gap-2 shadow-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shrink-0">
+            <i data-lucide="printer" class="w-4 h-4 text-purple-200"></i>
+            <span>Print / Save Hall Ticket (PDF)</span>
+          </button>
+        ` : ''}
+      </div>
+
+      <!-- Attendance Eligibility Alert Banner -->
+      ${!isEligible ? `
+        <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-[#e0231c] bg-[#e0231c]/10 text-xs space-y-1">
+          <div class="flex items-center gap-2 text-rose-300 font-bold">
+            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+            <span>Statutory Attendance Shortage (${ticket.attendancePct}% < 75%)</span>
+          </div>
+          <p class="text-slate-300">
+            According to Autonomous University Academic Regulations, students must maintain a minimum of <b>75% attendance</b> to be eligible for university examinations. Hall tickets cannot be requested or issued while attendance is below 75%.
+          </p>
+        </div>
+      ` : ''}
+
+      <!-- Course Request Status Tracker Cards -->
+      <div class="space-y-3">
+        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Enrolled Courses & Hall Ticket Status</h4>
+        <div class="grid grid-cols-1 gap-3">
+          ${(ticket.courses || []).length === 0 ? `
+            <div class="glass-panel p-8 text-center text-slate-400 text-xs rounded-2xl border border-white/10">
+              No registered courses found. Please enroll in active courses via Course Catalog.
+            </div>
+          ` : ticket.courses.map(c => `
+            <div class="glass-panel p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md hover:border-white/20 transition-all">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="badge badge-purple font-mono font-bold text-[10px]">[Slot ${c.slot || 'A'}] ${c.course_code || ''}</span>
+                  <h4 class="font-bold text-white text-sm">${c.subject_name}</h4>
+                </div>
+                <p class="text-xs text-slate-400 mt-1 flex items-center gap-2">
+                  <span>Instructor: <b class="text-slate-300">${c.faculty_name || 'Faculty Assigned'}</b></span>
+                  ${c.exam_date ? `<span>• Exam: <b class="text-purple-300">${c.exam_date} (${c.exam_session || 'FN'})</b></span>` : ''}
+                </p>
+              </div>
+
+              <div class="flex items-center gap-3">
+                ${!c.is_closed ? `
+                  <span class="badge badge-amber text-xs flex items-center gap-1.5 py-1.5 px-3">
+                    <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                    <span>Launch Active (Awaiting Course Exam Close)</span>
+                  </span>
+                ` : c.request_status === 'not_requested' ? `
+                  ${isEligible ? `
+                    <button onclick="requestHallTicket(${c.subject_id})" class="btn-primary text-xs py-2 px-4 rounded-xl flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md">
+                      <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                      <span>Request Faculty for Hall Ticket</span>
+                    </button>
+                  ` : `
+                    <span class="badge badge-rose text-xs flex items-center gap-1.5 py-1.5 px-3" title="Minimum 75% attendance required">
+                      <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+                      <span>Ineligible (Attendance < 75%)</span>
+                    </span>
+                  `}
+                ` : c.request_status === 'requested' ? `
+                  <span class="badge badge-amber text-xs flex items-center gap-1.5 py-1.5 px-3">
+                    <i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i>
+                    <span>Request Sent to Faculty (Pending Approval)</span>
+                  </span>
+                ` : `
+                  <span class="badge badge-emerald text-xs flex items-center gap-1.5 py-1.5 px-3">
+                    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                    <span>Hall Ticket Approved & Generated ✅</span>
+                  </span>
+                `}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Official Hall Ticket Card (Rendered if approved courses exist) -->
+      ${approvedCourses.length === 0 ? `
+        <div class="glass-panel p-10 rounded-3xl border border-white/10 text-center space-y-3">
+          <div class="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center mx-auto">
+            <i data-lucide="ticket" class="w-6 h-6"></i>
+          </div>
+          <h4 class="text-base font-bold text-white">No Approved Hall Tickets Ready</h4>
+          <p class="text-xs text-slate-400 max-w-md mx-auto">
+            Once course launch is closed for examinations and approved by your faculty coordinator (with ≥ 75% attendance), your official University Admit Card will appear below for print & download.
+          </p>
+        </div>
+      ` : `
+        <div id="official-hall-ticket" class="glass-panel p-8 rounded-3xl border-2 border-purple-500/30 bg-slate-900/90 text-left space-y-6 relative overflow-hidden shadow-2xl">
+          <!-- Header -->
+          <div class="text-center border-b border-white/10 pb-6 space-y-1">
+            <p class="text-xs font-mono uppercase tracking-[0.3em] text-purple-400 font-bold">AUTONOMOUS UNIVERSITY ACADEMIC PORTAL</p>
+            <h2 class="text-2xl font-black text-white tracking-tight">OFFICIAL UNIVERSITY EXAMINATION HALL TICKET</h2>
+            <p class="text-xs text-slate-400">Academic Year 2026-2027 • End-Semester Degree Theory & Practical Examinations</p>
+          </div>
+
+          <!-- Candidate Profile Info -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 p-5 rounded-2xl bg-white/5 border border-white/10 text-xs">
+            <div class="space-y-1">
+              <span class="text-slate-400 uppercase font-semibold text-[10px]">Candidate Full Name</span>
+              <p class="font-bold text-white text-sm">${ticket.student?.name || S.user.name}</p>
+            </div>
+            <div class="space-y-1">
+              <span class="text-slate-400 uppercase font-semibold text-[10px]">Register / Roll Number</span>
+              <p class="font-mono font-bold text-blue-400 text-sm">${ticket.student?.admin_id || S.user.admin_id || 'STU' + S.user.id}</p>
+            </div>
+            <div class="space-y-1">
+              <span class="text-slate-400 uppercase font-semibold text-[10px]">Branch / Department</span>
+              <p class="font-semibold text-white">${ticket.student?.department || S.user.department || 'B.E. Computer Science & Engineering'}</p>
+            </div>
+            <div class="space-y-1">
+              <span class="text-slate-400 uppercase font-semibold text-[10px]">Attendance Standing</span>
+              <p class="font-mono font-bold text-emerald-400">${ticket.attendancePct}% (Statutory Requirement Met ✅)</p>
+            </div>
+            <div class="space-y-1">
+              <span class="text-slate-400 uppercase font-semibold text-[10px]">Faculty Verification</span>
+              <p class="font-bold text-emerald-400">✅ Approved by Course Faculty</p>
+            </div>
+            <div class="space-y-1">
+              <span class="text-slate-400 uppercase font-semibold text-[10px]">Admit Card UUID</span>
+              <p class="font-mono text-purple-400 font-bold text-xs truncate">${ticket.qrVerificationCode || 'HT-AUTONOMOUS-2026'}</p>
+            </div>
+          </div>
+
+          <!-- Approved Exam Courses Table -->
+          <div class="space-y-2">
+            <h4 class="text-xs font-bold text-purple-400 uppercase tracking-wider">Scheduled Examination Courses</h4>
+            <div class="rounded-xl border border-white/10 overflow-hidden">
+              <table class="w-full text-left text-xs text-slate-300">
+                <thead class="bg-white/5 text-[11px] text-slate-400 uppercase font-semibold border-b border-white/10">
+                  <tr>
+                    <th class="p-3.5">Course Code</th>
+                    <th class="p-3.5">Subject Name</th>
+                    <th class="p-3.5">Exam Date</th>
+                    <th class="p-3.5">Session</th>
+                    <th class="p-3.5">Allocated Hall</th>
+                    <th class="p-3.5 text-center">Invigilator Sign</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                  ${approvedCourses.map(c => `
+                    <tr>
+                      <td class="p-3.5 font-mono text-blue-400 font-bold">[Slot ${c.slot || 'A'}] ${c.course_code || ''}</td>
+                      <td class="p-3.5 font-semibold text-white">${c.subject_name}</td>
+                      <td class="p-3.5 font-mono">${c.exam_date || 'TBA'}</td>
+                      <td class="p-3.5 font-medium text-purple-300">${c.exam_session || 'FN (09:30 AM - 12:30 PM)'}</td>
+                      <td class="p-3.5 font-semibold text-emerald-400">${c.exam_hall || 'University Exam Block — Hall A'}</td>
+                      <td class="p-3.5 text-center text-slate-500 font-mono">_______________</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Controller of Examination Seal -->
+          <div class="pt-6 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
+            <div class="space-y-1">
+              <p class="text-slate-400">1. Candidate must bring this Hall Ticket & Institutional ID Card to every exam.</p>
+              <p class="text-slate-400">2. Electronic devices & smart watches are strictly prohibited in the exam hall.</p>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="font-serif italic font-bold text-white text-base">K. Raghavan, Ph.D.</div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Controller of Examinations</p>
+              <span class="badge badge-emerald text-[9px] mt-1">SEAL VALIDATED</span>
+            </div>
+          </div>
+        </div>
+      `}
+    </div>
+  `;
+  lucide.createIcons();
+}
+
+async function requestHallTicket(subjectId) {
+  try {
+    const res = await api('POST', '/grades/hall-ticket/request', { subjectId });
+    toast(res.message || 'Hall ticket request sent directly to faculty! 🎟️', 'success');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to request hall ticket', 'error');
+  }
+}
+
+function printOfficialHallTicket() {
+  if (!currentStudentTicketData) return window.print();
+
+  const ticket = currentStudentTicketData;
+  const approvedCourses = (ticket.courses || []).filter(c => c.request_status === 'approved');
+
+  const printWindow = window.open('', '_blank', 'width=900,height=1100');
+  if (!printWindow) {
+    window.print();
+    return;
+  }
+
+  const studentName = ticket.student?.name || S.user.name;
+  const studentReg = ticket.student?.admin_id || S.user.admin_id || 'STU' + S.user.id;
+  const studentDept = ticket.student?.department || S.user.department || 'B.E. Computer Science & Engineering';
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>Official University Examination Hall Ticket — ${studentReg}</title>
+      <style>
+        @page { size: A4 portrait; margin: 12mm; }
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #111; background: #fff; margin: 0; padding: 20px; line-height: 1.4; }
+        .ticket-box { border: 2px solid #000; padding: 24px; border-radius: 6px; position: relative; max-width: 800px; margin: 0 auto; background: #fff; }
+        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 14px; margin-bottom: 18px; }
+        .header h1 { margin: 0; font-size: 19px; text-transform: uppercase; letter-spacing: 1px; color: #000; font-weight: 900; }
+        .header h2 { margin: 3px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: #333; font-weight: 700; }
+        .header p { margin: 3px 0 0 0; font-size: 11px; color: #555; font-weight: 500; }
+        
+        .grid-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; background: #f4f6f8; border: 1px solid #ccc; padding: 12px 14px; border-radius: 6px; margin-bottom: 18px; font-size: 12px; }
+        .info-item { display: flex; flex-direction: column; }
+        .info-label { font-size: 9px; text-transform: uppercase; font-weight: 800; color: #555; margin-bottom: 2px; }
+        .info-val { font-size: 12px; font-weight: 700; color: #000; }
+        .font-mono { font-family: 'Courier New', monospace; }
+        
+        table { width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 11px; }
+        th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; }
+        th { background: #e5e9ec; font-weight: 800; text-transform: uppercase; font-size: 10px; color: #111; }
+        
+        .rules { font-size: 10px; color: #333; line-height: 1.5; margin-bottom: 18px; border-top: 1px dashed #aaa; padding-top: 10px; }
+        .rules b { color: #000; }
+        
+        .footer { display: flex; justify-content: space-between; align-items: flex-end; border-top: 2px solid #000; padding-top: 14px; font-size: 11px; }
+        .seal-box { border: 2px dashed #000; padding: 6px 12px; font-weight: 900; font-size: 11px; text-transform: uppercase; border-radius: 4px; display: inline-block; background: #fafafa; }
+        .sign-area { text-align: right; }
+        .sign-title { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #333; margin-top: 3px; }
+      </style>
+    </head>
+    <body>
+      <div class="ticket-box">
+        <div class="header">
+          <h2>Autonomous University Academic Examination Cell</h2>
+          <h1>OFFICIAL UNIVERSITY EXAMINATION HALL TICKET</h1>
+          <p>Academic Year 2026-2027 • End-Semester Degree Examinations Admit Card</p>
+        </div>
+
+        <div class="grid-info">
+          <div class="info-item">
+            <span class="info-label">Candidate Full Name</span>
+            <span class="info-val">${studentName}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Register / Roll Number</span>
+            <span class="info-val font-mono">${studentReg}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Department / Branch</span>
+            <span class="info-val">${studentDept}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Attendance Standing</span>
+            <span class="info-val font-mono">${ticket.attendancePct}% (Statutory Requirement Met ✅)</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Faculty Verification</span>
+            <span class="info-val">Approved & Issued by Course Faculty</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Security UUID</span>
+            <span class="info-val font-mono">${ticket.qrVerificationCode || 'HT-AUTONOMOUS-2026'}</span>
+          </div>
+        </div>
+
+        <h4 style="margin: 0 0 8px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800;">Approved Examination Courses & Allocated Halls:</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Course Code</th>
+              <th>Subject / Course Title</th>
+              <th>Exam Date</th>
+              <th>Session</th>
+              <th>Allocated Hall</th>
+              <th style="text-align: center;">Invigilator Signature</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${approvedCourses.map(c => `
+              <tr>
+                <td class="font-mono" style="font-weight: 800;">${c.course_code || 'COURSE'}</td>
+                <td style="font-weight: 600;">${c.subject_name}</td>
+                <td class="font-mono">${c.exam_date || 'TBA'}</td>
+                <td style="font-weight: 600;">${c.exam_session || 'FN (09:30 AM - 12:30 PM)'}</td>
+                <td style="font-weight: 800;">${c.exam_hall || 'University Exam Block — Hall A'}</td>
+                <td style="text-align: center; color: #888;">___________________</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="rules">
+          <b>Important Instructions for Candidate:</b><br>
+          1. Candidate must carry this original Hall Ticket along with Institutional ID card at the examination venue.<br>
+          2. Entry into the examination hall is not permitted after 15 minutes from the scheduled commencement of the examination.<br>
+          3. Possession of cell phones, smart watches, notes, or unauthorized electronic materials inside the hall is strictly prohibited and constitutes academic malpractice.
+        </div>
+
+        <div class="footer">
+          <div>
+            <div class="seal-box">OFFICIAL UNIVERSITY EXAMINATION SEAL • VALIDATED</div>
+            <p style="margin: 4px 0 0 0; font-size: 9px; color: #666;">Generated on: ${new Date().toLocaleDateString('en-US', { dateStyle: 'full' })}</p>
+          </div>
+          <div class="sign-area">
+            <div style="font-family: serif; font-style: italic; font-size: 16px; font-weight: 800;">K. Raghavan, Ph.D.</div>
+            <div class="sign-title">Controller of Examinations</div>
+          </div>
+        </div>
+      </div>
+      <script>
+        window.onload = function() {
+          window.print();
+        };
+      <\/script>
+    </body>
+    </html>
+  `;
+
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+}
+
 </script>
 </body>
 </html>

@@ -298,7 +298,7 @@ router.post('/close-course/:subjectId', authenticate, requireFaculty, async (req
   }
 });
 
-// ── 3. STUDENT HALL TICKET REQUEST TO FACULTY (Only after course launch is closed) ──
+// ── 3. STUDENT HALL TICKET REQUEST TO FACULTY (Only after course launch is closed & attendance >= 75%) ──
 router.post('/hall-ticket/request', authenticate, async (req, res) => {
   const { subjectId } = req.body;
   if (!subjectId) return res.status(400).json({ error: 'subjectId is required' });
@@ -310,6 +310,24 @@ router.post('/hall-ticket/request', authenticate, async (req, res) => {
     if (!subject.rows[0].is_closed) {
       return res.status(400).json({
         error: 'Hall ticket can only be requested after the faculty closes the course launch.'
+      });
+    }
+
+    // Check student attendance standing (must be >= 75%)
+    const attResult = await pool.query(
+      `SELECT 
+         COUNT(*) as total_days,
+         COUNT(CASE WHEN status IN ('Present', 'OD') THEN 1 END) as attended_days
+       FROM attendance WHERE student_id = $1`,
+      [req.user.id]
+    );
+    const totalDays = parseInt(attResult.rows[0]?.total_days || 0, 10);
+    const attendedDays = parseInt(attResult.rows[0]?.attended_days || 0, 10);
+    const attendancePct = totalDays > 0 ? Math.round((attendedDays / totalDays) * 100) : 100;
+
+    if (attendancePct < 75) {
+      return res.status(400).json({
+        error: `Ineligible for Hall Ticket: Your attendance is ${attendancePct}%. Academic regulations strictly require a minimum of 75% attendance to sit for examinations.`
       });
     }
 
@@ -330,14 +348,14 @@ router.post('/hall-ticket/request', authenticate, async (req, res) => {
         facultyId,
         'hall_ticket_request',
         '🎟️ Hall Ticket Request Received',
-        `Student "${req.user.name}" requested Hall Ticket generation for "${subject.rows[0].name}".`,
+        `Student "${req.user.name}" (${req.user.admin_id || 'Student'}, Attendance: ${attendancePct}%) requested Hall Ticket generation for "${subject.rows[0].name}".`,
         r.rows[0].id
       );
     }
 
     await logAction(req.user.id, req.user.name, 'student', 'request_hall_ticket', 'hall_ticket_requests', r.rows[0].id);
 
-    res.json({ message: 'Hall ticket request sent to faculty successfully!', request: r.rows[0] });
+    res.json({ message: 'Hall ticket request sent to faculty successfully!', request: r.rows[0], attendancePct });
   } catch (err) {
     console.error('[Hall Ticket Request] Error:', err);
     res.status(500).json({ error: 'Server error' });
@@ -353,7 +371,13 @@ router.get('/hall-ticket/requests', authenticate, requireFaculty, async (req, re
              u.name as student_name, u.admin_id as student_reg_no, u.department as student_dept,
              s.name as subject_name, s.code as course_code, s.is_closed as course_is_closed,
              s.exam_date, s.exam_session, s.exam_hall,
-             g.div1_assessments, g.total_internal
+             g.div1_assessments, g.total_internal,
+             (
+               SELECT CASE WHEN COUNT(*) > 0 
+                      THEN ROUND((COUNT(CASE WHEN a.status IN ('Present','OD') THEN 1 END)::numeric / COUNT(*)::numeric) * 100)
+                      ELSE 100 END
+               FROM attendance a WHERE a.student_id = htr.student_id
+             ) as attendance_pct
       FROM hall_ticket_requests htr
       JOIN users u ON htr.student_id = u.id
       JOIN subjects s ON htr.subject_id = s.id
@@ -375,7 +399,7 @@ router.get('/hall-ticket/requests', authenticate, requireFaculty, async (req, re
   }
 });
 
-// ── Helper to approve a single hall ticket request ──
+// ── Helper to approve a single hall ticket request (Enforces >= 75% attendance) ──
 async function approveHallTicketById(requestId, facultyUser) {
   const reqRow = await pool.query(
     `SELECT htr.*, u.name as student_name, u.admin_id, s.name as subject_name
@@ -389,6 +413,23 @@ async function approveHallTicketById(requestId, facultyUser) {
   if (!reqRow.rows[0]) return null;
 
   const student = reqRow.rows[0];
+
+  // Verify attendance >= 75%
+  const attResult = await pool.query(
+    `SELECT 
+       COUNT(*) as total_days,
+       COUNT(CASE WHEN status IN ('Present', 'OD') THEN 1 END) as attended_days
+     FROM attendance WHERE student_id = $1`,
+    [student.student_id]
+  );
+  const totalDays = parseInt(attResult.rows[0]?.total_days || 0, 10);
+  const attendedDays = parseInt(attResult.rows[0]?.attended_days || 0, 10);
+  const attendancePct = totalDays > 0 ? Math.round((attendedDays / totalDays) * 100) : 100;
+
+  if (attendancePct < 75) {
+    throw new Error(`Cannot approve hall ticket: Student has ${attendancePct}% attendance (minimum 75% required by regulations).`);
+  }
+
   const token = crypto.createHash('sha256')
     .update(`${student.admin_id}_${student.subject_id}_${Date.now()}`)
     .digest('hex').slice(0, 16).toUpperCase();
@@ -415,7 +456,7 @@ async function approveHallTicketById(requestId, facultyUser) {
     await logAction(facultyUser.id, facultyUser.name, facultyUser.role, 'approve_hall_ticket', 'hall_ticket_requests', requestId);
   }
 
-  return r.rows[0];
+  return { ...r.rows[0], attendancePct };
 }
 
 // ── 5. FACULTY APPROVES HALL TICKET GENERATION (Supports PUT & POST, single & batch) ──
