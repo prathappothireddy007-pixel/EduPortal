@@ -390,6 +390,7 @@ const initDB = async () => {
       `CREATE INDEX IF NOT EXISTS idx_grades_student ON grades(student_id)`,
       `CREATE INDEX IF NOT EXISTS idx_od_student ON od_requests(student_id)`,
       `CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)`,
+      `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_at TIMESTAMP`,
       `CREATE INDEX IF NOT EXISTS idx_timetable_class ON timetable_entries(class_id)`,
       `CREATE INDEX IF NOT EXISTS idx_timetable_room ON timetable_entries(classroom_id)`,
     ];
