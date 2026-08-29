@@ -719,6 +719,44 @@ a.btn-secondary:active {
   box-shadow: 0 0 12px rgba(244, 63, 94, 0.2) !important;
 }
 
+/* Katana Blade Dividers & Section Styling */
+.katana-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+/* Katana Click Slash Particle FX */
+.katana-slash-fx {
+  position: fixed;
+  pointer-events: none;
+  z-index: 999999;
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #ffffff 40%, #ff5a3c 80%, #e0231c 100%);
+  box-shadow: 0 0 10px #ff5a3c, 0 0 20px rgba(224, 35, 28, 0.9);
+  border-radius: 2px;
+  transform: translate(-50%, -50%) rotate(var(--slash-angle, -45deg)) scaleX(0.1);
+  transform-origin: center;
+  animation: katanaSlashAnim 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes katanaSlashAnim {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--slash-angle, -45deg)) scaleX(0.1);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--slash-angle, -45deg)) scaleX(1.4);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--slash-angle, -45deg)) scaleX(2.2) translateY(-4px);
+  }
+}
+
 /* Modal styling */
 #modal-container .glass-panel {
   background: rgba(7, 11, 14, 0.95) !important;
@@ -2610,6 +2648,66 @@ function buildShell() {
   }
   const stair = new THREE.Mesh(mergeGeos(treads), platMat);
   stair.receiveShadow = true; stair.castShadow = true; scene.add(stair);
+  try {
+    const katanaGroup = new THREE.Group();
+    const lacquerMat = new THREE.MeshStandardMaterial({ color: 0x0a0e12, roughness: 0.22, metalness: 0.18 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xc9a24a, roughness: 0.25, metalness: 0.9 });
+    const steelMat = new THREE.MeshStandardMaterial({ color: 0xdfe7e0, roughness: 0.08, metalness: 0.98 });
+    const tsukaMat = new THREE.MeshStandardMaterial({ color: 0x181c20, roughness: 0.6, metalness: 0.1 });
+
+    // Stand base
+    const base = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.08, 0.6), lacquerMat);
+    base.castShadow = true;
+    katanaGroup.add(base);
+
+    // Left and right upright sword pillars
+    [-0.55, 0.55].forEach(x => {
+      const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.75, 0.2), lacquerMat);
+      pillar.position.set(x, 0.38, 0);
+      pillar.castShadow = true;
+      katanaGroup.add(pillar);
+    });
+
+    // Top tier: Sheathed Katana (Saya)
+    const saya = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.032, 2.2, 12), lacquerMat);
+    saya.rotation.z = Math.PI / 2;
+    saya.position.set(0, 0.68, 0);
+    katanaGroup.add(saya);
+
+    // Gold Tsuba (Guard) on top katana
+    const tsuba1 = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.02, 16), goldMat);
+    tsuba1.rotation.z = Math.PI / 2;
+    tsuba1.position.set(-0.5, 0.68, 0);
+    katanaGroup.add(tsuba1);
+
+    // Tsuka (Hilt)
+    const tsuka1 = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.036, 0.65, 12), tsukaMat);
+    tsuka1.rotation.z = Math.PI / 2;
+    tsuka1.position.set(-0.85, 0.68, 0);
+    katanaGroup.add(tsuka1);
+
+    // Lower tier: Bare Tamahagane Katana Blade
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.036, 0.012), steelMat);
+    blade.position.set(0.3, 0.45, 0);
+    katanaGroup.add(blade);
+
+    // Lower Tsuba
+    const tsuba2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.02, 16), goldMat);
+    tsuba2.rotation.z = Math.PI / 2;
+    tsuba2.position.set(-0.5, 0.45, 0);
+    katanaGroup.add(tsuba2);
+
+    // Lower Tsuka
+    const tsuka2 = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.034, 0.65, 12), tsukaMat);
+    tsuka2.rotation.z = Math.PI / 2;
+    tsuka2.position.set(-0.85, 0.45, 0);
+    katanaGroup.add(tsuka2);
+
+    katanaGroup.position.set(2.8, 1.35, -7.2);
+    katanaGroup.rotation.y = -0.42;
+    katanaGroup.scale.set(1.3, 1.3, 1.3);
+    scene.add(katanaGroup);
+  } catch(e) {}
   const rail = new THREE.Mesh(mergeGeos(cheeks), wallMat);
   rail.receiveShadow = true; rail.castShadow = true; scene.add(rail);
 }
@@ -5156,7 +5254,10 @@ setTimeout(() => {
       
       let html = '';
       navStructure.forEach(sec => {
-        html += `<div class="text-[10px] font-medium text-[#78837c] tracking-[0.2em] uppercase px-3 mb-2">${sec.section}</div>`;
+        html += `<div class="text-[10px] font-medium text-[#78837c] tracking-[0.2em] uppercase px-3 mb-2 flex items-center justify-between">
+          <span>${sec.section}</span>
+          <span class="text-[9px] text-[#ff5a3c] opacity-60 font-serif">刀</span>
+        </div>`;
         sec.items.forEach(item => {
           const active = S.tab === item.tab;
           html += `
@@ -7910,6 +8011,9 @@ setTimeout(() => {
               </button>
             </div>
           </div>
+
+          <!-- Katana Blade Divider -->
+          ${typeof getKatanaBladeDivider === 'function' ? getKatanaBladeDivider('刀 · ACADEMIC OVERVIEW & TIMETABLE DISPATCH') : ''}
 
           <!-- Official Campus Announcements Banner for Student -->
           ${announcements && announcements.length > 0 ? `
@@ -11270,6 +11374,52 @@ async function runAutoGenerateTimetable() {
   }
 }
 
+// ── KATANA SVG COMPONENTS & BLADE DIVIDERS ──
+function getKatanaBladeDivider(title = '刀 · BUSHIDO ACADEMIC MASTERY') {
+  return `
+    <div class="katana-divider my-6 flex items-center gap-3 opacity-80 hover:opacity-100 transition-opacity">
+      <svg class="h-3.5 w-auto flex-1 max-w-[240px] shrink-0" viewBox="0 0 280 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="6" width="36" height="4" rx="1.5" fill="#14181c" stroke="#ff5a3c" stroke-width="0.8"/>
+        <line x1="8" y1="6" x2="11" y2="10" stroke="#e0231c" stroke-width="0.8"/>
+        <line x1="14" y1="6" x2="17" y2="10" stroke="#e0231c" stroke-width="0.8"/>
+        <line x1="20" y1="6" x2="23" y2="10" stroke="#e0231c" stroke-width="0.8"/>
+        <line x1="26" y1="6" x2="29" y2="10" stroke="#e0231c" stroke-width="0.8"/>
+        <line x1="32" y1="6" x2="35" y2="10" stroke="#e0231c" stroke-width="0.8"/>
+        <rect x="38" y="3" width="3" height="10" rx="1" fill="#c9a24a" stroke="#e0231c" stroke-width="0.6"/>
+        <rect x="41" y="5.5" width="5" height="5" fill="#c9a24a"/>
+        <path d="M46 6.5 L260 6.5 Q274 7.2 278 8 Q274 8.8 260 9.5 L46 9.5 Z" fill="url(#katanaBladeGrad)"/>
+        <path d="M48 8 Q65 7 80 8 T120 8 T160 8 T200 8 T240 8 Q260 7.8 274 8" stroke="rgba(255,255,255,0.75)" stroke-width="0.6" fill="none"/>
+        <circle cx="278" cy="8" r="1.5" fill="#ff5a3c"/>
+        <defs>
+          <linearGradient id="katanaBladeGrad" x1="46" y1="8" x2="278" y2="8" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#8a9ba8"/>
+            <stop offset="60%" stop-color="#dfe7e0"/>
+            <stop offset="92%" stop-color="#ffffff"/>
+            <stop offset="100%" stop-color="#ff5a3c"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <span class="text-[9px] font-mono tracking-[0.25em] uppercase text-slate-400 font-bold shrink-0">${title}</span>
+      <div class="h-[1px] flex-1 bg-gradient-to-r from-white/15 to-transparent"></div>
+    </div>
+  `;
+}
+
+function getKatanaCrestSvg(size = 'w-7 h-7') {
+  return `
+    <svg class="${size} shrink-0" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g filter="drop-shadow(0 0 6px rgba(224,35,28,0.5))">
+        <path d="M8 40 L38 10 Q40 8 42 6 Q40 10 38 12 L12 42 Z" fill="#dfe7e0" stroke="#ff5a3c" stroke-width="0.8"/>
+        <rect x="6" y="38" width="5" height="5" rx="1" transform="rotate(-45 6 38)" fill="#c9a24a"/>
+        <path d="M40 40 L10 10 Q8 8 6 6 Q10 10 12 12 L36 42 Z" fill="#dfe7e0" stroke="#e0231c" stroke-width="0.8"/>
+        <rect x="38" y="38" width="5" height="5" rx="1" transform="rotate(45 38 38)" fill="#c9a24a"/>
+        <circle cx="24" cy="24" r="5.5" fill="#e0231c" stroke="#c9a24a" stroke-width="1.2"/>
+        <circle cx="24" cy="24" r="2.2" fill="#fff"/>
+      </g>
+    </svg>
+  `;
+}
+
 // ── STUDENT UNIVERSITY EXAMINATION HALL TICKET VIEW & PRINT ENGINE ──
 let currentStudentTicketData = null;
 
@@ -11290,12 +11440,17 @@ async function renderStudentHallTicket(container) {
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div class="flex items-center gap-2">
-            <span class="badge badge-purple text-[10px] uppercase tracking-wider">OFFICIAL ADMIT CARD</span>
+            <span class="badge badge-purple text-[10px] uppercase tracking-wider flex items-center gap-1.5">
+              ${getKatanaCrestSvg('w-3.5 h-3.5')}
+              <span>OFFICIAL ADMIT CARD</span>
+            </span>
             <span class="badge ${isEligible ? 'badge-emerald' : 'badge-rose'} text-[10px] font-mono font-bold">
               ${ticket.attendancePct}% Attendance (${isEligible ? 'Eligible' : 'Shortage < 75%'})
             </span>
           </div>
-          <h3 class="text-2xl font-normal text-white tracking-wide mt-1">University Examination Hall Ticket</h3>
+          <h3 class="text-2xl font-normal text-white tracking-wide mt-1 flex items-center gap-2.5">
+            <span>University Examination Hall Ticket</span>
+          </h3>
           <p class="text-xs text-slate-300">Statutory examination admit card. Issued after faculty course launch closure & attendance verification (≥ 75%).</p>
         </div>
         ${approvedCourses.length > 0 ? `
@@ -11305,6 +11460,9 @@ async function renderStudentHallTicket(container) {
           </button>
         ` : ''}
       </div>
+
+      <!-- Katana Blade Divider -->
+      ${getKatanaBladeDivider('刀 · UNIVERSITY EXAMINATION CELL')}
 
       <!-- Attendance Eligibility Alert Banner -->
       ${!isEligible ? `
@@ -11388,9 +11546,13 @@ async function renderStudentHallTicket(container) {
         </div>
       ` : `
         <div id="official-hall-ticket" class="glass-panel p-8 rounded-3xl border-2 border-purple-500/30 bg-slate-900/90 text-left space-y-6 relative overflow-hidden shadow-2xl">
-          <!-- Header -->
-          <div class="text-center border-b border-white/10 pb-6 space-y-1">
-            <p class="text-xs font-mono uppercase tracking-[0.3em] text-purple-400 font-bold">AUTONOMOUS UNIVERSITY ACADEMIC PORTAL</p>
+          <!-- Header with Katana Emblem -->
+          <div class="text-center border-b border-white/10 pb-6 space-y-1.5">
+            <div class="flex items-center justify-center gap-2">
+              ${getKatanaCrestSvg('w-6 h-6')}
+              <p class="text-xs font-mono uppercase tracking-[0.3em] text-purple-400 font-bold">AUTONOMOUS UNIVERSITY ACADEMIC PORTAL</p>
+              ${getKatanaCrestSvg('w-6 h-6')}
+            </div>
             <h2 class="text-2xl font-black text-white tracking-tight">OFFICIAL UNIVERSITY EXAMINATION HALL TICKET</h2>
             <p class="text-xs text-slate-400">Academic Year 2026-2027 • End-Semester Degree Theory & Practical Examinations</p>
           </div>
@@ -11454,7 +11616,7 @@ async function renderStudentHallTicket(container) {
             </div>
           </div>
 
-          <!-- Controller of Examination Seal -->
+          <!-- Controller of Examination Seal with Katana Badge -->
           <div class="pt-6 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
             <div class="space-y-1">
               <p class="text-slate-400">1. Candidate must bring this Hall Ticket & Institutional ID Card to every exam.</p>
@@ -11463,7 +11625,10 @@ async function renderStudentHallTicket(container) {
             <div class="text-right shrink-0">
               <div class="font-serif italic font-bold text-white text-base">K. Raghavan, Ph.D.</div>
               <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Controller of Examinations</p>
-              <span class="badge badge-emerald text-[9px] mt-1">SEAL VALIDATED</span>
+              <span class="badge badge-emerald text-[9px] mt-1 inline-flex items-center gap-1">
+                ${getKatanaCrestSvg('w-3 h-3')}
+                <span>KATANA SEAL VALIDATED</span>
+              </span>
             </div>
           </div>
         </div>
@@ -11539,7 +11704,7 @@ function printOfficialHallTicket() {
         <div class="header">
           <h2>Autonomous University Academic Examination Cell</h2>
           <h1>OFFICIAL UNIVERSITY EXAMINATION HALL TICKET</h1>
-          <p>Academic Year 2026-2027 • End-Semester Degree Examinations Admit Card</p>
+          <p>Academic Year 2026-2027 • End-Semester Degree Examinations Admit Card • Katana Verified</p>
         </div>
 
         <div class="grid-info">
@@ -11604,7 +11769,7 @@ function printOfficialHallTicket() {
 
         <div class="footer">
           <div>
-            <div class="seal-box">OFFICIAL UNIVERSITY EXAMINATION SEAL • VALIDATED</div>
+            <div class="seal-box">⚔️ OFFICIAL UNIVERSITY EXAMINATION SEAL • VALIDATED</div>
             <p style="margin: 4px 0 0 0; font-size: 9px; color: #666;">Generated on: ${new Date().toLocaleDateString('en-US', { dateStyle: 'full' })}</p>
           </div>
           <div class="sign-area">
@@ -11626,6 +11791,25 @@ function printOfficialHallTicket() {
   printWindow.document.write(html);
   printWindow.document.close();
 }
+
+// ── KATANA CLICK SLASH MICRO-FX ──
+if (typeof window !== 'undefined' && !window.__katanaFxBound) {
+  window.__katanaFxBound = true;
+  document.addEventListener('click', (e) => {
+    const target = e.target.closest('button, .chip, .glass-card, .stat-card, a.btn-primary, a.btn-secondary, .nav-link');
+    if (!target) return;
+
+    const slash = document.createElement('div');
+    slash.className = 'katana-slash-fx';
+    const angle = Math.floor(Math.random() * 40) - 20 - 45;
+    slash.style.left = `${e.clientX}px`;
+    slash.style.top = `${e.clientY}px`;
+    slash.style.setProperty('--slash-angle', `${angle}deg`);
+    document.body.appendChild(slash);
+    setTimeout(() => slash.remove(), 420);
+  });
+}
+
 
 </script>
 </body>
