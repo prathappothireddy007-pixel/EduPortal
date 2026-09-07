@@ -4,15 +4,40 @@ const bcrypt = require('bcryptjs');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+// Helper to resolve candidate URLs (including Render regional fallbacks for bare internal hostnames)
+function getDbCandidateUrls(rawUrl) {
+  if (!rawUrl) return [];
+  const urls = [rawUrl];
+  try {
+    const parsed = new URL(rawUrl);
+    // If hostname is a bare Render host like dpg-xxxxxxxxx-a without dots
+    if (/^dpg-[a-z0-9]+-[a-z0-9]+$/i.test(parsed.hostname) && !parsed.hostname.includes('.')) {
+      const regions = ['oregon', 'frankfurt', 'singapore', 'ohio', 'virginia'];
+      for (const reg of regions) {
+        const fallbackUrl = new URL(rawUrl);
+        fallbackUrl.hostname = `${parsed.hostname}.${reg}-postgres.render.com`;
+        urls.push(fallbackUrl.toString());
+      }
+    }
+  } catch (e) {}
+  return urls;
+}
+
+let activeConnectionString = process.env.DATABASE_URL;
+let pool = new Pool({
+  connectionString: activeConnectionString,
   ssl: isProduction ? { rejectUnauthorized: false } : false
 });
 
-const initDB = async () => {
-  const client = await pool.connect();
-  try {
-    // ── Core Tables ──────────────────────────────────────────────────────────
+// Proxy pool methods so routes always use the active connected pool
+const poolProxy = {
+  query: (...args) => pool.query(...args),
+  connect: (...args) => pool.connect(...args),
+  on: (...args) => pool.on(...args),
+  end: (...args) => pool.end(...args)
+};
+
+const runSchemaAndMigrations = async (client) => {
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -449,13 +474,57 @@ const initDB = async () => {
     await client.query("UPDATE users SET plain_pass = 'Faculty@123' WHERE role='faculty' AND (plain_pass IS NULL OR plain_pass = '')");
     await client.query("UPDATE users SET plain_pass = 'katam@123' WHERE role='admin' AND (plain_pass IS NULL OR plain_pass = '')");
 
-    console.log('✅ Database initialized (v3.0 — full platform)');
+    console.log('✅ Database schema and migrations verified (v3.0 — full platform)');
   } catch (err) {
-    console.error('❌ DB init error:', err.message);
+    console.error('❌ DB schema/migration error:', err.message);
     throw err;
-  } finally {
-    client.release();
   }
 };
 
-module.exports = { pool, initDB };
+const initDB = async (maxRetries = 4) => {
+  const candidateUrls = getDbCandidateUrls(process.env.DATABASE_URL);
+  let connected = false;
+  let lastErr = null;
+
+  for (const url of candidateUrls) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const hostDisplay = (() => { try { return new URL(url).hostname; } catch(e) { return 'database'; } })();
+        console.log(`[DB] Connecting to PostgreSQL at ${hostDisplay} (attempt ${attempt}/${maxRetries})...`);
+
+        if (pool.options.connectionString !== url) {
+          try { await pool.end(); } catch(e) {}
+          pool = new Pool({
+            connectionString: url,
+            ssl: isProduction ? { rejectUnauthorized: false } : false
+          });
+        }
+
+        const client = await pool.connect();
+        try {
+          console.log(`✅ [DB] Successfully connected to database at ${hostDisplay}!`);
+          activeConnectionString = url;
+          await runSchemaAndMigrations(client);
+          connected = true;
+          return;
+        } finally {
+          client.release();
+        }
+      } catch (err) {
+        lastErr = err;
+        console.warn(`⚠️ [DB] Connection attempt failed (${err.code || err.message}).`);
+        if (attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+    }
+  }
+
+  if (!connected) {
+    console.error('❌ [DB] Could not connect to PostgreSQL after checking all candidate URLs.');
+    console.error('💡 Render Deployment Tip: If your PostgreSQL Database was recreated or is in another region, copy the "External Database URL" from your Render PostgreSQL Dashboard into your Web Service Environment Variables (DATABASE_URL).');
+    throw lastErr;
+  }
+};
+
+module.exports = { pool: poolProxy, initDB };

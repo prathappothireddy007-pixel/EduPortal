@@ -67,16 +67,18 @@ app.get('*', (req, res) => {
 // ── Start server ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 
-(async () => {
-  try {
-    await initDB();
-    startODExpiryJob();
-    app.listen(PORT, () => {
-      console.log(`🚀 EduPortal v3.0 running on port ${PORT}`);
-      console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+const server = app.listen(PORT, () => {
+  console.log(`🚀 EduPortal v3.0 running on port ${PORT}`);
+  console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+
+  // Initialize Database & background jobs with graceful resilience
+  initDB()
+    .then(() => {
+      startODExpiryJob();
+      console.log('✅ PostgreSQL database ready & background jobs started!');
+    })
+    .catch(err => {
+      console.warn('⚠️ Initial database connection notice:', err.message);
     });
-  } catch (err) {
-    console.error('Failed to start server:', err);
-    process.exit(1);
-  }
-})();
+});
+
