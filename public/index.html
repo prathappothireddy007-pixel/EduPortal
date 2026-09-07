@@ -7564,29 +7564,258 @@ setTimeout(() => {
       lucide.createIcons();
     }
 
+    var eventMapInstance = null;
+    var eventMarkerInstance = null;
+    var eventCircleInstance = null;
+
     function openAddEventModal() {
-      openModal('Create Institutional Event', `
+      const title = '🏛️ Create Institutional Event · Internal & External Venue Geotag';
+      const bodyHtml = `
         <div class="space-y-4 text-left">
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Event Title</label><input type="text" id="m-e-title" placeholder="e.g. National Level Hackathon 2026" class="glass-input w-full"></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Venue</label><input type="text" id="m-e-venue" placeholder="e.g. Tech Block Auditorium" class="glass-input w-full"></div>
-          <div><label class="block text-xs font-semibold text-slate-400 mb-1">Event Date</label><input type="date" id="m-e-date" value="${new Date().toISOString().split('T')[0]}" class="glass-input w-full"></div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Event Type <span class="text-[#e0231c]">*</span></label>
+              <select id="m-e-type" onchange="handleEventTypeChange(this.value)" class="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs font-bold text-[#ff5a3c] focus:border-[#e0231c] focus:outline-none">
+                <option value="internal">Internal (Campus Venue - Fixed 30m Geofence)</option>
+                <option value="external">External (Inter-College / Off-Campus / Hackathon)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Event Date <span class="text-[#e0231c]">*</span></label>
+              <input type="date" id="m-e-date" value="${new Date().toISOString().split('T')[0]}" class="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl font-mono text-xs text-white focus:border-[#e0231c] focus:outline-none">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Event Title <span class="text-[#e0231c]">*</span></label>
+            <input type="text" id="m-e-title" placeholder="e.g. National Level Cyber Hackathon 2026 / Paper Presentation" class="w-full px-3.5 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-[#e0231c] focus:outline-none" required>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Host Institution / Department</label>
+              <input type="text" id="m-e-host" placeholder="e.g. Dept of Computer Science & Engineering" class="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-[#e0231c] focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Venue / Hall / Ground Name <span class="text-[#e0231c]">*</span></label>
+              <input type="text" id="m-e-venue" placeholder="e.g. Tech Block Auditorium, Mech Block Seminar Hall" class="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-[#e0231c] focus:outline-none" required>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Description / Guidelines</label>
+            <textarea id="m-e-desc" rows="2" placeholder="Describe symposium tracks, awards, or instructions..." class="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-[#e0231c] focus:outline-none"></textarea>
+          </div>
+
+          <!-- Interactive Venue Map for Internal Campus Events -->
+          <div id="m-e-map-section" class="space-y-2.5 pt-3 border-t border-white/10">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="map-pin" class="w-4 h-4 text-[#ff5a3c]"></i>
+                <span>Set Official Campus Venue Pin & 30m Geofence</span>
+              </label>
+              <span class="badge badge-amber text-[10px]">Strict 30m Radius Geofence</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <div class="relative flex-1">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
+                <input type="text" id="event-map-search-input" onkeydown="if(event.key==='Enter'){event.preventDefault();searchEventLocation();}" placeholder="Search campus building or scroll map freely to drop pin..." class="w-full pl-9 pr-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-[#e0231c] focus:outline-none" />
+              </div>
+              <button type="button" onclick="searchEventLocation()" class="btn-secondary text-xs py-2 px-3.5 rounded-xl shrink-0 flex items-center gap-1.5">
+                <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                <span>Search</span>
+              </button>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 text-xs">
+              <div class="flex items-center gap-1.5">
+                <button type="button" onclick="switchEventMapLayer('street')" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#e0231c] text-white">Street Map</button>
+                <button type="button" onclick="switchEventMapLayer('satellite')" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-white/10 text-slate-300">🛰️ Satellite</button>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button type="button" onclick="dropEventPinAtMapCenter()" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-white/10 text-slate-300">📍 Pin Center</button>
+                <button type="button" onclick="useCurrentGPSLocationForEvent()" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-emerald-500/10 text-emerald-400">🎯 My GPS</button>
+              </div>
+            </div>
+
+            <div class="relative">
+              <div id="event-leaflet-map" class="w-full h-56 rounded-2xl border border-white/10 overflow-hidden relative z-0"></div>
+              <div class="absolute bottom-2 left-2 z-[400] bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 text-[10px] text-slate-400">
+                Click map to drop pin • Students applying for OD will be locked to this 30m circle
+              </div>
+            </div>
+
+            <div id="event-coords-display" class="flex items-center justify-between text-xs text-slate-400 font-mono bg-white/5 p-2 rounded-xl border border-white/10">
+              <span>📍 Lat: <b id="e-lat-val">13.0827</b>, Lng: <b id="e-lng-val">80.2707</b></span>
+              <span class="badge badge-emerald text-[10px]">30m Verified Radius</span>
+            </div>
+
+            <input type="hidden" id="m-e-lat" value="13.0827">
+            <input type="hidden" id="m-e-lng" value="80.2707">
+          </div>
         </div>
-      `, `<button onclick="saveEvent()" class="btn-primary w-full">Create Event</button>`);
+      `;
+
+      const footerHtml = `
+        <button onclick="closeModal()" class="btn-secondary text-xs py-2 px-4 rounded-xl">Cancel</button>
+        <button onclick="saveEvent()" class="btn-primary text-xs py-2.5 px-6 rounded-xl uppercase tracking-wider flex items-center gap-2 bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] font-medium">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Announce & Save Event</span>
+        </button>
+      `;
+
+      openModal(title, bodyHtml, footerHtml);
       lucide.createIcons();
+
+      setTimeout(() => {
+        initEventMap(13.0827, 80.2707);
+      }, 250);
+    }
+
+    function handleEventTypeChange(val) {
+      const mapSec = document.getElementById('m-e-map-section');
+      if (!mapSec) return;
+      if (val === 'external') {
+        mapSec.classList.add('opacity-50');
+      } else {
+        mapSec.classList.remove('opacity-50');
+      }
+    }
+
+    function initEventMap(lat, lng) {
+      const mapContainer = document.getElementById('event-leaflet-map');
+      if (!mapContainer || typeof L === 'undefined') return;
+
+      if (eventMapInstance) {
+        eventMapInstance.remove();
+        eventMapInstance = null;
+      }
+
+      eventMapInstance = L.map('event-leaflet-map', {
+        scrollWheelZoom: true,
+        touchZoom: true,
+        dragging: true,
+        doubleClickZoom: true,
+        boxZoom: true
+      }).setView([lat, lng], 15);
+
+      window._eventStreetTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+      window._eventSatTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles © Esri' });
+
+      window._eventStreetTileLayer.addTo(eventMapInstance);
+
+      const pinIcon = L.divIcon({
+        className: 'custom-od-pin',
+        html: '<div style="width:28px;height:28px;background:linear-gradient(135deg,#e0231c,#ff5a3c);border:2.5px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 4px 12px rgba(224,35,28,0.5);display:flex;align-items:center;justify-content:center;"><div style="width:8px;height:8px;background:white;border-radius:50%;transform:rotate(45deg);"></div></div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
+        popupAnchor: [0, -28]
+      });
+
+      eventMarkerInstance = L.marker([lat, lng], { draggable: true, icon: pinIcon }).addTo(eventMapInstance);
+      eventCircleInstance = L.circle([lat, lng], { radius: 30, color: '#e0231c', fillColor: '#ff5a3c', fillOpacity: 0.25, weight: 2 }).addTo(eventMapInstance);
+
+      eventMarkerInstance.on('drag', (e) => {
+        const pos = e.target.getLatLng();
+        eventCircleInstance.setLatLng(pos);
+        updateEventMarkerPosition(pos.lat, pos.lng, false);
+      });
+
+      eventMapInstance.on('click', (e) => {
+        updateEventMarkerPosition(e.latlng.lat, e.latlng.lng, false);
+      });
+    }
+
+    function updateEventMarkerPosition(lat, lng) {
+      const clampedLat = parseFloat(lat);
+      const clampedLng = parseFloat(lng);
+      if (eventMarkerInstance) eventMarkerInstance.setLatLng([clampedLat, clampedLng]);
+      if (eventCircleInstance) eventCircleInstance.setLatLng([clampedLat, clampedLng]);
+      const latEl = document.getElementById('m-e-lat');
+      const lngEl = document.getElementById('m-e-lng');
+      const latVal = document.getElementById('e-lat-val');
+      const lngVal = document.getElementById('e-lng-val');
+      if (latEl) latEl.value = clampedLat.toFixed(6);
+      if (lngEl) lngEl.value = clampedLng.toFixed(6);
+      if (latVal) latVal.innerText = clampedLat.toFixed(4);
+      if (lngVal) lngVal.innerText = clampedLng.toFixed(4);
+    }
+
+    function switchEventMapLayer(type) {
+      if (!eventMapInstance) return;
+      if (type === 'satellite') {
+        if (eventMapInstance.hasLayer(window._eventStreetTileLayer)) eventMapInstance.removeLayer(window._eventStreetTileLayer);
+        window._eventSatTileLayer.addTo(eventMapInstance);
+      } else {
+        if (eventMapInstance.hasLayer(window._eventSatTileLayer)) eventMapInstance.removeLayer(window._eventSatTileLayer);
+        window._eventStreetTileLayer.addTo(eventMapInstance);
+      }
+    }
+
+    function dropEventPinAtMapCenter() {
+      if (!eventMapInstance) return;
+      const center = eventMapInstance.getCenter();
+      updateEventMarkerPosition(center.lat, center.lng);
+    }
+
+    function useCurrentGPSLocationForEvent() {
+      if (!navigator.geolocation) return toast('Geolocation not supported', 'error');
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        if (eventMapInstance) eventMapInstance.setView([lat, lng], 16);
+        updateEventMarkerPosition(lat, lng);
+        toast('Map centered on current GPS coordinates 🎯', 'success');
+      }, () => toast('GPS access denied', 'warning'), { enableHighAccuracy: true });
+    }
+
+    async function searchEventLocation() {
+      const q = document.getElementById('event-map-search-input')?.value.trim();
+      if (!q) return;
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          const first = data[0];
+          const lat = parseFloat(first.lat);
+          const lng = parseFloat(first.lon);
+          if (eventMapInstance) eventMapInstance.setView([lat, lng], 16);
+          updateEventMarkerPosition(lat, lng);
+          const venueInput = document.getElementById('m-e-venue');
+          if (venueInput && !venueInput.value) venueInput.value = first.display_name.split(',')[0];
+        } else {
+          toast('Location not found in search. Scroll map to pin anywhere.', 'info');
+        }
+      } catch(e) {
+        toast('Search busy. Scroll map to pin venue.', 'info');
+      }
     }
 
     async function saveEvent() {
-      const title = document.getElementById('m-e-title')?.value;
-      const venue = document.getElementById('m-e-venue')?.value;
+      const title = document.getElementById('m-e-title')?.value.trim();
+      const eventType = document.getElementById('m-e-type')?.value || 'internal';
       const eventDate = document.getElementById('m-e-date')?.value;
+      const venue = document.getElementById('m-e-venue')?.value.trim();
+      const hostInstitution = document.getElementById('m-e-host')?.value.trim();
+      const description = document.getElementById('m-e-desc')?.value.trim();
+      const lat = parseFloat(document.getElementById('m-e-lat')?.value) || null;
+      const lng = parseFloat(document.getElementById('m-e-lng')?.value) || null;
 
       if (!title) return toast('Event title required', 'warning');
+      if (!venue) return toast('Venue name required', 'warning');
+
       try {
-        await api('POST', '/events', { title, venue, eventDate });
-        toast('Event created successfully', 'success');
+        await api('POST', '/events', {
+          title, description, eventDate, venue, hostInstitution,
+          lat, lng, radiusMeters: 30, eventType
+        });
+        toast('Institutional Event created and broadcasted to students! 🎉', 'success');
         closeModal();
         renderPage();
-      } catch(e) {}
+      } catch(e) {
+        toast(e.message || 'Failed to create event', 'error');
+      }
     }
 
     async function renderAcademicRisk(container) {
@@ -9880,13 +10109,28 @@ async function renderAttendance(container) {
                   </td>
                 </tr>
               ` : enrolledStudents.map(stu => `
-                <tr class="hover:bg-white/[0.02] transition-colors" id="att-row-${stu.id}">
+                <tr class="hover:bg-white/[0.02] transition-colors ${stu.is_od_approved ? 'bg-amber-500/[0.04] border-l-2 border-l-amber-400' : ''}" id="att-row-${stu.id}">
                   <td class="p-3.5">
                     <span class="font-mono text-xs font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
                       ${stu.admin_id}
                     </span>
                   </td>
-                  <td class="p-3.5 font-medium text-white text-sm">${stu.name}</td>
+                  <td class="p-3.5 font-medium text-white text-sm">
+                    <div class="flex items-center gap-2">
+                      <span>${stu.name}</span>
+                      ${stu.is_od_approved ? `
+                        <span class="badge badge-amber text-[10px] flex items-center gap-1 font-mono font-bold" title="OD Approved for ${stu.od_event_name || 'Event'}">
+                          ⭐ OD APPROVED
+                        </span>
+                      ` : ''}
+                    </div>
+                    ${stu.is_od_approved && stu.od_location_name ? `
+                      <div class="text-[10px] text-amber-300/80 font-normal mt-0.5 flex items-center gap-1">
+                        <i data-lucide="map-pin" class="w-3 h-3 text-amber-400"></i>
+                        <span>${stu.od_location_name} (30m Check-in Active)</span>
+                      </div>
+                    ` : ''}
+                  </td>
                   <td class="p-3.5"><span class="badge badge-purple">${stu.department || 'CSE'}</span></td>
                   <td class="p-3.5">
                     <div class="flex items-center gap-2">
@@ -9902,16 +10146,16 @@ async function renderAttendance(container) {
                   <td class="p-3.5 text-center">
                     <div class="inline-flex items-center p-1 rounded-xl bg-white/5 border border-white/10 gap-1">
                       <label class="cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-emerald-500/20 has-[:checked]:bg-emerald-500 has-[:checked]:text-white">
-                        <input type="radio" name="att_status_${stu.id}" value="Present" checked class="sr-only">
+                        <input type="radio" name="att_status_${stu.id}" value="Present" ${!stu.is_od_approved ? 'checked' : ''} class="sr-only">
                         <span>Present</span>
                       </label>
                       <label class="cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-rose-500/20 has-[:checked]:bg-rose-500 has-[:checked]:text-white">
                         <input type="radio" name="att_status_${stu.id}" value="Absent" class="sr-only">
                         <span>Absent</span>
                       </label>
-                      <label class="cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-amber-500/20 has-[:checked]:bg-amber-500 has-[:checked]:text-white">
-                        <input type="radio" name="att_status_${stu.id}" value="OD" class="sr-only">
-                        <span>On-Duty</span>
+                      <label class="cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-amber-500/20 has-[:checked]:bg-amber-500 has-[:checked]:text-white ${stu.is_od_approved ? 'ring-2 ring-amber-400 shadow-md' : ''}">
+                        <input type="radio" name="att_status_${stu.id}" value="OD" ${stu.is_od_approved ? 'checked' : ''} class="sr-only">
+                        <span>${stu.is_od_approved ? '⭐ On-Duty (OD)' : 'On-Duty'}</span>
                       </label>
                     </div>
                   </td>
@@ -10315,11 +10559,12 @@ async function openSubmitODModal() {
         <select id="m-od-event-id" onchange="handleODEventChange(this.value)" class="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs font-medium text-white focus:border-[#e0231c] focus:outline-none">
           <option value="">-- Independent Academic / External OD --</option>
           ${registeredEvents.map(e => `
-            <option value="${e.id}" data-name="${e.title}" data-lat="${e.lat || ''}" data-lng="${e.lng || ''}" data-venue="${e.venue || ''}">
-              ${e.title} (${e.venue || 'Campus'})
+            <option value="${e.id}" data-name="${e.title}" data-event-type="${e.event_type || 'internal'}" data-lat="${e.lat || ''}" data-lng="${e.lng || ''}" data-venue="${e.venue || ''}">
+              [${(e.event_type || 'internal').toUpperCase()}] ${e.title} (${e.venue || 'Campus'})
             </option>
           `).join('')}
         </select>
+        <div id="od-venue-lock-badge" class="hidden mt-1.5"></div>
       </div>
 
       <!-- Event Name -->
@@ -10672,17 +10917,49 @@ function selectODSearchResult(lat, lng, name) {
 function handleODEventChange(val) {
   const select = document.getElementById('m-od-event-id');
   const opt = select.options[select.selectedIndex];
+  const lockBadge = document.getElementById('od-venue-lock-badge');
+  const searchBar = document.getElementById('od-search-container');
+  const venueInput = document.getElementById('od-location-name');
+
   if (val && opt) {
     if (opt.dataset.name) document.getElementById('m-od-event-name').value = opt.dataset.name;
+    const isInternal = (opt.dataset.eventType === 'internal') || (opt.dataset.lat && opt.dataset.lng);
+
     if (opt.dataset.lat && opt.dataset.lng) {
       const lat = parseFloat(opt.dataset.lat);
       const lng = parseFloat(opt.dataset.lng);
       if (odMapInstance) {
-        odMapInstance.setView([lat, lng], 16);
+        odMapInstance.setView([lat, lng], 17);
         updateODMarkerPosition(lat, lng, false);
       }
-      document.getElementById('od-location-name').value = opt.dataset.venue || opt.dataset.name;
+      if (venueInput) {
+        venueInput.value = opt.dataset.venue || opt.dataset.name;
+        venueInput.readOnly = isInternal;
+      }
     }
+
+    if (isInternal) {
+      if (lockBadge) {
+        lockBadge.innerHTML = `<span class="badge badge-emerald text-[11px] font-mono flex items-center gap-1.5"><i data-lucide="lock" class="w-3.5 h-3.5"></i> 🔒 Campus Verified Venue (30m Radius Locked by Faculty)</span>`;
+        lockBadge.classList.remove('hidden');
+      }
+      if (searchBar) searchBar.classList.add('opacity-40', 'pointer-events-none');
+      if (odMarkerInstance && odMarkerInstance.dragging) odMarkerInstance.dragging.disable();
+    } else {
+      if (lockBadge) {
+        lockBadge.innerHTML = `<span class="badge badge-blue text-[11px] font-mono flex items-center gap-1.5"><i data-lucide="globe" class="w-3.5 h-3.5"></i> 📍 External Event (Freely Scroll or Search to Pin 30m Geofence)</span>`;
+        lockBadge.classList.remove('hidden');
+      }
+      if (searchBar) searchBar.classList.remove('opacity-40', 'pointer-events-none');
+      if (venueInput) venueInput.readOnly = false;
+      if (odMarkerInstance && odMarkerInstance.dragging) odMarkerInstance.dragging.enable();
+    }
+    lucide.createIcons();
+  } else {
+    if (lockBadge) lockBadge.classList.add('hidden');
+    if (searchBar) searchBar.classList.remove('opacity-40', 'pointer-events-none');
+    if (venueInput) venueInput.readOnly = false;
+    if (odMarkerInstance && odMarkerInstance.dragging) odMarkerInstance.dragging.enable();
   }
 }
 
@@ -10982,21 +11259,24 @@ async function openInspectODModal(odId) {
   const title = `📍 OD Verification & Map Inspection · ${od.student_name}`;
   const bodyHtml = `
     <div class="space-y-4 animate-fade-in text-left">
-      <!-- Top Info Summary -->
-      <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
+      <!-- Full Student Profile & Event Metadata Summary -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-white/5 border border-white/10 text-xs">
+        <div class="space-y-1.5">
           <div class="flex items-center gap-2">
             <span class="badge badge-purple font-mono text-xs font-bold">SLOT ${slot}</span>
             <span class="badge ${isCompleted ? 'badge-emerald' : isPending ? 'badge-amber' : 'badge-rose'} text-xs font-mono uppercase">${od.status.toUpperCase()}</span>
-            <span class="font-mono text-xs text-slate-400">${od.date ? new Date(od.date).toLocaleDateString() : 'Today'}</span>
+            <span class="badge badge-blue text-[10px] font-mono uppercase">${(od.event_type || 'internal').toUpperCase()} EVENT</span>
           </div>
-          <h4 class="text-base font-medium text-white mt-1">${od.event_name || 'Academic Event'}</h4>
-          <p class="text-xs text-slate-400">Student: <b class="text-white">${od.student_name}</b> (${od.reg_no || 'REG---'}) · ${od.student_dept || 'Engineering'}</p>
+          <h4 class="text-sm font-bold text-white">${od.event_name || 'Academic Event'}</h4>
+          <p class="text-slate-300 font-semibold">Student: <span class="text-white">${od.student_name}</span> (<span class="font-mono text-blue-400">${od.reg_no || 'REG---'}</span>)</p>
+          <p class="text-slate-400">Dept: <b class="text-slate-300">${od.student_dept || 'Engineering'}</b> • Email: <span class="text-slate-300">${od.student_email || 'N/A'}</span></p>
+          ${od.parent_phone ? `<p class="text-slate-400">Parent Contact: <b class="text-emerald-400 font-mono">${od.parent_phone}</b></p>` : ''}
         </div>
-        <div class="text-right font-mono">
-          <div class="text-xs text-slate-400">Target Venue</div>
-          <div class="text-sm font-semibold text-[#ff5a3c]">${od.location_name || 'Selected Venue'}</div>
-          <div class="text-[10px] text-slate-500">Lat ${targetLat.toFixed(4)}, Lng ${targetLng.toFixed(4)}</div>
+        <div class="space-y-1.5 sm:text-right font-mono">
+          <div class="text-slate-400 text-[11px] uppercase">Designated Venue & 30m Geofence</div>
+          <div class="text-sm font-bold text-[#ff5a3c]">${od.location_name || 'Campus Selected Venue'}</div>
+          <div class="text-[11px] text-slate-400">Coordinates: Lat ${targetLat.toFixed(4)}, Lng ${targetLng.toFixed(4)}</div>
+          <div class="text-[10px] text-emerald-400">Radius: 30m Strict Geofence Enabled</div>
         </div>
       </div>
 
@@ -12448,19 +12728,20 @@ async function renderStudentHallTicket(container) {
               No registered courses found. Please enroll in active courses via Course Catalog.
             </div>
           ` : ticket.courses.map(c => `
-            <div class="glass-panel p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md hover:border-white/20 transition-all">
-              <div>
+            <div class="glass-panel p-5 rounded-2xl border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg hover:border-white/20 transition-all">
+              <div class="space-y-1">
                 <div class="flex items-center gap-2">
                   <span class="badge badge-purple font-mono font-bold text-[10px]">[Slot ${c.slot || 'A'}] ${c.course_code || ''}</span>
-                  <h4 class="font-bold text-white text-sm">${c.subject_name}</h4>
+                  <h4 class="font-bold text-white text-base">${c.subject_name}</h4>
                 </div>
-                <p class="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                  <span>Instructor: <b class="text-slate-300">${c.faculty_name || 'Faculty Assigned'}</b></span>
+                <div class="text-xs text-slate-300 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span>Instructor: <b class="text-white">${c.faculty_name || 'Faculty In-Charge'}</b></span>
                   ${c.exam_date ? `<span>• Exam: <b class="text-purple-300">${c.exam_date} (${c.exam_session || 'FN'})</b></span>` : ''}
-                </p>
+                  ${c.exam_hall ? `<span>• Hall: <b class="text-emerald-400">${c.exam_hall}</b></span>` : ''}
+                </div>
               </div>
 
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2.5 shrink-0 flex-wrap">
                 ${!c.is_closed ? `
                   <span class="badge badge-amber text-xs flex items-center gap-1.5 py-1.5 px-3">
                     <i data-lucide="clock" class="w-3.5 h-3.5"></i>
@@ -12484,10 +12765,12 @@ async function renderStudentHallTicket(container) {
                     <span>Request Sent to Faculty (Pending Approval)</span>
                   </span>
                 ` : `
-                  <span class="badge badge-emerald text-xs flex items-center gap-1.5 py-1.5 px-3">
-                    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
-                    <span>Hall Ticket Approved & Generated ✅</span>
-                  </span>
+                  <div class="flex items-center gap-2">
+                    <button onclick="openSubjectHallTicketPassModal(${c.subject_id})" class="btn-primary text-xs py-2 px-4 rounded-xl flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-md font-medium">
+                      <i data-lucide="ticket" class="w-4 h-4 text-purple-200"></i>
+                      <span>🎫 View / Print Subject Pass</span>
+                    </button>
+                  </div>
                 `}
               </div>
             </div>
@@ -12609,6 +12892,263 @@ async function requestHallTicket(subjectId) {
     toast(e.message || 'Failed to request hall ticket', 'error');
   }
 }
+
+
+// ── INDIVIDUAL SUBJECT HALL TICKET ADMIT PASS MODAL & PRINT GENERATOR ──
+let currentSubjectPassData = null;
+
+async function openSubjectHallTicketPassModal(subjectId) {
+  try {
+    const data = await api('GET', `/grades/hall-ticket/subject/${subjectId}`);
+    currentSubjectPassData = data;
+
+    const stu = data.student;
+    const sub = data.subject;
+    const att = data.attendance;
+    const grd = data.grades;
+    const ht = data.hallTicket;
+
+    const isEligible = att.attendancePct >= 75;
+
+    const title = `🎫 Individual Subject Hall Ticket Admit Pass · ${sub.name}`;
+    const bodyHtml = `
+      <div id="subject-admit-pass-content" class="space-y-6 text-left p-2 animate-fade-in">
+        <!-- University Official Banner -->
+        <div class="p-6 rounded-3xl bg-slate-900/90 border-2 border-purple-500/30 text-center space-y-2 shadow-2xl relative overflow-hidden">
+          <div class="flex items-center justify-center gap-2">
+            ${getKatanaCrestSvg('w-5 h-5')}
+            <span class="text-[11px] font-mono uppercase tracking-[0.25em] text-purple-400 font-bold">AUTONOMOUS UNIVERSITY EXAMINATION CELL</span>
+            ${getKatanaCrestSvg('w-5 h-5')}
+          </div>
+          <h3 class="text-xl font-black text-white tracking-wide">SUBJECT EXAMINATION ADMIT PASS</h3>
+          <p class="text-xs text-slate-400">Academic Year 2026-2027 • End-Semester Autonomous Examinations</p>
+
+          <!-- Candidate & Subject Quick Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-left pt-4 mt-4 border-t border-white/10">
+            <!-- Candidate Details -->
+            <div class="space-y-1.5 p-3 rounded-2xl bg-white/5 border border-white/10">
+              <span class="text-[10px] text-purple-400 uppercase font-bold tracking-wider">Candidate Profile</span>
+              <p class="font-bold text-white text-sm">${stu.name}</p>
+              <p class="font-mono text-blue-400 font-bold">${stu.admin_id || 'STU' + stu.id}</p>
+              <p class="text-slate-300 text-[11px]">${stu.department || 'Computer Science & Engineering'}</p>
+              <p class="text-slate-400 text-[10px]">Email: ${stu.email || 'student@university.edu'}</p>
+            </div>
+
+            <!-- Subject Details -->
+            <div class="space-y-1.5 p-3 rounded-2xl bg-white/5 border border-white/10">
+              <span class="text-[10px] text-purple-400 uppercase font-bold tracking-wider">Course Allocation</span>
+              <p class="font-bold text-white text-sm">${sub.name}</p>
+              <p class="font-mono text-purple-300 font-bold">[Slot ${sub.slot || 'A'}] ${sub.code}</p>
+              <p class="text-slate-300 text-[11px]">Faculty In-Charge: <b>${sub.faculty_name}</b></p>
+              <p class="text-slate-400 text-[10px]">Type: ${(sub.subject_type || 'classroom').toUpperCase()}</p>
+            </div>
+          </div>
+
+          <!-- Attendance & Internal Marks Breakdown -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-left pt-2">
+            <!-- Subject Attendance Standing -->
+            <div class="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+              <span class="text-[10px] text-emerald-400 uppercase font-bold tracking-wider">Subject Attendance Record</span>
+              <div class="flex items-center justify-between">
+                <span class="font-mono font-bold text-emerald-400 text-lg">${att.attendancePct}%</span>
+                <span class="badge ${isEligible ? 'badge-emerald' : 'badge-rose'} text-[10px] font-mono font-bold">
+                  ${isEligible ? 'STATUTORY REQUIREMENT MET ✓' : 'SHORTAGE (< 75%)'}
+                </span>
+              </div>
+              <p class="text-slate-400 text-[10px] font-mono">Attended: ${att.attendedSessions || 0} / ${att.totalSessions || 0} Scheduled Sessions</p>
+            </div>
+
+            <!-- Internal Marks Standing -->
+            <div class="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+              <span class="text-[10px] text-blue-400 uppercase font-bold tracking-wider">Recorded Internal Marks</span>
+              <div class="flex items-center justify-between">
+                <span class="font-mono font-bold text-blue-400 text-lg">${grd.total_internal} / 400</span>
+                <span class="badge badge-purple text-[10px] font-mono font-bold">Grade: ${grd.grade_letter}</span>
+              </div>
+              <p class="text-slate-400 text-[10px] font-mono">Phase 1 Assessments: ${grd.div1_assessments}/100 • Lab: ${grd.div3_class_lab}/100</p>
+            </div>
+          </div>
+
+          <!-- Examination Schedule & Venue -->
+          <div class="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-xs text-left space-y-2">
+            <span class="text-[10px] text-purple-300 uppercase font-bold tracking-wider">Scheduled Examination Schedule</span>
+            <div class="grid grid-cols-3 gap-3 font-mono">
+              <div>
+                <span class="text-slate-400 text-[10px] block">Exam Date</span>
+                <b class="text-white">${sub.exam_date || 'TBA'}</b>
+              </div>
+              <div>
+                <span class="text-slate-400 text-[10px] block">Session / Timing</span>
+                <b class="text-purple-300">${sub.exam_session || 'FN (09:30 AM - 12:30 PM)'}</b>
+              </div>
+              <div>
+                <span class="text-slate-400 text-[10px] block">Allocated Hall</span>
+                <b class="text-emerald-400">${sub.exam_hall || 'University Exam Block — Hall A'}</b>
+              </div>
+            </div>
+          </div>
+
+          <!-- Security Token & Verification QR -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-white/10 text-xs text-left">
+            <div class="space-y-0.5">
+              <span class="text-[10px] text-slate-400 uppercase font-bold">Admit Verification Token</span>
+              <p class="font-mono text-purple-300 font-bold text-[11px] truncate">${ht.qrToken || ht.token}</p>
+              <p class="text-[10px] text-slate-500">Issued by Course Coordinator & Academic Registrar</p>
+            </div>
+            <div class="text-right shrink-0 font-mono">
+              <div class="text-slate-300 font-serif italic text-sm">K. Raghavan, Ph.D.</div>
+              <p class="text-[9px] text-slate-400 uppercase tracking-wider">Controller of Examinations</p>
+              <span class="badge badge-emerald text-[9px] mt-1 inline-flex items-center gap-1">
+                ${getKatanaCrestSvg('w-3 h-3')}
+                <span>SEAL VALIDATED</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const footerHtml = `
+      <button onclick="closeModal()" class="btn-secondary text-xs py-2 px-4 rounded-xl">Close</button>
+      <button onclick="printIndividualSubjectHallTicket()" class="btn-primary text-xs py-2.5 px-6 rounded-xl uppercase tracking-wider flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 shadow-md font-medium">
+        <i data-lucide="printer" class="w-4 h-4 text-purple-200"></i>
+        <span>Print Subject Admit Pass (PDF)</span>
+      </button>
+    `;
+
+    openModal(title, bodyHtml, footerHtml);
+    lucide.createIcons();
+  } catch(e) {
+    toast(e.message || 'Failed to load subject hall ticket', 'error');
+  }
+}
+
+function printIndividualSubjectHallTicket() {
+  if (!currentSubjectPassData) return toast('No subject pass data loaded', 'error');
+
+  const data = currentSubjectPassData;
+  const stu = data.student;
+  const sub = data.subject;
+  const att = data.attendance;
+  const grd = data.grades;
+  const ht = data.hallTicket;
+
+  const printWindow = window.open('', '_blank', 'width=850,height=1000');
+  if (!printWindow) return toast('Please allow popups to print Hall Ticket', 'warning');
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Subject Admit Pass - ${sub.code} - ${stu.name}</title>
+      <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; color: #111; background: #fff; line-height: 1.4; }
+        .pass-box { border: 2px solid #222; padding: 25px; border-radius: 12px; max-width: 750px; margin: 0 auto; }
+        .header { text-align: center; border-bottom: 2px solid #222; padding-bottom: 15px; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 20px; text-transform: uppercase; letter-spacing: 2px; }
+        .header h2 { margin: 5px 0 0; font-size: 16px; color: #444; }
+        .header p { margin: 4px 0 0; font-size: 12px; color: #666; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 18px; }
+        .card { border: 1px solid #ccc; padding: 12px; border-radius: 8px; font-size: 12px; }
+        .card-title { font-size: 10px; font-weight: bold; text-transform: uppercase; color: #666; margin-bottom: 6px; }
+        .val-large { font-size: 14px; font-weight: bold; margin-bottom: 2px; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
+        .table th, .table td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; }
+        .table th { background: #f4f4f4; text-transform: uppercase; font-size: 11px; }
+        .footer { margin-top: 25px; border-top: 1px solid #ccc; padding-top: 15px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 11px; }
+        .rules { font-size: 10px; color: #555; max-width: 450px; }
+        .sig { text-align: right; }
+        @media print { body { padding: 0; } .pass-box { border: 1.5px solid #000; } }
+      </style>
+    </head>
+    <body>
+      <div class="pass-box">
+        <div class="header">
+          <p>AUTONOMOUS UNIVERSITY ACADEMIC OPERATIONS</p>
+          <h1>OFFICIAL SUBJECT EXAMINATION ADMIT PASS</h1>
+          <h2>End-Semester Degree Examinations • Academic Year 2026-2027</h2>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <div class="card-title">Candidate Details</div>
+            <div class="val-large">${stu.name}</div>
+            <div>Register No: <b>${stu.admin_id || 'STU' + stu.id}</b></div>
+            <div>Department: ${stu.department || 'B.E. Computer Science & Engineering'}</div>
+            <div>Email: ${stu.email || 'student@university.edu'}</div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Subject & Slot Allocation</div>
+            <div class="val-large">${sub.name}</div>
+            <div>Course Code: <b>${sub.code} (Slot ${sub.slot || 'A'})</b></div>
+            <div>Faculty In-Charge: <b>${sub.faculty_name}</b></div>
+            <div>Course Type: ${(sub.subject_type || 'classroom').toUpperCase()}</div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <div class="card-title">Subject Attendance Standing</div>
+            <div class="val-large" style="color: ${att.attendancePct >= 75 ? '#0b8244' : '#c51b15'}">${att.attendancePct}% Attendance</div>
+            <div>Status: <b>${att.attendancePct >= 75 ? 'STATUTORY ELIGIBILITY MET ✓' : 'ATTENDANCE SHORTAGE (< 75%)'}</b></div>
+            <div>Attended: ${att.attendedSessions || 0} / ${att.totalSessions || 0} Sessions</div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Internal Assessment Standing</div>
+            <div class="val-large">${grd.total_internal} / 400 Total Internal</div>
+            <div>Phase 1 Assessment: ${grd.div1_assessments}/100 • Lab: ${grd.div3_class_lab}/100</div>
+            <div>Current Grade Letter: <b>${grd.grade_letter}</b></div>
+          </div>
+        </div>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Exam Date</th>
+              <th>Session / Timing</th>
+              <th>Allocated Hall</th>
+              <th>Invigilator Verification</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>${sub.exam_date || 'TBA'}</b></td>
+              <td>${sub.exam_session || 'FN (09:30 AM - 12:30 PM)'}</td>
+              <td><b>${sub.exam_hall || 'University Exam Block — Hall A'}</b></td>
+              <td style="color:#888;">___________________</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="margin-top: 15px; font-size: 10px; font-family: monospace; color: #555;">
+          Security QR Token: <b>${ht.qrToken || ht.token}</b> • Generated: ${new Date().toLocaleString()}
+        </div>
+
+        <div class="footer">
+          <div class="rules">
+            1. Candidate must produce this Subject Admit Pass and Institutional ID card at the examination venue.<br>
+            2. Hall ticket is valid only if subject attendance standing is verified (≥ 75%).
+          </div>
+          <div class="sig">
+            <div style="font-family: serif; font-style: italic; font-size: 14px; font-weight: bold;">K. Raghavan, Ph.D.</div>
+            <div style="font-size: 10px; font-weight: bold; text-transform: uppercase;">Controller of Examinations</div>
+            <div style="font-size: 9px; color: #0b8244; font-weight: bold;">OFFICIAL SEAL ATTESTED ✓</div>
+          </div>
+        </div>
+      </div>
+      <script>
+        window.onload = function() {
+          window.print();
+        };
+      <\/script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
+
 
 function printOfficialHallTicket() {
   if (!currentStudentTicketData) return window.print();

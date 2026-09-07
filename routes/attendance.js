@@ -1,9 +1,42 @@
 const router = require('express').Router();
 const { pool } = require('../db');
 const { authenticate, requireFaculty } = require('../middleware/auth');
+const { notify, notifyRole } = require('../services/audit');
+
+// Helper to automatically expire unverified OD requests after 30 minutes and convert attendance to Absent
+async function sweepExpiredODRequests() {
+  try {
+    const expired = await pool.query(`
+      UPDATE od_requests
+      SET status = 'geo_rejected',
+          rejection_reason = 'Geo-verification deadline expired: 30 minutes elapsed without 30m GPS location check-in'
+      WHERE status = 'approved'
+        AND attendance_marked_at IS NOT NULL
+        AND NOW() > geo_deadline
+      RETURNING id, student_id, date, slot, student_name, event_name
+    `);
+
+    for (const exp of expired.rows) {
+      await pool.query(
+        `UPDATE attendance SET status = 'Absent' WHERE student_id = $1 AND date = $2 AND (slot = $3 OR slot = 'ALL')`,
+        [exp.student_id, exp.date, exp.slot]
+      );
+      await notify(
+        exp.student_id,
+        'od_expired',
+        '⚠️ OD Verification Expired · Marked Absent',
+        `Your 30-minute verification window for Slot ${exp.slot} (${exp.event_name}) expired without GPS check-in. Attendance has been marked Absent and percentage updated.`,
+        exp.id
+      );
+    }
+  } catch (e) {
+    console.error('[Sweep Expired OD Error]:', e.message);
+  }
+}
 
 // GET attendance list
 router.get('/', authenticate, async (req, res) => {
+  await sweepExpiredODRequests();
   const { slot, subjectId, date } = req.query;
   try {
     let query = `
@@ -19,7 +52,6 @@ router.get('/', authenticate, async (req, res) => {
       params.push(req.user.id);
       query += ` AND a.student_id = $${params.length}`;
     } else if (req.user.role === 'faculty') {
-      // Faculty can view all or filter by their courses
       if (subjectId) {
         params.push(subjectId);
         query += ` AND a.subject_id = $${params.length}`;
@@ -47,6 +79,7 @@ router.get('/', authenticate, async (req, res) => {
 
 // GET student slot-wise attendance standing breakdown (Student Dashboard)
 router.get('/student-standing', authenticate, async (req, res) => {
+  await sweepExpiredODRequests();
   try {
     const studentId = req.user.role === 'student' ? req.user.id : (req.query.studentId || req.user.id);
 
@@ -129,8 +162,9 @@ router.get('/student-standing', authenticate, async (req, res) => {
   }
 });
 
-// GET course roster & slot attendance for faculty
+// GET course roster & slot attendance for faculty (with approved OD pre-population)
 router.get('/course-roster/:subjectId', authenticate, requireFaculty, async (req, res) => {
+  await sweepExpiredODRequests();
   const { subjectId } = req.params;
   try {
     const subject = await pool.query('SELECT * FROM subjects WHERE id=$1', [subjectId]);
@@ -164,14 +198,33 @@ router.get('/course-roster/:subjectId', authenticate, requireFaculty, async (req
       if (a.status === 'Present' || a.status === 'OD') studentStats[a.student_id].attended++;
     });
 
+    // Check approved ODs for today and this subject's slot
+    const todayStr = new Date().toISOString().split('T')[0];
+    const targetSlot = (subject.rows[0].slot || 'A').toUpperCase();
+
+    const activeOds = await pool.query(
+      `SELECT id, student_id, event_name, location_name, letter_b64, status
+       FROM od_requests
+       WHERE date = $1 AND (slot = $2 OR slot = 'ALL') AND status IN ('approved', 'geo_submitted', 'completed')`,
+      [todayStr, targetSlot]
+    );
+    const odMap = {};
+    activeOds.rows.forEach(o => { odMap[o.student_id] = o; });
+
     const students = studentsRes.rows.map(stu => {
       const stat = studentStats[stu.id] || { total: 0, attended: 0 };
       const pct = stat.total > 0 ? Math.round((stat.attended / stat.total) * 100) : 100;
+      const od = odMap[stu.id] || null;
       return {
         ...stu,
         totalSessions: stat.total,
         attendedSessions: stat.attended,
-        attendancePercentage: pct
+        attendancePercentage: pct,
+        is_od_approved: Boolean(od),
+        od_id: od ? od.id : null,
+        od_event_name: od ? od.event_name : null,
+        od_location_name: od ? od.location_name : null,
+        od_letter: od ? od.letter_b64 : null
       };
     });
 
@@ -241,14 +294,26 @@ router.post('/', authenticate, requireFaculty, async (req, res) => {
         );
       }
 
-      // Trigger 30-minute verification countdown on approved OD request
-      await pool.query(
+      // Trigger 30-minute verification countdown on approved OD request & send notification
+      const odUpdate = await pool.query(
         `UPDATE od_requests
          SET attendance_marked_at = NOW(),
              geo_deadline = NOW() + INTERVAL '30 minutes'
-         WHERE student_id = $1 AND date = $2 AND (slot = $3 OR slot = 'ALL') AND status = 'approved' AND attendance_marked_at IS NULL`,
+         WHERE student_id = $1 AND date = $2 AND (slot = $3 OR slot = 'ALL') AND status = 'approved' AND attendance_marked_at IS NULL
+         RETURNING *`,
         [item.studentId, recDate, recSlot]
       );
+
+      if (odUpdate.rows[0]) {
+        const od = odUpdate.rows[0];
+        await notify(
+          item.studentId,
+          'od_attendance_marked',
+          '⏳ Attendance Marked · 30m Check-In Window Active',
+          `Attendance for Slot ${recSlot} (${item.studentName}) has been marked! You have 30 minutes to complete GPS verification within 30m of "${od.location_name || od.event_name}".`,
+          od.id
+        );
+      }
 
       results.push({ ...saved.rows[0], autoAbsent });
     }

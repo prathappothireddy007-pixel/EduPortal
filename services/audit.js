@@ -22,6 +22,7 @@ const logAction = async (userId, userName, role, action, entityType, entityId, o
  * Send an in-app notification to a user.
  */
 const notify = async (userId, type, title, message, relatedId = null) => {
+  if (!userId) return;
   try {
     await pool.query(
       `INSERT INTO notifications (user_id, type, title, message, related_id)
@@ -33,4 +34,33 @@ const notify = async (userId, type, title, message, relatedId = null) => {
   }
 };
 
-module.exports = { logAction, notify };
+/**
+ * Send an in-app notification to all users of a specific role ('student', 'faculty', 'admin').
+ */
+const notifyRole = async (role, type, title, message, relatedId = null) => {
+  try {
+    const users = await pool.query(`SELECT id FROM users WHERE role=$1 AND deleted_at IS NULL`, [role]);
+    for (const u of users.rows) {
+      await notify(u.id, type, title, message, relatedId);
+    }
+  } catch (e) {
+    console.error('[NotifyRole] Failed:', e.message);
+  }
+};
+
+/**
+ * Send an in-app notification to all active users.
+ */
+const notifyAll = async (type, title, message, relatedId = null) => {
+  try {
+    const users = await pool.query(`SELECT id FROM users WHERE deleted_at IS NULL`);
+    for (const u of users.rows) {
+      await notify(u.id, type, title, message, relatedId);
+    }
+  } catch (e) {
+    console.error('[NotifyAll] Failed:', e.message);
+  }
+};
+
+module.exports = { logAction, notify, notifyRole, notifyAll };
+

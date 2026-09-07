@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { pool } = require('../db');
 const { authenticate, requireFaculty } = require('../middleware/auth');
 const QRCode = require('qrcode');
-const { logAction, notify } = require('../services/audit');
+const { logAction, notify, notifyRole } = require('../services/audit');
 
 // GET all events (with student registration flag)
 router.get('/', authenticate, async (req, res) => {
@@ -40,10 +40,19 @@ router.post('/', authenticate, requireFaculty, async (req, res) => {
          radius_meters,start_time,end_time,event_type,qr_token,qr_expires_at,created_by)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
       [title, description, eventDate, venue, hostInstitution || null,
-       lat || null, lng || null, radiusMeters || 200,
-       startTime || null, endTime || null, eventType || 'general',
+       lat || null, lng || null, radiusMeters || 30,
+       startTime || null, endTime || null, eventType || 'internal',
        qrToken, qrExpires, req.user.id]
     );
+
+    await notifyRole(
+      'student',
+      'new_event',
+      '🎉 New Campus Event Announced!',
+      `"${title}" (${(eventType || 'internal').toUpperCase()}) on ${eventDate || 'upcoming date'} at ${venue || 'Campus'}. Check out details and register!`,
+      r.rows[0].id
+    );
+
     await logAction(req.user.id, req.user.name, 'faculty', 'create_event', 'events', r.rows[0].id, null, { title });
     res.status(201).json(r.rows[0]);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }

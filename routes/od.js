@@ -2,17 +2,50 @@ const router = require('express').Router();
 const { pool } = require('../db');
 const { authenticate, requireFaculty, requireStudent } = require('../middleware/auth');
 const { haversineDistance } = require('../services/timetable');
-const { logAction, notify } = require('../services/audit');
+const { logAction, notify, notifyRole } = require('../services/audit');
+
+// Helper to sweep expired OD requests and update attendance to Absent
+async function sweepExpiredODRequests() {
+  try {
+    const expired = await pool.query(`
+      UPDATE od_requests
+      SET status = 'geo_rejected',
+          rejection_reason = 'Geo-verification deadline expired: 30 minutes elapsed without 30m GPS location check-in'
+      WHERE status = 'approved'
+        AND attendance_marked_at IS NOT NULL
+        AND NOW() > geo_deadline
+      RETURNING id, student_id, date, slot, student_name, event_name
+    `);
+
+    for (const exp of expired.rows) {
+      await pool.query(
+        `UPDATE attendance SET status = 'Absent' WHERE student_id = $1 AND date = $2 AND (slot = $3 OR slot = 'ALL')`,
+        [exp.student_id, exp.date, exp.slot]
+      );
+      await notify(
+        exp.student_id,
+        'od_expired',
+        '⚠️ OD Verification Expired · Marked Absent',
+        `Your 30-minute verification window for Slot ${exp.slot} (${exp.event_name}) expired. Attendance has been marked Absent and attendance percentage reduced.`,
+        exp.id
+      );
+    }
+  } catch (e) {
+    console.error('[Sweep Expired OD Error]:', e.message);
+  }
+}
 
 // GET OD requests (Faculty & Admin get all with student info; Student gets own)
 router.get('/', authenticate, async (req, res) => {
+  await sweepExpiredODRequests();
   try {
     let r;
     if (req.user.role === 'faculty' || req.user.role === 'admin') {
       r = await pool.query(`
         SELECT o.*, e.lat as event_lat, e.lng as event_lng,
                e.radius_meters, e.start_time as event_start, e.end_time as event_end,
-               u.admin_id as reg_no, u.department as student_dept, u.email as student_email
+               e.event_type,
+               u.admin_id as reg_no, u.department as student_dept, u.email as student_email, u.parent_phone
         FROM od_requests o
         LEFT JOIN events e ON o.event_id = e.id
         LEFT JOIN users u ON o.student_id = u.id
@@ -41,14 +74,28 @@ router.post('/', authenticate, requireStudent, async (req, res) => {
     const today = new Date().toISOString().split('T')[0];
     const odSlot = (slot || 'A').toUpperCase().trim().slice(0, 1);
 
-    // Verify student is registered for the event if eventId provided
+    let finalLat = lat ? parseFloat(lat) : null;
+    let finalLng = lng ? parseFloat(lng) : null;
+    let finalLocationName = locationName || 'Custom Selected Location';
+
+    // Verify student is registered for the event if eventId provided & lock internal event location
     if (eventId) {
       const regCheck = await pool.query(
-        `SELECT id FROM event_registrations WHERE event_id=$1 AND student_id=$2`,
+        `SELECT er.id, e.lat, e.lng, e.venue, e.event_type, e.title
+         FROM event_registrations er
+         JOIN events e ON er.event_id = e.id
+         WHERE er.event_id=$1 AND er.student_id=$2`,
         [eventId, req.user.id]
       );
       if (regCheck.rows.length === 0) {
         return res.status(400).json({ error: 'You must register for the event before submitting an OD request' });
+      }
+      const evt = regCheck.rows[0];
+      if (evt.lat && evt.lng) {
+        // Internal/Coordinator set location
+        finalLat = parseFloat(evt.lat);
+        finalLng = parseFloat(evt.lng);
+        finalLocationName = evt.venue || evt.title || finalLocationName;
       }
     }
 
@@ -70,20 +117,41 @@ router.post('/', authenticate, requireStudent, async (req, res) => {
         eventId || null,
         eventName || 'Other Event',
         odSlot,
-        lat ? parseFloat(lat) : null,
-        lng ? parseFloat(lng) : null,
-        locationName || 'Custom Selected Location',
+        finalLat,
+        finalLng,
+        finalLocationName,
         letterPayload,
         today
       ]
     );
 
-    // Notify faculty
-    const faculty = await pool.query(`SELECT id FROM users WHERE role='faculty' LIMIT 1`);
-    if (faculty.rows[0]) {
-      await notify(faculty.rows[0].id, 'od_request', 'New OD Request 📝',
-        `${req.user.name} submitted an OD request for Slot ${odSlot} (${eventName || 'Other'})`, r.rows[0].id);
+    // Notify the specific course faculty teaching this slot
+    const sub = await pool.query(
+      `SELECT s.id, s.name, s.faculty_id 
+       FROM enrollment_requests er 
+       JOIN subjects s ON er.subject_id=s.id 
+       WHERE er.student_id=$1 AND UPPER(COALESCE(s.slot, 'A'))=$2 AND er.status='enrolled'
+       LIMIT 1`,
+      [req.user.id, odSlot]
+    );
+
+    if (sub.rows[0] && sub.rows[0].faculty_id) {
+      await notify(
+        sub.rows[0].faculty_id,
+        'od_request',
+        'New OD Request 📝',
+        `${req.user.name} requested OD for Slot ${odSlot} ("${sub.rows[0].name}") at "${finalLocationName}".`,
+        r.rows[0].id
+      );
+    } else {
+      // Broadcast to faculty pool
+      const faculty = await pool.query(`SELECT id FROM users WHERE role='faculty' LIMIT 1`);
+      if (faculty.rows[0]) {
+        await notify(faculty.rows[0].id, 'od_request', 'New OD Request 📝',
+          `${req.user.name} submitted an OD request for Slot ${odSlot} (${eventName || 'Other'})`, r.rows[0].id);
+      }
     }
+
     res.status(201).json(r.rows[0]);
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });

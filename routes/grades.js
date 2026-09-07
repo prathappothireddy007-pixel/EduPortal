@@ -559,6 +559,101 @@ router.get('/hall-ticket', authenticate, async (req, res) => {
   }
 });
 
+// ── 6b. INDIVIDUAL SUBJECT HALL TICKET ADMIT PASS ──
+router.get('/hall-ticket/subject/:subjectId', authenticate, async (req, res) => {
+  const { subjectId } = req.params;
+  const targetStudentId = req.user.role === 'student' ? req.user.id : (req.query.studentId || req.user.id);
+
+  try {
+    const student = await pool.query(
+      `SELECT u.id, u.name, u.admin_id, u.department, u.email, u.parent_phone
+       FROM users u WHERE u.id=$1`,
+      [targetStudentId]
+    );
+    if (!student.rows[0]) return res.status(404).json({ error: 'Student not found' });
+
+    const subRes = await pool.query(
+      `SELECT s.*, u_fac.name as faculty_name, u_fac.email as faculty_email
+       FROM subjects s
+       LEFT JOIN users u_fac ON s.faculty_id = u_fac.id
+       WHERE s.id = $1`,
+      [subjectId]
+    );
+    if (!subRes.rows[0]) return res.status(404).json({ error: 'Subject not found' });
+    const subject = subRes.rows[0];
+
+    // Get Hall Ticket Request & Approval Status
+    const htr = await pool.query(
+      `SELECT * FROM hall_ticket_requests WHERE student_id = $1 AND subject_id = $2`,
+      [targetStudentId, subjectId]
+    );
+    const hallTicketReq = htr.rows[0] || { status: 'not_requested' };
+
+    // Get subject-specific attendance
+    const attResult = await pool.query(
+      `SELECT 
+         COUNT(*) as total_sessions,
+         COUNT(CASE WHEN status IN ('Present', 'OD') THEN 1 END) as attended_sessions
+       FROM attendance WHERE student_id = $1 AND (subject_id = $2 OR subject_id IS NULL)`,
+      [targetStudentId, subjectId]
+    );
+    const totalSessions = parseInt(attResult.rows[0]?.total_sessions || 0, 10);
+    const attendedSessions = parseInt(attResult.rows[0]?.attended_sessions || 0, 10);
+    const attendancePct = totalSessions > 0 ? Math.round((attendedSessions / totalSessions) * 100) : 100;
+
+    // Get grades
+    const gradeRes = await pool.query(
+      `SELECT * FROM grades WHERE student_id = $1 AND subject_id = $2`,
+      [targetStudentId, subjectId]
+    );
+    const grade = gradeRes.rows[0] || {};
+
+    const token = hallTicketReq.hall_ticket_token || crypto.createHash('sha256')
+      .update(`${student.rows[0].admin_id}_SUB${subject.id}_${Date.now()}`)
+      .digest('hex').slice(0, 16).toUpperCase();
+
+    res.json({
+      student: student.rows[0],
+      subject: {
+        id: subject.id,
+        name: subject.name,
+        code: subject.code || `SUB${String(subject.id).padStart(3, '0')}`,
+        slot: (subject.slot || 'A').toUpperCase(),
+        subject_type: subject.subject_type || 'classroom',
+        target_dept: subject.target_dept || 'ALL',
+        faculty_name: subject.faculty_name || 'Assigned Faculty',
+        faculty_email: subject.faculty_email,
+        exam_date: subject.exam_date || 'TBA',
+        exam_session: subject.exam_session || 'FN (09:30 AM - 12:30 PM)',
+        exam_hall: subject.exam_hall || 'Main Exam Hall - Block A'
+      },
+      attendance: {
+        totalSessions,
+        attendedSessions,
+        attendancePct,
+        isEligible: attendancePct >= 75
+      },
+      grades: {
+        div1_assessments: grade.div1_assessments || 0,
+        div3_class_lab: grade.div3_class_lab || 0,
+        total_internal: grade.total_internal || 0,
+        grand_total: grade.grand_total || 0,
+        grade_letter: grade.grade_letter || 'In Progress'
+      },
+      hallTicket: {
+        status: hallTicketReq.status || 'not_requested',
+        approvedAt: hallTicketReq.approved_at,
+        token,
+        qrToken: `EDU-HT-${student.rows[0].admin_id}-${subject.code || subject.id}-${token.slice(0, 6)}`
+      },
+      generatedAt: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('[Subject Hall Ticket GET] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Helper for Phase 2 Upsert
 async function upsertPhase2Grade(studentId, subjectId, div2Capstone, div4UnivLab) {
   const d2 = Math.min(100, Math.max(0, parseFloat(div2Capstone) || 0));
