@@ -482,6 +482,81 @@ const runSchemaAndMigrations = async (client) => {
     await client.query("UPDATE users SET plain_pass = 'Faculty@123' WHERE role='faculty' AND (plain_pass IS NULL OR plain_pass = '')");
     await client.query("UPDATE users SET plain_pass = 'katam@123' WHERE role='admin' AND (plain_pass IS NULL OR plain_pass = '')");
 
+    // ── Seed default classes / batches ──────────────────────────────────────
+    const classCount = await client.query('SELECT COUNT(*) FROM classes WHERE deleted_at IS NULL');
+    if (parseInt(classCount.rows[0].count, 10) === 0) {
+      await client.query(`
+        INSERT INTO classes (name) VALUES
+          ('B.E. Computer Science & Engineering — Section A (Year IV)'),
+          ('B.E. Computer Science & Engineering — Section B (Year IV)'),
+          ('B.Tech Artificial Intelligence & Data Science (Year III)'),
+          ('B.E. Electronics & Communication Engineering (Year IV)')
+      `);
+      console.log('✅ Default academic classes and sections seeded');
+    }
+
+    // Assign unassigned students to the primary class section
+    const defaultClass = await client.query('SELECT id FROM classes WHERE deleted_at IS NULL ORDER BY id LIMIT 1');
+    if (defaultClass.rows[0]) {
+      await client.query(
+        'UPDATE users SET class_id = $1 WHERE role = \'student\' AND class_id IS NULL',
+        [defaultClass.rows[0].id]
+      );
+    }
+
+    // ── Seed default classrooms ─────────────────────────────────────────────
+    const roomCount = await client.query('SELECT COUNT(*) FROM classrooms WHERE is_active = TRUE');
+    if (parseInt(roomCount.rows[0].count, 10) === 0) {
+      await client.query(`
+        INSERT INTO classrooms (name, building, floor, capacity, room_type, is_active) VALUES
+          ('LH-101 (Smart Lecture Hall)', 'Tech Block', 1, 60, 'classroom', true),
+          ('LH-102 (Smart Lecture Hall)', 'Tech Block', 1, 60, 'classroom', true),
+          ('CS-LAB-01 (Advanced Computing Lab)', 'Computing Wing', 2, 45, 'lab', true),
+          ('AI-LAB-02 (Machine Learning & Robotics Lab)', 'Computing Wing', 2, 45, 'lab', true),
+          ('AUDI-MAIN (University Central Auditorium)', 'Main Academic Complex', 1, 300, 'seminar', true),
+          ('SEMINAR-HALL-A (Mechanical Block)', 'Mechanical Block', 3, 120, 'seminar', true)
+      `);
+      console.log('✅ Default smart classrooms and labs seeded');
+    }
+
+    // ── Seed default subjects in Slots A-F if none exist ───────────────────
+    const subCount = await client.query('SELECT COUNT(*) FROM subjects WHERE is_launched IS TRUE OR is_launched IS NULL');
+    const facRow = await client.query("SELECT id FROM users WHERE role='faculty' LIMIT 1");
+    const facId = facRow.rows[0]?.id || null;
+
+    if (parseInt(subCount.rows[0].count, 10) === 0) {
+      await client.query(`
+        INSERT INTO subjects (name, code, slot, faculty_id, subject_type, target_dept, is_launched, description) VALUES
+          ('Distributed Cloud Computing & DevOps', 'CS801', 'A', $1, 'classroom', 'CSE', true, 'Architecting scalable cloud microservices, Kubernetes clusters, and CI/CD pipelines.'),
+          ('Deep Neural Networks & Large Language Models', 'AI802', 'B', $1, 'lab', 'CSE', true, 'Transformer models, multi-modal generative networks, and GPU inference pipelines.'),
+          ('Autonomous Cryptography & Cyber Security', 'CS803', 'C', $1, 'classroom', 'ALL', true, 'Zero-knowledge proofs, quantum-safe encryption, and red-team penetration testing.'),
+          ('High Performance Embedded Systems & IoT', 'EC804', 'D', $1, 'lab', 'ALL', true, 'Real-time operating systems, edge sensor networks, and ARM SoC firmware design.'),
+          ('Full-Stack Web Architecture & Reactive Systems', 'CS805', 'E', $1, 'classroom', 'CSE', true, 'Modern web frameworks, WebGL 3D graphics, and distributed relational databases.'),
+          ('Data Analytics & Predictive Intelligence', 'DS806', 'F', $1, 'classroom', 'ALL', true, 'Statistical inference, bayesian predictive modeling, and business intelligence pipelines.')
+      `, [facId]);
+      console.log('✅ Default curriculum subjects seeded across Slots A to F');
+    }
+
+    // ── Ensure default students are enrolled into subjects ──────────────────
+    const studentUsers = await client.query("SELECT id FROM users WHERE role='student'");
+    const allSubjects = await client.query("SELECT id FROM subjects");
+    for (const stu of studentUsers.rows) {
+      for (const sub of allSubjects.rows) {
+        await client.query(
+          "INSERT INTO enrollment_requests (student_id, subject_id, status) VALUES ($1, $2, 'enrolled') ON CONFLICT DO NOTHING",
+          [stu.id, sub.id]
+        );
+      }
+    }
+
+    // ── Auto-generate default timetable entries if none exist ───────────────
+    const ttCount = await client.query('SELECT COUNT(*) FROM timetable_entries');
+    if (parseInt(ttCount.rows[0].count, 10) === 0) {
+      const { autoGenerateLiveCoursesTimetable } = require('./services/timetable');
+      await autoGenerateLiveCoursesTimetable(pool, null);
+      console.log('✅ Default weekly timetable schedule and classroom allocations auto-generated');
+    }
+
     console.log('✅ Database schema and migrations verified (v3.0 — full platform)');
   } catch (err) {
     console.error('❌ DB schema/migration error:', err.message);

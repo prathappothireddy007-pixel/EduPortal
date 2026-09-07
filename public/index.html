@@ -272,6 +272,81 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 .nav-link.on{ color:var(--bone); }
 .nav-link.on::after{ content:''; position:absolute; left:0; bottom:0; width:100%; height:1px; background:var(--vermilion); }
 
+
+/* Nav Burger & Mobile Sheet Menu */
+.nav-burger {
+  display: none;
+  width: 28px;
+  height: 18px;
+  position: relative;
+  flex: 0 0 auto;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 1001;
+  padding: 0;
+}
+.nav-burger i {
+  position: absolute;
+  right: 0;
+  height: 2px;
+  background: var(--bone, #dfe7e0);
+  border-radius: 2px;
+  transition: width .45s cubic-bezier(0.16, 1, 0.3, 1), transform .45s cubic-bezier(0.16, 1, 0.3, 1), top .45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nav-burger i:nth-child(1) { top: 4px; width: 26px; }
+.nav-burger i:nth-child(2) { top: 12px; width: 18px; }
+.nav-burger:hover i:nth-child(2) { width: 26px; }
+.nav-burger:hover i:nth-child(1) { width: 18px; }
+
+@media (max-width: 820px) {
+  .nav-burger {
+    display: block !important;
+  }
+  .nav-burger.active i:nth-child(1) { top: 8px; width: 26px; transform: rotate(45deg); }
+  .nav-burger.active i:nth-child(2) { top: 8px; width: 26px; transform: rotate(-45deg); }
+  .nav.menu-open { transform: none !important; transition: none !important; }
+  .nav.menu-open .nav-links {
+    display: flex !important;
+    flex-direction: column !important;
+    position: fixed !important;
+    inset: 0 !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(3, 6, 9, 0.98) !important;
+    backdrop-filter: blur(28px) !important;
+    padding: 90px 28px 40px 28px !important;
+    z-index: 999 !important;
+    gap: 16px !important;
+    overflow-y: auto !important;
+  }
+  .nav.menu-open .nav-links .nav-link {
+    width: 100% !important;
+    height: auto !important;
+    padding: 16px 0 !important;
+    border-bottom: 1px solid rgba(223, 231, 224, 0.12) !important;
+    font-size: 20px !important;
+    color: #dfe7e0 !important;
+    display: block !important;
+  }
+  .nav.menu-open .nav-links .nav-link span {
+    height: auto !important;
+    line-height: 1.2 !important;
+    transform: none !important;
+  }
+  .nav.menu-open .nav-links .nav-link .alt {
+    position: static !important;
+    margin-top: 4px !important;
+    font-size: 11px !important;
+    color: rgba(223, 231, 224, 0.5) !important;
+    display: block !important;
+  }
+}
+
 /* Hero */
 .hero{ position:relative; min-height:100svh; padding:0 var(--pad); display:flex; flex-direction:column; }
 .hero::before{ content:''; position:absolute; left:0; right:0; top:0; height:46%; pointer-events:none;
@@ -958,10 +1033,15 @@ html, body {
       <a class="nav-link" href="#portal"><span>Portal</span><span class="alt">扉</span></a>
     </nav>
 
-    <a href="#portal" class="btn-primary text-xs py-2 px-4 rounded-full flex items-center gap-2 shadow-lg hover:scale-105 transition-all">
-      <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
-      <span>Sign In</span>
-    </a>
+    <div class="flex items-center gap-2.5">
+      <a href="#portal" class="btn-primary text-xs py-2 px-4 rounded-full flex items-center gap-2 shadow-lg hover:scale-105 transition-all">
+        <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+        <span>Sign In</span>
+      </a>
+      <button class="nav-burger" aria-label="Toggle navigation" data-cursor>
+        <i></i><i></i>
+      </button>
+    </div>
   </header>
 
   <div id="top">
@@ -4648,51 +4728,60 @@ function wireNav() {
   let last = 0;
   const rail = $('#rail');
   const names = ['The Hidden Gate', 'The Sanmon', 'Still Gardens', 'Sacred Craft', 'Afterlight', 'Colophon'];
-  SECS.forEach((s, i) => {
-    const b = document.createElement('button');
-    b.innerHTML = '<i></i>'; b.title = names[i] || '';
-    b.setAttribute('aria-label', names[i] || 'section');
-    b.addEventListener('click', () => scrollTo({ top: anchors[i], behavior: REDUCE ? 'auto' : 'smooth' }));
-    rail.appendChild(b);
-  });
+  if (rail) {
+    SECS.forEach((s, i) => {
+      const b = document.createElement('button');
+      b.innerHTML = '<i></i>'; b.title = names[i] || '';
+      b.setAttribute('aria-label', names[i] || 'section');
+      b.addEventListener('click', () => scrollTo({ top: anchors[i], behavior: REDUCE ? 'auto' : 'smooth' }));
+      rail.appendChild(b);
+    });
+  }
   const dots = $$('#rail button');
   const links = $$('.nav-link');
   const burger = $('.nav-burger');
   const closeMenu = () => {
-    nav.classList.remove('menu-open');
-    burger.classList.remove('active');
-    burger.setAttribute('aria-expanded', 'false');
+    if (typeof nav !== 'undefined' && nav) nav.classList.remove('menu-open');
+    if (burger) {
+      burger.classList.remove('active');
+      burger.setAttribute('aria-expanded', 'false');
+    }
     document.documentElement.classList.remove('nav-open');
   };
   const setMenu = open => {
-    /* clear the scroll-hide before the sheet opens: leaving it set would ease
-       the bar back down on close, promoting it again under the outgoing sheet */
-    if (open) nav.classList.remove('hide');
-    nav.classList.toggle('menu-open', open);
-    burger.classList.toggle('active', open);
-    burger.setAttribute('aria-expanded', String(open));
+    if (typeof nav !== 'undefined' && nav) {
+      if (open) nav.classList.remove('hide');
+      nav.classList.toggle('menu-open', open);
+    }
+    if (burger) {
+      burger.classList.toggle('active', open);
+      burger.setAttribute('aria-expanded', String(open));
+    }
     document.documentElement.classList.toggle('nav-open', open);
   };
-  burger.setAttribute('aria-controls', 'navlinks');
-  burger.setAttribute('aria-expanded', 'false');
-  burger.addEventListener('click', () => {
-    if (vpW() > 820) return;
-    setMenu(!nav.classList.contains('menu-open'));
-  });
+  if (burger) {
+    burger.setAttribute('aria-controls', 'navlinks');
+    burger.setAttribute('aria-expanded', 'false');
+    burger.addEventListener('click', () => {
+      if (vpW() > 820) return;
+      if (typeof nav !== 'undefined' && nav) {
+        setMenu(!nav.classList.contains('menu-open'));
+      }
+    });
+  }
   links.forEach(link => link.addEventListener('click', closeMenu));
   addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
   addEventListener('resize', () => { if (vpW() > 820) closeMenu(); }, { passive:true });
-  /* Which chapter each link actually points at, read off its href. The old
-     rule was positional — link i lit for section i+1 — which silently assumed
-     one link per section in matching order. With five links over four chapters
-     every entry past the third lit for its neighbour: standing in Afterlight
-     highlighted Stories. Reading the destination cannot drift. */
-  const linkSec = links.map(l => SECS.indexOf(document.querySelector(l.getAttribute('href'))));
+  
+  const linkSec = links.map(l => {
+    const target = document.querySelector(l.getAttribute('href'));
+    return target ? SECS.indexOf(target) : -1;
+  });
+
   window.addEventListener('scroll', () => {
+    if (typeof nav === 'undefined' || !nav) return;
     const y = scrollY;
     nav.classList.toggle('stuck', y > 40);
-    /* and don't even mark it hidden while the menu is open, or the class lands
-       the moment the sheet closes and the bar blinks away under the thumb */
     nav.classList.toggle('hide',
       !nav.classList.contains('menu-open') && y > last + 4 && y > vpH() * .8);
     last = y;
@@ -4703,11 +4792,15 @@ function wireNav() {
       links.forEach((l, i) => l.classList.toggle('on', linkSec[i] === a));
     }
   }, { passive: true });
+
   $$('a[href^="#"]').forEach(a => a.addEventListener('click', e => {
-    const t = document.querySelector(a.getAttribute('href'));
+    const href = a.getAttribute('href');
+    if (!href || href === '#') return;
+    const t = document.querySelector(href);
     if (!t) return;
     e.preventDefault();
-    scrollTo({ top: a.getAttribute('href') === '#top' ? 0 : t.offsetTop - 40, behavior: REDUCE ? 'auto' : 'smooth' });
+    scrollTo({ top: href === '#top' ? 0 : t.offsetTop - 40, behavior: REDUCE ? 'auto' : 'smooth' });
+    closeMenu();
   }));
 }
 
@@ -7553,8 +7646,15 @@ setTimeout(() => {
                 <h4 class="text-lg font-extrabold text-white">${e.title}</h4>
                 <p class="text-xs text-slate-400">${e.description || 'Institutional Campus Event'}</p>
                 <div class="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
-                  <span>📍 ${e.venue || 'Auditorium'}</span>
-                  <span>📅 ${e.event_date || ''}</span>
+                  <div class="flex items-center gap-1.5 truncate">
+                    <span>📍 ${e.venue || 'Auditorium'}</span>
+                    <span>• ${e.event_date || ''}</span>
+                  </div>
+                  ${(S.user && (S.user.role === 'admin' || S.user.role === 'faculty')) ? `
+                    <button onclick="deleteEvent(${e.id}, '${e.title}')" class="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-all shrink-0" title="Delete Event">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  ` : ''}
                 </div>
               </div>
             `).join('')}
@@ -7995,6 +8095,11 @@ setTimeout(() => {
                   ` : `
                     <button onclick="toast('Sample document record', 'info')" class="btn-secondary text-xs py-2 px-3 flex-1">View Info</button>
                   `}
+                  ${(S.user && (S.user.role === 'admin' || S.user.role === 'faculty' || d.owner_id === S.user.id)) ? `
+                    <button onclick="deleteDocument(${d.id}, '${d.title}')" class="btn-secondary text-xs py-2 px-2.5 rounded-xl border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition-all shrink-0" title="Delete Document">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  ` : ''}
                 </div>
               </div>
             `).join('')}
@@ -8103,18 +8208,23 @@ setTimeout(() => {
                   ${a.student_name ? `<p class="text-xs text-blue-400 mt-2">Student: <b>${a.student_name}</b></p>` : ''}
                 </div>
 
-                <div class="pt-3 border-t border-white/10">
+                <div class="pt-3 border-t border-white/10 flex items-center gap-2">
                   ${!a.is_verified ? `
-                    <button onclick="verifyAchievement(${a.id})" class="btn-primary w-full text-xs py-2 flex items-center justify-center gap-2">
+                    <button onclick="verifyAchievement(${a.id})" class="btn-primary flex-1 text-xs py-2 flex items-center justify-center gap-2">
                       <i data-lucide="check-circle" class="w-4 h-4"></i>
-                      <span>Verify Achievement</span>
+                      <span>Verify</span>
                     </button>
                   ` : `
-                    <p class="text-center text-xs text-emerald-400 font-semibold flex items-center justify-center gap-1">
+                    <p class="flex-1 text-center text-xs text-emerald-400 font-semibold flex items-center justify-center gap-1">
                       <i data-lucide="shield-check" class="w-4 h-4"></i>
-                      <span>Verified & Published in Portfolio</span>
+                      <span>Verified</span>
                     </p>
                   `}
+                  ${(S.user && (S.user.role === 'admin' || S.user.role === 'faculty' || a.student_id === S.user.id)) ? `
+                    <button onclick="deleteAchievement(${a.id}, '${a.title}')" class="btn-secondary text-xs py-2 px-2.5 rounded-xl border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition-all shrink-0" title="Delete Achievement">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  ` : ''}
                 </div>
               </div>
             `).join('')}
@@ -8176,10 +8286,17 @@ setTimeout(() => {
                     <td class="p-4 font-mono text-xs text-blue-400 font-bold">${c.cert_id.slice(0, 13)}...</td>
                     <td class="p-4 text-xs text-slate-400">${new Date(c.created_at).toLocaleDateString()}</td>
                     <td class="p-4 text-right">
-                      <button onclick="viewCertificateModal('${c.cert_id}', '${c.student_display_name || c.student_name}', '${c.display_event_title || c.event_name}', '${c.host_org || 'Autonomous Institute of Technology'}')" class="btn-primary text-xs py-1.5 px-3">
-                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                        <span>View / Print</span>
-                      </button>
+                      <div class="flex items-center justify-end gap-1.5">
+                        <button onclick="viewCertificateModal('${c.cert_id}', '${c.student_display_name || c.student_name}', '${c.display_event_title || c.event_name}', '${c.host_org || 'Autonomous Institute of Technology'}')" class="btn-primary text-xs py-1.5 px-3 flex items-center gap-1">
+                          <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                          <span>View / Print</span>
+                        </button>
+                        ${(S.user && (S.user.role === 'admin' || S.user.role === 'faculty')) ? `
+                          <button onclick="deleteCertificate(${c.id}, '${c.cert_id}')" class="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-all" title="Revoke Certificate">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                          </button>
+                        ` : ''}
+                      </div>
                     </td>
                   </tr>
                 `).join('')}
@@ -12522,9 +12639,16 @@ async function renderTimetable(container) {
                       ${e.day_of_week}
                     </span>
                   </div>
-                  <span class="text-xs font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">
-                    ${e.start_time ? String(e.start_time).slice(0, 5) : ''} - ${e.end_time ? String(e.end_time).slice(0, 5) : ''}
-                  </span>
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-xs font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">
+                      ${e.start_time ? String(e.start_time).slice(0, 5) : ''} - ${e.end_time ? String(e.end_time).slice(0, 5) : ''}
+                    </span>
+                    ${(S.user && (S.user.role === 'admin' || S.user.role === 'faculty')) ? `
+                      <button onclick="deleteTimetableEntry(${e.id})" class="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all" title="Remove Session">
+                        <i data-lucide="trash-2" class="w-3 h-3"></i>
+                      </button>
+                    ` : ''}
+                  </div>
                 </div>
 
                 <div>
@@ -13149,6 +13273,63 @@ function printIndividualSubjectHallTicket() {
   printWindow.document.close();
 }
 
+
+
+// ── GENERIC DATA CLEANUP & DELETE HANDLERS ──
+async function deleteEvent(id, title) {
+  if (!confirm(`Delete event "${title || id}"? This will also remove registrations.`)) return;
+  try {
+    await api('DELETE', `/events/${id}`);
+    toast('Event deleted successfully', 'info');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to delete event', 'error');
+  }
+}
+
+async function deleteDocument(id, title) {
+  if (!confirm(`Delete document "${title || id}" from Digital Vault?`)) return;
+  try {
+    await api('DELETE', `/documents/${id}`);
+    toast('Document deleted from Vault', 'info');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to delete document', 'error');
+  }
+}
+
+async function deleteAchievement(id, title) {
+  if (!confirm(`Remove achievement record "${title || id}"?`)) return;
+  try {
+    await api('DELETE', `/achievements/${id}`);
+    toast('Achievement removed', 'info');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to delete achievement', 'error');
+  }
+}
+
+async function deleteCertificate(id, certId) {
+  if (!confirm(`Revoke certificate ${certId || id}?`)) return;
+  try {
+    await api('DELETE', `/certificates/${id}`);
+    toast('Certificate revoked successfully', 'info');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to revoke certificate', 'error');
+  }
+}
+
+async function deleteTimetableEntry(id) {
+  if (!confirm('Remove this timetable session?')) return;
+  try {
+    await api('DELETE', `/timetable/${id}`);
+    toast('Timetable session removed', 'info');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to delete timetable entry', 'error');
+  }
+}
 
 function printOfficialHallTicket() {
   if (!currentStudentTicketData) return window.print();
