@@ -21,6 +21,16 @@ router.get('/available', authenticate, async (req, res) => {
                 WHERE er.subject_id = s.id AND er.student_id = $1 AND er.status = 'enrolled'
               ) as is_enrolled,
               (
+                SELECT s_other.name 
+                FROM enrollment_requests er_other
+                JOIN subjects s_other ON er_other.subject_id = s_other.id
+                WHERE er_other.student_id = $1 
+                  AND er_other.status = 'enrolled'
+                  AND UPPER(COALESCE(s_other.slot, 'A')) = UPPER(COALESCE(s.slot, 'A'))
+                  AND s_other.id != s.id
+                LIMIT 1
+              ) as slot_occupied_by_course,
+              (
                 s.target_dept IS NULL 
                 OR s.target_dept = 'ALL' 
                 OR $2 = '' 
@@ -117,13 +127,43 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-// POST /enroll - Student enrolls directly into a course/subject
+// POST /enroll - Student enrolls directly into a course/subject with strict single-course-per-slot enforcement
 router.post('/enroll', authenticate, async (req, res) => {
   const { subjectId } = req.body;
   if (!subjectId) return res.status(400).json({ error: 'Subject ID required' });
 
   try {
-    // Check if already enrolled
+    // 1. Fetch target subject details
+    const targetSub = await pool.query('SELECT id, name, code, slot, is_closed FROM subjects WHERE id=$1', [subjectId]);
+    if (!targetSub.rows[0]) return res.status(404).json({ error: 'Course not found' });
+    const subject = targetSub.rows[0];
+
+    if (subject.is_closed) {
+      return res.status(400).json({ error: 'Enrollments for this course are closed for examinations.' });
+    }
+
+    const targetSlot = (subject.slot || 'A').toUpperCase();
+
+    // 2. Strict Single Course per Slot Check: Block if student is already enrolled in another course for the same slot
+    const slotClash = await pool.query(
+      `SELECT er.id, s.id as subject_id, s.name as subject_name, s.code as course_code, COALESCE(s.slot, 'A') as slot
+       FROM enrollment_requests er
+       JOIN subjects s ON er.subject_id = s.id
+       WHERE er.student_id = $1 
+         AND er.status = 'enrolled' 
+         AND UPPER(COALESCE(s.slot, 'A')) = $2
+         AND s.id != $3`,
+      [req.user.id, targetSlot, subjectId]
+    );
+
+    if (slotClash.rows.length > 0) {
+      const existing = slotClash.rows[0];
+      return res.status(400).json({
+        error: `Slot ${targetSlot} Conflict: You are already enrolled in "${existing.subject_name}" (${existing.course_code || 'CS'}) for Slot ${targetSlot}. Academic regulations permit only one enrolled course per slot. Please unenroll from "${existing.subject_name}" first if you wish to switch.`
+      });
+    }
+
+    // 3. Check if already enrolled in this exact course
     const check = await pool.query(
       `SELECT * FROM enrollment_requests WHERE student_id=$1 AND subject_id=$2`,
       [req.user.id, subjectId]
@@ -155,12 +195,12 @@ router.post('/enroll', authenticate, async (req, res) => {
         sub.rows[0].faculty_id,
         'student_enrolled',
         'New Course Enrollment 🎓',
-        `${req.user.name} enrolled in "${sub.rows[0].name}"`,
+        `${req.user.name} enrolled in "${sub.rows[0].name}" (Slot ${targetSlot})`,
         r.rows[0].id
       );
     }
 
-    await logAction(req.user.id, req.user.name, req.user.role, 'enroll_course', 'subjects', subjectId);
+    await logAction(req.user.id, req.user.name, req.user.role, 'enroll_course', 'subjects', subjectId, null, { slot: targetSlot });
     res.status(201).json(r.rows[0]);
   } catch (err) {
     console.error('[Enroll POST] Error:', err);

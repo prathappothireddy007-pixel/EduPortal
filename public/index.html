@@ -9944,12 +9944,17 @@ async function renderStudentCourseEnrollment(container) {
 
               <div class="pt-3 border-t border-white/10">
                 ${c.is_enrolled ? `
-                  <button onclick="unenrollCourse(${c.id})" class="btn-secondary w-full text-xs py-2 rounded-xl text-rose-400 border-rose-500/30 hover:bg-rose-500/10 flex items-center justify-center gap-1.5">
+                  <button onclick="unenrollCourse(${c.id})" class="btn-secondary w-full text-xs py-2 rounded-xl text-rose-400 border-rose-500/30 hover:bg-rose-500/10 flex items-center justify-center gap-1.5 transition-all">
                     <i data-lucide="user-minus" class="w-3.5 h-3.5"></i>
                     <span>Drop / Unenroll</span>
                   </button>
+                ` : c.slot_occupied_by_course ? `
+                  <button onclick="handleSlotConflictClick('${slot}', '${(c.slot_occupied_by_course || '').replace(/'/g, "\\'")}')" class="w-full py-2 px-2.5 rounded-xl text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 flex items-center justify-center gap-1.5 transition-all text-center">
+                    <i data-lucide="lock" class="w-3.5 h-3.5 shrink-0"></i>
+                    <span class="truncate">Slot ${slot} Conflict (${c.slot_occupied_by_course})</span>
+                  </button>
                 ` : isEligible ? `
-                  <button onclick="enrollInCourse(${c.id})" class="btn-primary w-full text-xs py-2 rounded-xl flex items-center justify-center gap-1.5">
+                  <button onclick="enrollInCourse(${c.id})" class="btn-primary w-full text-xs py-2 rounded-xl flex items-center justify-center gap-1.5 shadow-md bg-gradient-to-r from-blue-600 to-indigo-600 hover:brightness-110 transition-all">
                     <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
                     <span>Enroll in Slot ${slot}</span>
                   </button>
@@ -9966,6 +9971,10 @@ async function renderStudentCourseEnrollment(container) {
     </div>
   `;
   lucide.createIcons();
+}
+
+function handleSlotConflictClick(slot, courseName) {
+  toast(`Slot ${slot} Conflict: You are already enrolled in "${courseName}". Please unenroll from it first if you wish to switch courses.`, 'warning');
 }
 
 function filterStudentSlot(slot) {
