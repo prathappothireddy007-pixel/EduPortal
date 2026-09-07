@@ -198,6 +198,131 @@ router.post('/unenroll', authenticate, async (req, res) => {
   }
 });
 
+// GET /subject/:subjectId/students - Faculty or Admin gets full enrolled student roster for a course
+router.get('/subject/:subjectId/students', authenticate, requireFaculty, async (req, res) => {
+  const { subjectId } = req.params;
+  try {
+    const subRes = await pool.query('SELECT * FROM subjects WHERE id=$1', [subjectId]);
+    if (!subRes.rows[0]) return res.status(404).json({ error: 'Subject not found' });
+    const subject = subRes.rows[0];
+
+    const r = await pool.query(
+      `SELECT er.id as enrollment_id, er.created_at as enrolled_at, er.status as enrollment_status,
+              u.id as student_id, u.name as student_name, u.admin_id as reg_no, u.email as student_email,
+              u.department as student_dept, u.parent_phone,
+              COALESCE(g.div1_assessments, 0) as div1_assessments,
+              COALESCE(g.div3_class_lab, 0) as div3_class_lab,
+              COALESCE(g.total_internal, 0) as total_internal,
+              COALESCE(g.grand_total, 0) as grand_total,
+              COALESCE(g.grade_letter, 'In Progress') as grade_letter,
+              htr.status as hall_ticket_status,
+              (
+                SELECT COUNT(*) FROM attendance a 
+                WHERE a.student_id = u.id AND a.subject_id = $1
+              ) as total_sessions,
+              (
+                SELECT COUNT(*) FROM attendance a 
+                WHERE a.student_id = u.id AND a.subject_id = $1 AND a.status IN ('Present', 'OD')
+              ) as attended_sessions
+       FROM enrollment_requests er
+       JOIN users u ON er.student_id = u.id
+       LEFT JOIN grades g ON (g.student_id = u.id AND g.subject_id = $1)
+       LEFT JOIN hall_ticket_requests htr ON (htr.student_id = u.id AND htr.subject_id = $1)
+       WHERE er.subject_id = $1 AND er.status = 'enrolled'
+       ORDER BY u.admin_id ASC, u.name ASC`,
+      [subjectId]
+    );
+
+    const students = r.rows.map(stu => {
+      const total = parseInt(stu.total_sessions || 0, 10);
+      const attended = parseInt(stu.attended_sessions || 0, 10);
+      const attendancePct = total > 0 ? Math.round((attended / total) * 100) : 100;
+      return {
+        ...stu,
+        attendance_pct: attendancePct
+      };
+    });
+
+    res.json({
+      subject: {
+        id: subject.id,
+        name: subject.name,
+        code: subject.code || `SUB${String(subject.id).padStart(3, '0')}`,
+        slot: subject.slot || 'A',
+        subject_type: subject.subject_type || 'classroom',
+        target_dept: subject.target_dept || 'ALL',
+        is_closed: subject.is_closed,
+        faculty_id: subject.faculty_id
+      },
+      students,
+      totalCount: students.length
+    });
+  } catch (err) {
+    console.error('[Subject Enrolled Students GET] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /subject/:subjectId/drop-student - Faculty/Admin kicks out / drops a student from a course
+router.post('/subject/:subjectId/drop-student', authenticate, requireFaculty, async (req, res) => {
+  const { subjectId } = req.params;
+  const { studentId, reason } = req.body;
+
+  if (!studentId) return res.status(400).json({ error: 'studentId is required' });
+
+  try {
+    const subRes = await pool.query('SELECT * FROM subjects WHERE id=$1', [subjectId]);
+    if (!subRes.rows[0]) return res.status(404).json({ error: 'Subject not found' });
+    const subject = subRes.rows[0];
+
+    const studentRes = await pool.query('SELECT id, name, email FROM users WHERE id=$1', [studentId]);
+    if (!studentRes.rows[0]) return res.status(404).json({ error: 'Student not found' });
+    const student = studentRes.rows[0];
+
+    // Remove enrollment
+    await pool.query(
+      `DELETE FROM enrollment_requests WHERE student_id=$1 AND subject_id=$2`,
+      [studentId, subjectId]
+    );
+
+    // Delete associated subject attendance & hall ticket requests
+    await pool.query(`DELETE FROM attendance WHERE student_id=$1 AND subject_id=$2`, [studentId, subjectId]);
+    await pool.query(`DELETE FROM hall_ticket_requests WHERE student_id=$1 AND subject_id=$2`, [studentId, subjectId]);
+
+    const dropReason = reason || 'Course enrollment revoked by course faculty';
+
+    // Notify student
+    await notify(
+      studentId,
+      'course_dropped',
+      '⚠️ Course Enrollment Revoked',
+      `You have been dropped from "${subject.name}" (${subject.code || 'SUB'}) by ${req.user.name}. Reason: ${dropReason}`,
+      subjectId
+    );
+
+    // Audit log
+    await logAction(
+      req.user.id,
+      req.user.name,
+      req.user.role,
+      'drop_student_from_course',
+      'enrollment_requests',
+      subjectId,
+      null,
+      { studentId, studentName: student.name, reason: dropReason }
+    );
+
+    res.json({
+      message: `Student ${student.name} was successfully dropped from ${subject.name}.`,
+      droppedStudentId: studentId,
+      subjectId
+    });
+  } catch (err) {
+    console.error('[Drop Student POST] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // DELETE /:id - Faculty removes enrollment
 router.delete('/:id', authenticate, requireFaculty, async (req, res) => {
   try {

@@ -9501,17 +9501,23 @@ async function renderSubjects(container) {
                 </div>
               </div>
 
-              <div class="pt-3 border-t border-white/10 flex items-center justify-between gap-2">
+              <div class="pt-3 border-t border-white/10 flex flex-col gap-2">
+                <button onclick="openSubjectRosterModal(${s.id})" class="w-full btn-primary text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 shadow-md bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] hover:brightness-110 transition-all font-medium">
+                  <i data-lucide="users" class="w-3.5 h-3.5"></i>
+                  <span>Enrolled Students (${s.enrolled_count || 0}) · Manage Roster</span>
+                </button>
                 ${isMine ? `
-                  <button onclick="toggleCourseLaunch(${s.id}, ${s.is_launched !== false ? 'false' : 'true'})" class="btn-secondary text-xs py-1.5 px-3 rounded-lg flex-1">
-                    ${s.is_launched !== false ? 'Close Launch' : 'Launch Course'}
-                  </button>
-                  <button onclick="deleteSubject(${s.id})" class="p-1.5 rounded-lg text-slate-400 hover:text-[#e0231c] hover:bg-white/5" title="Delete Course">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                  </button>
+                  <div class="flex items-center gap-2">
+                    <button onclick="toggleCourseLaunch(${s.id}, ${s.is_launched !== false ? 'false' : 'true'})" class="btn-secondary text-xs py-1.5 px-3 rounded-xl flex-1">
+                      ${s.is_launched !== false ? 'Close Launch' : 'Launch Course'}
+                    </button>
+                    <button onclick="deleteSubject(${s.id})" class="p-1.5 rounded-xl text-slate-400 hover:text-[#e0231c] hover:bg-white/5 border border-white/10 transition-colors" title="Delete Course">
+                      <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                  </div>
                 ` : `
-                  <div class="w-full text-center py-1.5 text-xs text-slate-500 italic">
-                    Assigned to ${s.faculty_name || 'other faculty'}
+                  <div class="w-full text-center py-1 text-xs text-slate-500 italic">
+                    Faculty Coordinator: ${s.faculty_name || 'Other Faculty'}
                   </div>
                 `}
               </div>
@@ -9675,6 +9681,179 @@ async function deleteSubject(id) {
     toast(e.message || 'Failed to delete course', 'error');
   }
 }
+
+// ── COURSE ENROLLED STUDENTS ROSTER & DROP / KICK OUT MANAGEMENT ──────────
+let currentRosterData = null;
+
+async function openSubjectRosterModal(subjectId) {
+  try {
+    const data = await api('GET', `/enrollment/subject/${subjectId}/students`);
+    currentRosterData = data;
+
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+    const modalFooter = document.getElementById('modal-footer');
+
+    if (modalTitle) modalTitle.innerHTML = `👥 Enrolled Students Roster · ${data.subject.name}`;
+    if (modalFooter) modalFooter.innerHTML = `
+      <button onclick="closeModal()" class="btn-secondary text-xs py-2 px-4 rounded-xl">Close Roster</button>
+    `;
+
+    if (modalBody) {
+      modalBody.innerHTML = `
+        <div class="space-y-4 animate-fade-in">
+          <!-- Course Header Banner -->
+          <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="badge badge-purple font-mono text-xs font-bold">SLOT ${(data.subject.slot || 'A').toUpperCase()}</span>
+                <span class="font-mono text-xs text-[#ff5a3c] bg-[#e0231c]/10 px-2 py-0.5 rounded border border-[#e0231c]/20">${data.subject.code}</span>
+                <span class="badge ${data.subject.is_closed ? 'badge-amber' : 'badge-emerald'} text-[10px]">${data.subject.is_closed ? 'CLOSED FOR EXAMS' : 'ACTIVE'}</span>
+              </div>
+              <h4 class="text-lg font-normal text-white mt-1">${data.subject.name}</h4>
+              <p class="text-xs text-slate-400">Target Eligible Department: <span class="text-white font-medium">${data.subject.target_dept}</span></p>
+            </div>
+            <div class="text-right">
+              <span class="text-2xl font-light text-emerald-400 font-mono">${data.totalCount}</span>
+              <p class="text-[10px] text-slate-400 uppercase tracking-widest">Enrolled Students</p>
+            </div>
+          </div>
+
+          <!-- Search & Filter Bar -->
+          <div class="flex items-center gap-3">
+            <div class="relative flex-1">
+              <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+              <input type="text" id="roster-search-input" oninput="filterRosterStudents()" placeholder="Search enrolled students by name, reg no, or dept..." class="w-full pl-10 pr-4 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-[#e0231c] focus:outline-none" />
+            </div>
+            <span id="roster-count-badge" class="badge badge-vermilion text-xs font-mono shrink-0">${data.totalCount} Enrolled</span>
+          </div>
+
+          <!-- Students Table -->
+          <div class="overflow-x-auto rounded-2xl border border-white/10 max-h-[380px] overflow-y-auto scrollbar-thin">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-black/60 sticky top-0 text-[10px] uppercase text-slate-400 tracking-wider font-mono border-b border-white/10">
+                <tr>
+                  <th class="p-3">Student Info</th>
+                  <th class="p-3">Dept</th>
+                  <th class="p-3 text-center">Attendance</th>
+                  <th class="p-3 text-center">Assessment</th>
+                  <th class="p-3 text-center">Internal / Grand</th>
+                  <th class="p-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="roster-table-body" class="divide-y divide-white/5">
+                ${renderRosterRows(data.students, data.subject.id)}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    openModal();
+    lucide.createIcons();
+  } catch (err) {
+    console.error('Error loading roster:', err);
+    toast('Failed to load course enrolled students: ' + (err.message || 'Server error'), 'error');
+  }
+}
+
+function renderRosterRows(students, subjectId) {
+  if (!students || students.length === 0) {
+    return `
+      <tr>
+        <td colspan="6" class="p-8 text-center text-slate-500">
+          <i data-lucide="users" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+          <p>No students currently enrolled in this course.</p>
+        </td>
+      </tr>
+    `;
+  }
+
+  return students.map(s => {
+    const attendPct = s.attendance_pct != null ? s.attendance_pct : 100;
+    const isAttendGood = attendPct >= 75;
+    const cleanName = (s.student_name || 'Student').replace(/'/g, "\\'");
+    return `
+      <tr class="hover:bg-white/5 transition-colors" id="roster-row-${s.student_id}">
+        <td class="p-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-[#e0231c]/30 to-[#ff5a3c]/10 border border-[#e0231c]/30 flex items-center justify-center font-bold text-white text-xs shrink-0">
+              ${(s.student_name || 'S')[0].toUpperCase()}
+            </div>
+            <div>
+              <div class="font-medium text-white">${s.student_name}</div>
+              <div class="font-mono text-[10px] text-[#ff5a3c]">${s.reg_no || 'REG---'}</div>
+            </div>
+          </div>
+        </td>
+        <td class="p-3">
+          <span class="badge badge-blue text-[10px]">${s.student_dept || 'General'}</span>
+        </td>
+        <td class="p-3 text-center">
+          <span class="badge ${isAttendGood ? 'badge-emerald' : 'badge-vermilion'} font-mono text-xs font-bold">
+            ${attendPct}%
+          </span>
+          <div class="text-[9px] text-slate-500 mt-0.5">${s.attended_sessions || 0}/${s.total_sessions || 0} sessions</div>
+        </td>
+        <td class="p-3 text-center font-mono">
+          <span class="text-white">${s.div1_assessments || 0}</span>
+          <span class="text-[10px] text-slate-500">/100</span>
+        </td>
+        <td class="p-3 text-center font-mono">
+          <div class="text-emerald-400 font-bold">${s.total_internal || 0} <span class="text-[10px] text-slate-500 font-normal">int</span></div>
+          <div class="text-[10px] text-slate-400">${s.grade_letter || 'In Progress'}</div>
+        </td>
+        <td class="p-3 text-right">
+          <button onclick="dropStudentFromSubject(${subjectId}, ${s.student_id}, '${cleanName}')" class="btn-danger text-[11px] py-1.5 px-3 rounded-lg flex items-center gap-1.5 ml-auto shadow-sm bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white border border-red-500/30 transition-all font-medium" title="Drop student from this course">
+            <i data-lucide="user-minus" class="w-3.5 h-3.5"></i>
+            <span>Drop / Kick Out</span>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filterRosterStudents() {
+  if (!currentRosterData) return;
+  const q = (document.getElementById('roster-search-input')?.value || '').toLowerCase().trim();
+  const filtered = currentRosterData.students.filter(s => 
+    (s.student_name || '').toLowerCase().includes(q) ||
+    (s.reg_no || '').toLowerCase().includes(q) ||
+    (s.student_dept || '').toLowerCase().includes(q)
+  );
+
+  const tbody = document.getElementById('roster-table-body');
+  const countBadge = document.getElementById('roster-count-badge');
+  if (tbody) tbody.innerHTML = renderRosterRows(filtered, currentRosterData.subject.id);
+  if (countBadge) countBadge.innerText = `${filtered.length} of ${currentRosterData.totalCount} Enrolled`;
+  lucide.createIcons();
+}
+
+async function dropStudentFromSubject(subjectId, studentId, studentName) {
+  const confirmed = confirm(`Are you sure you want to drop / kick out "${studentName}" from this course?\n\nThis will revoke their enrollment, clear subject-specific attendance & grades, and notify the student.`);
+  if (!confirmed) return;
+
+  const reason = prompt(`Enter reason for dropping "${studentName}" (optional):`, 'Course faculty dropped enrollment') || 'Course enrollment revoked by faculty';
+
+  try {
+    const res = await api('POST', `/enrollment/subject/${subjectId}/drop-student`, { studentId, reason });
+    toast(`✅ ${studentName} was dropped from the course.`, 'success');
+    
+    // Refresh modal
+    await openSubjectRosterModal(subjectId);
+    
+    // Refresh background subject list if open
+    if (S.tab === 'subjects') {
+      renderPage();
+    }
+  } catch (err) {
+    console.error('Failed to drop student:', err);
+    toast('Error dropping student: ' + (err.message || 'Server error'), 'error');
+  }
+}
+
 
 
 // ── 2. STUDENT COURSE CATALOG & ENROLLMENT (SLOTS A-Z) ───────────────────
