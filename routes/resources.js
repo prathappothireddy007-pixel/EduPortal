@@ -42,16 +42,16 @@ router.get('/recommended/:studentId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Calculate average score per subject; return only subjects where avg < 60%
+    // Calculate average score per subject safely; return only subjects where avg < 60%
     const gradesResult = await pool.query(
       `SELECT g.subject_id, s.name AS subject_name,
-              AVG(g.score) AS avg_score,
-              AVG(g.max_score) AS avg_max_score
+              AVG(COALESCE(g.grand_total, g.total_internal, g.div1_assessments, 75)) AS avg_score,
+              100 AS avg_max_score
        FROM grades g
        LEFT JOIN subjects s ON g.subject_id = s.id
        WHERE g.student_id = $1
        GROUP BY g.subject_id, s.name
-       HAVING AVG(CASE WHEN g.max_score > 0 THEN (g.score / g.max_score) * 100 ELSE 0 END) < 60`,
+       HAVING AVG(COALESCE(g.grand_total, g.total_internal, g.div1_assessments, 75)) < 60`,
       [studentId]
     );
 
@@ -76,7 +76,7 @@ router.get('/recommended/:studentId', authenticate, async (req, res) => {
       resources: resourcesResult.rows,
     });
   } catch (err) {
-    console.error(err);
+    console.error('[Resources Recommended GET] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -84,17 +84,18 @@ router.get('/recommended/:studentId', authenticate, async (req, res) => {
 // POST / - faculty uploads resource
 router.post('/', authenticate, requireFaculty, async (req, res) => {
   try {
-    const { subjectId, title, resourceType, description, fileB64 } = req.body;
+    const { subjectId, title, resourceType, description, fileB64, fileData } = req.body;
+    const filePayload = fileB64 || fileData || null;
 
     if (!subjectId || !title || !resourceType) {
       return res.status(400).json({ error: 'subjectId, title, and resourceType are required' });
     }
 
     const result = await pool.query(
-      `INSERT INTO resources (subject_id, title, resource_type, description, file_data, uploaded_by)
+      `INSERT INTO resources (subject_id, title, resource_type, description, file_b64, uploaded_by)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [subjectId, title, resourceType, description, fileB64, req.user.id]
+      [subjectId, title, resourceType, description, filePayload, req.user.id]
     );
 
     res.status(201).json(result.rows[0]);
