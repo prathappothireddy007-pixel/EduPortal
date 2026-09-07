@@ -51,21 +51,24 @@ router.post('/', authenticate, async (req, res) => {
   try {
     const { title, category, description, priority } = req.body;
 
-    if (!title) {
+    if (!title || !title.trim()) {
       return res.status(400).json({ error: 'title is required' });
     }
 
-    // Auto-assign to first faculty found
+    // Auto-assign to first faculty or admin found
     const facultyResult = await pool.query(
-      "SELECT id FROM users WHERE role = 'faculty' ORDER BY id LIMIT 1"
+      "SELECT id FROM users WHERE role IN ('faculty', 'admin') ORDER BY id LIMIT 1"
     );
     const assignedTo = facultyResult.rows[0]?.id || null;
+
+    const normalizedCategory = String(category || 'general').trim().toLowerCase().replace(/\s+/g, '_');
+    const normalizedPriority = String(priority || 'medium').trim().toLowerCase();
 
     const result = await pool.query(
       `INSERT INTO issues (student_id, assigned_to, category, title, description, priority, status)
        VALUES ($1, $2, $3, $4, $5, $6, 'open')
        RETURNING *`,
-      [req.user.id, assignedTo, category || 'general', title, description || '', priority || 'medium']
+      [req.user.id, assignedTo, normalizedCategory, title.trim(), description ? description.trim() : '', normalizedPriority]
     );
 
     const newIssue = result.rows[0];
@@ -74,8 +77,8 @@ router.post('/', authenticate, async (req, res) => {
       await notify(
         assignedTo,
         'new_issue',
-        'New Support Ticket',
-        `A new ticket "${title}" was created by ${req.user.name}`,
+        '📩 New Campus Support Ticket',
+        `New ticket "${title}" submitted by ${req.user.name}`,
         newIssue.id
       );
     }

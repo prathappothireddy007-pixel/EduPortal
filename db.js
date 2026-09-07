@@ -420,6 +420,13 @@ const runSchemaAndMigrations = async (client) => {
       `CREATE INDEX IF NOT EXISTS idx_od_student ON od_requests(student_id)`,
       `CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)`,
       `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_at TIMESTAMP`,
+      `ALTER TABLE issues DROP CONSTRAINT IF EXISTS issues_category_check`,
+      `ALTER TABLE issues DROP CONSTRAINT IF EXISTS issues_priority_check`,
+      `ALTER TABLE issues DROP CONSTRAINT IF EXISTS issues_status_check`,
+      `ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`,
+      `ALTER TABLE classrooms DROP CONSTRAINT IF EXISTS classrooms_room_type_check`,
+      `ALTER TABLE timetable_entries DROP CONSTRAINT IF EXISTS timetable_entries_day_of_week_check`,
+      `ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_status_check`,
       `CREATE INDEX IF NOT EXISTS idx_timetable_class ON timetable_entries(class_id)`,
       `CREATE INDEX IF NOT EXISTS idx_timetable_room ON timetable_entries(classroom_id)`,
     ];
