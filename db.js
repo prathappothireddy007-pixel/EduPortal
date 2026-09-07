@@ -38,6 +38,7 @@ const poolProxy = {
 };
 
 const runSchemaAndMigrations = async (client) => {
+  try {
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
