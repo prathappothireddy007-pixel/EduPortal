@@ -4,16 +4,18 @@ const { authenticate, requireFaculty, requireStudent } = require('../middleware/
 const { haversineDistance } = require('../services/timetable');
 const { logAction, notify } = require('../services/audit');
 
-// GET OD requests
+// GET OD requests (Faculty & Admin get all with student info; Student gets own)
 router.get('/', authenticate, async (req, res) => {
   try {
     let r;
-    if (req.user.role === 'faculty') {
+    if (req.user.role === 'faculty' || req.user.role === 'admin') {
       r = await pool.query(`
         SELECT o.*, e.lat as event_lat, e.lng as event_lng,
-               e.radius_meters, e.start_time as event_start, e.end_time as event_end
+               e.radius_meters, e.start_time as event_start, e.end_time as event_end,
+               u.admin_id as reg_no, u.department as student_dept, u.email as student_email
         FROM od_requests o
         LEFT JOIN events e ON o.event_id = e.id
+        LEFT JOIN users u ON o.student_id = u.id
         ORDER BY o.created_at DESC
       `);
     } else {
@@ -33,7 +35,7 @@ router.get('/', authenticate, async (req, res) => {
 // POST submit OD request (student)
 router.post('/', authenticate, requireStudent, async (req, res) => {
   const { eventId, eventName, slot, lat, lng, locationName, letterB64 } = req.body;
-  if (!letterB64) return res.status(400).json({ error: 'Letter photo or document required' });
+  const letterPayload = letterB64 || `data:text/plain;base64,${Buffer.from(`Official Digital OD Application Undertaking - Event: ${eventName || 'General OD'} - Slot: ${slot || 'A'} - Date: ${new Date().toISOString()}`).toString('base64')}`;
 
   try {
     const today = new Date().toISOString().split('T')[0];
@@ -71,7 +73,7 @@ router.post('/', authenticate, requireStudent, async (req, res) => {
         lat ? parseFloat(lat) : null,
         lng ? parseFloat(lng) : null,
         locationName || 'Custom Selected Location',
-        letterB64,
+        letterPayload,
         today
       ]
     );

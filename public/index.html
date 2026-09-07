@@ -7411,54 +7411,7 @@ setTimeout(() => {
       } catch(e) {}
     }
 
-    async function renderODRequests(container) {
-      const odList = await api('GET', '/od');
-      container.innerHTML = `
-        <div class="space-y-6 animate-fade-in">
-          <h3 class="text-xl font-black text-white">On-Duty (OD) Submissions & Verification</h3>
-          <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
-            <table class="w-full text-left text-sm text-slate-300">
-              <thead class="bg-white/5 text-xs text-slate-400 uppercase font-semibold border-b border-white/10">
-                <tr>
-                  <th class="p-4">Student</th>
-                  <th class="p-4">Event</th>
-                  <th class="p-4">Status</th>
-                  <th class="p-4">Distance</th>
-                  <th class="p-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/5">
-                ${odList.length === 0 ? `
-                  <tr><td colspan="5" class="p-8 text-center text-slate-500">No OD requests pending.</td></tr>
-                ` : odList.map(o => `
-                  <tr class="hover:bg-white/[0.02]">
-                    <td class="p-4 font-semibold text-white">${o.student_name}</td>
-                    <td class="p-4">${o.event_name}</td>
-                    <td class="p-4"><span class="badge ${o.status === 'approved' || o.status === 'completed' ? 'badge-emerald' : 'badge-amber'}">${o.status}</span></td>
-                    <td class="p-4 text-xs font-mono text-slate-400">${o.distance_meters != null ? o.distance_meters + 'm' : 'N/A'}</td>
-                    <td class="p-4 text-right gap-2 flex justify-end">
-                      ${o.status === 'pending' ? `
-                        <button onclick="approveOD(${o.id})" class="btn-primary text-xs py-1 px-3">Approve</button>
-                        <button onclick="rejectOD(${o.id})" class="btn-secondary text-xs py-1 px-3">Reject</button>
-                      ` : ''}
-                      ${o.status === 'geo_submitted' ? `
-                        <button onclick="verifyGeo(${o.id}, 'accept')" class="btn-primary text-xs py-1 px-3">Accept Geo</button>
-                        <button onclick="verifyGeo(${o.id}, 'reject')" class="btn-secondary text-xs py-1 px-3">Reject Geo</button>
-                      ` : ''}
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
-      lucide.createIcons();
-    }
-
-    async function approveOD(id) { await api('PUT', `/od/${id}/approve`); toast('OD Approved', 'success'); renderPage(); }
-    async function rejectOD(id) { await api('PUT', `/od/${id}/reject`, { reason: 'Faculty Rejected' }); toast('OD Rejected', 'info'); renderPage(); }
-    async function verifyGeo(id, action) { await api('PUT', `/od/${id}/verify-geo`, { action }); toast('Geo Status Updated', 'success'); renderPage(); }
+    // Note: renderODRequests and OD verification engine are defined in Section 6b (Enhanced OD Engine)
 
     async function renderClassrooms(container) {
       const rooms = await api('GET', '/classrooms');
@@ -9157,181 +9110,7 @@ setTimeout(() => {
       }
     }
 
-    // --- STUDENT ON-DUTY (OD) WORKFLOW ---
-    async function renderStudentOD(container) {
-      const odList = await api('GET', '/od');
-
-      container.innerHTML = `
-        <div class="space-y-6 animate-fade-in">
-          <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-emerald-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="badge badge-emerald text-[10px] uppercase tracking-[0.2em]">ON-DUTY WORKFLOW</span>
-                <span class="text-xs text-slate-400 font-mono">3-Stage Verification Engine</span>
-              </div>
-              <h3 class="text-2xl font-normal text-white tracking-wide mt-1">My On-Duty (OD) Requests</h3>
-              <p class="text-xs text-slate-300">Submit official OD letters for symposiums, sports, and technical competitions with GPS check-in.</p>
-            </div>
-            <button onclick="openSubmitODModal()" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase">
-              <i data-lucide="plus-circle" class="w-4 h-4"></i>
-              <span>Submit New OD Request</span>
-            </button>
-          </div>
-
-          <div class="space-y-4">
-            ${(odList || []).length > 0 ? (odList || []).map(o => `
-              <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
-                  <div>
-                    <h4 class="font-medium text-white text-base tracking-wide">${o.event_name}</h4>
-                    <p class="text-xs text-slate-400">Date: <span class="font-mono text-slate-300">${o.date || new Date(o.created_at).toLocaleDateString()}</span></p>
-                  </div>
-                  <span class="badge ${
-                    o.status === 'approved' || o.status === 'completed' || o.status === 'geo_submitted' 
-                      ? 'badge-emerald' 
-                      : o.status === 'rejected' 
-                      ? 'badge-rose' 
-                      : 'badge-amber'
-                  } text-[10px] uppercase tracking-wider">
-                    ${(o.status || 'PENDING').toUpperCase()}
-                  </span>
-                </div>
-
-                <!-- 3-Stage Progress Stepper -->
-                <div class="grid grid-cols-3 gap-2 pt-1 text-center">
-                  <div class="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
-                    <div class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-xs font-bold">✓</div>
-                    <p class="text-[11px] font-medium text-white">1. Letter Submitted</p>
-                    <p class="text-[9px] text-slate-400">Document Uploaded</p>
-                  </div>
-                  <div class="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
-                    <div class="w-6 h-6 rounded-full ${o.status !== 'pending' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-300'} flex items-center justify-center mx-auto text-xs font-bold">
-                      ${o.status !== 'pending' ? '✓' : '2'}
-                    </div>
-                    <p class="text-[11px] font-medium text-white">2. Faculty Review</p>
-                    <p class="text-[9px] text-slate-400">${o.status !== 'pending' ? 'Reviewed' : 'Awaiting Approval'}</p>
-                  </div>
-                  <div class="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
-                    <div class="w-6 h-6 rounded-full ${o.status === 'geo_submitted' || o.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400'} flex items-center justify-center mx-auto text-xs font-bold">
-                      ${o.status === 'geo_submitted' || o.status === 'completed' ? '✓' : '3'}
-                    </div>
-                    <p class="text-[11px] font-medium text-white">3. Geo Verification</p>
-                    <p class="text-[9px] text-slate-400">${o.status === 'geo_submitted' || o.status === 'completed' ? 'Verified' : 'Pending Check-in'}</p>
-                  </div>
-                </div>
-
-                ${o.status === 'approved' ? `
-                  <div class="pt-2">
-                    <button onclick="triggerGeoCamera(${o.id})" class="btn-primary w-full text-xs py-3 rounded-xl flex items-center justify-center gap-2 tracking-wider uppercase">
-                      <i data-lucide="map-pin" class="w-4 h-4"></i>
-                      <span>Complete GPS Geo-Verification Check-In</span>
-                    </button>
-                  </div>
-                ` : ''}
-              </div>
-            `).join('') : `
-              <div class="glass-panel p-12 rounded-3xl text-center text-slate-400">
-                <i data-lucide="clipboard-list" class="w-12 h-12 mx-auto mb-3 text-slate-500"></i>
-                <h4 class="text-base font-normal text-white">No On-Duty Requests Submitted</h4>
-                <p class="text-xs text-slate-400 mt-1">Submit your permission letters when representing the college in external events.</p>
-              </div>
-            `}
-          </div>
-        </div>
-      `;
-      lucide.createIcons();
-    }
-
-    async function openSubmitODModal() {
-      let events = [];
-      try {
-        events = await api('GET', '/events');
-      } catch(e) {
-        events = [];
-      }
-      const registeredEvents = (events || []).filter(e => e.is_registered);
-
-      openModal('Submit On-Duty (OD) Request', `
-        <div class="space-y-4 text-left">
-          <div>
-            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Registered Event (Optional)</label>
-            <select id="m-od-event-id" class="glass-input w-full font-medium" onchange="handleODEventChange(this.value)">
-              <option value="">-- Custom Event / Other --</option>
-              ${registeredEvents.map(e => `<option value="${e.id}" data-name="${e.title}">${e.title} (${e.event_date ? new Date(e.event_date).toLocaleDateString() : ''})</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Event / Competition Name <span class="text-[#e0231c]">*</span></label>
-            <input type="text" id="m-od-event-name" class="glass-input w-full font-medium" placeholder="e.g. National Hackathon 2026" required>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Permission Letter / Proof Photo (Image or PDF) <span class="text-[#e0231c]">*</span></label>
-            <input type="file" id="m-od-file" accept="image/*,application/pdf" class="glass-input w-full font-medium" required>
-          </div>
-        </div>
-      `, `
-        <button onclick="saveOD()" class="btn-primary text-xs py-2.5 px-6 rounded-xl uppercase tracking-wider flex items-center gap-2">
-          <i data-lucide="send" class="w-4 h-4"></i>
-          <span>Submit OD Application</span>
-        </button>
-      `);
-      lucide.createIcons();
-    }
-
-    function handleODEventChange(val) {
-      const select = document.getElementById('m-od-event-id');
-      const selectedOption = select.options[select.selectedIndex];
-      const nameInput = document.getElementById('m-od-event-name');
-      if (val && selectedOption && selectedOption.dataset.name) {
-        nameInput.value = selectedOption.dataset.name;
-      }
-    }
-
-    async function saveOD() {
-      const eventId = document.getElementById('m-od-event-id')?.value || null;
-      const eventName = document.getElementById('m-od-event-name')?.value;
-      const fileInput = document.getElementById('m-od-file');
-
-      if (!eventName || !eventName.trim()) return toast('Event name is required', 'warning');
-      if (!fileInput || !fileInput.files[0]) return toast('Permission letter or photo required', 'warning');
-
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          await api('POST', '/od', {
-            eventId: eventId ? parseInt(eventId, 10) : null,
-            eventName: eventName.trim(),
-            letterB64: e.target.result
-          });
-          toast('OD Request Submitted Successfully!', 'success');
-          closeModal();
-          renderPage();
-        } catch(err) {
-          toast(err.message || 'Failed to submit OD', 'error');
-        }
-      };
-      reader.readAsDataURL(fileInput.files[0]);
-    }
-
-    async function triggerGeoCamera(odId) {
-      if (!navigator.geolocation) return toast('Geolocation is not supported by your browser', 'error');
-      
-      navigator.geolocation.getCurrentPosition(async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-
-        try {
-          await api('POST', `/od/${odId}/geo-photo`, {
-            geoB64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-            lat, lng
-          });
-          toast('GPS Geo-Verification Successful!', 'success');
-          renderPage();
-        } catch(e) {
-          toast(e.message || 'Verification failed', 'error');
-        }
-      }, (err) => toast('GPS location permission is required for OD verification', 'error'));
-    }
+    // Note: renderStudentOD and openSubmitODModal with Leaflet map pinning are defined in Section 6 (Enhanced OD Module)
 
     // --- WHAT-IF GRADE SIMULATOR ---
     async function renderWhatIfSimulator(container) {
@@ -10385,7 +10164,20 @@ async function renderAttendanceCalculator(container) {
 }
 
 
-// ── 6. ON-DUTY (OD) WORKFLOW: MAP SEARCH & 30m / 30-MIN STRICT CHECK-IN ──
+// ── 6. ON-DUTY (OD) WORKFLOW: INTERACTIVE MAP PINNING, FREE SCROLL & VERIFICATION ENGINE ──
+
+var odMapInstance = null;
+var odMarkerInstance = null;
+var odCircleInstance = null;
+var odCurrentTileLayer = 'street';
+
+var inspectODMapInstance = null;
+var currentODRequestsCache = [];
+var selectedODTab = 'ALL';
+var odFilterSearchTerm = '';
+var currentInspectedOD = null;
+
+// ── STUDENT VIEW: OD DASHBOARD & REAL-TIME GEO STATUS ────────────────────
 async function renderStudentOD(container) {
   const [odList, events] = await Promise.all([
     api('GET', '/od'),
@@ -10398,12 +10190,12 @@ async function renderStudentOD(container) {
         <div>
           <div class="flex items-center gap-2">
             <span class="badge badge-amber text-[10px] uppercase tracking-[0.2em]">ON-DUTY (OD) GOVERNANCE</span>
-            <span class="text-xs text-amber-400 font-mono">30m Radius Verification</span>
+            <span class="text-xs text-amber-400 font-mono">30m Radius Geotag Verification</span>
           </div>
           <h3 class="text-2xl font-normal text-white tracking-wide mt-1">Student On-Duty (OD) Requests & Geo-Verification</h3>
-          <p class="text-xs text-slate-300">Select event slot, pin location via interactive map search, and complete check-in within 30 minutes of faculty attendance marking.</p>
+          <p class="text-xs text-slate-300">Pin any symposium, competition, or campus venue directly on the map and complete GPS check-in within 30 minutes of attendance marking.</p>
         </div>
-        <button onclick="openSubmitODModal()" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase shadow-md">
+        <button onclick="openSubmitODModal()" class="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 tracking-wider uppercase shadow-md bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] hover:brightness-110 font-medium">
           <i data-lucide="plus-circle" class="w-4 h-4"></i>
           <span>Submit New OD Request</span>
         </button>
@@ -10492,17 +10284,19 @@ async function renderStudentOD(container) {
   lucide.createIcons();
 }
 
+// ── STUDENT SUBMIT OD MODAL WITH PINNING & SATELLITE FREE SCROLL ─────────
 async function openSubmitODModal() {
   const events = await api('GET', '/events').catch(() => []);
   const registeredEvents = events.filter(e => e.is_registered);
 
-  openModal('Submit On-Duty (OD) Request with Map Geotag', `
+  const title = `📍 Submit On-Duty (OD) Request · Interactive Map Geotag`;
+  const bodyHtml = `
     <div class="space-y-4 text-left">
       <div class="grid grid-cols-2 gap-3">
         <!-- OD Slot -->
         <div>
           <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">OD Course Slot <span class="text-[#e0231c]">*</span></label>
-          <select id="m-od-slot" class="glass-input w-full font-bold text-[#ff5a3c]">
+          <select id="m-od-slot" class="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs font-bold text-[#ff5a3c] focus:border-[#e0231c] focus:outline-none">
             <option value="ALL">All Day / Full Session</option>
             ${SLOTS_LIST.map(slot => `<option value="${slot}">Slot ${slot}</option>`).join('')}
           </select>
@@ -10511,14 +10305,14 @@ async function openSubmitODModal() {
         <!-- OD Date -->
         <div>
           <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">OD Date <span class="text-[#e0231c]">*</span></label>
-          <input type="date" id="m-od-date" value="${new Date().toISOString().split('T')[0]}" class="glass-input w-full font-mono font-medium text-xs">
+          <input type="date" id="m-od-date" value="${new Date().toISOString().split('T')[0]}" class="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl font-mono text-xs text-white focus:border-[#e0231c] focus:outline-none">
         </div>
       </div>
 
       <!-- Event Association -->
       <div>
         <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Associated Campus Event (Optional)</label>
-        <select id="m-od-event-id" onchange="handleODEventChange(this.value)" class="glass-input w-full font-medium">
+        <select id="m-od-event-id" onchange="handleODEventChange(this.value)" class="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs font-medium text-white focus:border-[#e0231c] focus:outline-none">
           <option value="">-- Independent Academic / External OD --</option>
           ${registeredEvents.map(e => `
             <option value="${e.id}" data-name="${e.title}" data-lat="${e.lat || ''}" data-lng="${e.lng || ''}" data-venue="${e.venue || ''}">
@@ -10531,51 +10325,103 @@ async function openSubmitODModal() {
       <!-- Event Name -->
       <div>
         <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Event / Symposium / Competition Name <span class="text-[#e0231c]">*</span></label>
-        <input type="text" id="m-od-event-name" placeholder="e.g. National Hackathon, Technical Paper Presentation" class="glass-input w-full font-medium" required>
+        <input type="text" id="m-od-event-name" placeholder="e.g. National Hackathon, Technical Paper Presentation, Inter-College Sports" class="w-full px-3.5 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-[#e0231c] focus:outline-none" required>
       </div>
 
       <!-- Letter Upload -->
       <div>
-        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">OD Proof / Invitation Letter</label>
-        <input type="file" id="m-od-file" accept="image/*,.pdf" class="glass-input w-full text-xs">
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">OD Proof / Invitation Letter (Image or PDF)</label>
+        <input type="file" id="m-od-file" accept="image/*,.pdf" class="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-slate-300 focus:border-[#e0231c] focus:outline-none file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:bg-white/10 file:text-white hover:file:bg-white/20">
       </div>
 
       <!-- Interactive Map & Place Search -->
-      <div class="space-y-2 pt-2 border-t border-white/10">
-        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider flex items-center justify-between">
-          <span>📍 Pin Event Location on Map</span>
-          <span class="text-[10px] text-amber-400 font-normal">30m Radius Check-In Required</span>
-        </label>
+      <div class="space-y-2.5 pt-3 border-t border-white/10">
+        <div class="flex items-center justify-between">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+            <i data-lucide="map-pin" class="w-4 h-4 text-[#ff5a3c]"></i>
+            <span>Pin Event Location on Map</span>
+          </label>
+          <span class="badge badge-amber text-[10px] font-normal">30m Radius Geofence</span>
+        </div>
 
-        <!-- Search Bar -->
-        <div class="flex items-center gap-2">
-          <input type="text" id="od-map-search-input" placeholder="Search location (e.g. Anna University, IIT Madras, Nehru Stadium)..." class="glass-input flex-1 text-xs">
-          <button type="button" onclick="searchODLocation()" class="btn-secondary text-xs py-2 px-3 shrink-0 flex items-center gap-1">
-            <i data-lucide="search" class="w-3.5 h-3.5"></i>
-            <span>Search</span>
-          </button>
+        <!-- Search Bar with Suggestions Dropdown -->
+        <div class="relative space-y-1">
+          <div class="flex items-center gap-2">
+            <div class="relative flex-1">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
+              <input type="text" id="od-map-search-input" onkeydown="if(event.key==='Enter'){event.preventDefault();searchODLocation();}" placeholder="Search location (or scroll map freely to drop pin on any building/ground)..." class="w-full pl-9 pr-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-[#e0231c] focus:outline-none" />
+            </div>
+            <button type="button" onclick="searchODLocation()" class="btn-secondary text-xs py-2 px-3.5 rounded-xl shrink-0 flex items-center gap-1.5 hover:border-[#e0231c]/50">
+              <i data-lucide="search" class="w-3.5 h-3.5"></i>
+              <span>Search</span>
+            </button>
+          </div>
+          <div id="od-search-suggestions" class="hidden rounded-2xl bg-black/95 border border-white/10 backdrop-blur-md shadow-2xl overflow-hidden z-20"></div>
+        </div>
+
+        <!-- Map Controls Toolbar: Street/Sat, Center Pin, GPS -->
+        <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div class="flex items-center gap-1.5">
+            <button type="button" id="btn-layer-street" onclick="switchODMapLayer('street')" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#e0231c] text-white shadow-sm flex items-center gap-1 transition-all">
+              <i data-lucide="map" class="w-3 h-3"></i>
+              <span>Street View</span>
+            </button>
+            <button type="button" id="btn-layer-sat" onclick="switchODMapLayer('satellite')" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-white/10 text-slate-300 hover:text-white flex items-center gap-1 transition-all">
+              <i data-lucide="globe" class="w-3 h-3"></i>
+              <span>🛰️ Satellite</span>
+            </button>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <button type="button" onclick="dropPinAtMapCenter()" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-white/10 text-slate-300 hover:text-white hover:bg-white/20 border border-white/10 flex items-center gap-1 transition-all" title="Drop Pin right at the center of the current map view">
+              <i data-lucide="crosshair" class="w-3 h-3 text-[#ff5a3c]"></i>
+              <span>📍 Pin at Center</span>
+            </button>
+            <button type="button" onclick="useCurrentGPSLocationForOD()" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 flex items-center gap-1 transition-all" title="Center map at current device GPS">
+              <i data-lucide="navigation" class="w-3 h-3"></i>
+              <span>🎯 My Location</span>
+            </button>
+          </div>
         </div>
 
         <!-- Leaflet Map Container -->
-        <div id="od-leaflet-map" class="w-full h-56 rounded-2xl border border-white/10 overflow-hidden relative z-0"></div>
+        <div class="relative">
+          <div id="od-leaflet-map" class="w-full h-64 rounded-2xl border border-white/10 overflow-hidden relative z-0"></div>
+          <div class="absolute bottom-2 left-2 z-[400] bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 text-[10px] text-slate-400 flex items-center gap-1.5">
+            <i data-lucide="mouse-pointer" class="w-3 h-3 text-[#ff5a3c]"></i>
+            <span>Scroll & click anywhere to pin • Drag pin to adjust</span>
+          </div>
+        </div>
 
-        <!-- Selected Coordinates Display -->
-        <div class="flex items-center justify-between text-xs text-slate-400 font-mono bg-white/5 p-2.5 rounded-xl border border-white/10">
-          <span id="od-coords-display">📍 Lat: 13.0827, Lng: 80.2707</span>
-          <span class="text-amber-400 font-bold text-[11px]">Radius: 30 meters</span>
+        <!-- Custom Venue / Location Name Input (For places not in search) -->
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+            Venue / Custom Location Name <span class="text-slate-500 font-normal">(Type any room, ground, or hall name)</span>
+          </label>
+          <input type="text" id="od-location-name" oninput="this.dataset.userEdited='true'" placeholder="e.g. Mechanical Block Seminar Hall, Indoor Basketball Court, Tech Park Audi" class="w-full px-3.5 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-[#e0231c] focus:outline-none" value="Campus Event Venue" />
+        </div>
+
+        <!-- Selected Coordinates & 30m Geofence Indicator -->
+        <div id="od-coords-display" class="flex items-center justify-between text-xs text-slate-400 font-mono bg-white/5 p-2.5 rounded-xl border border-white/10">
+          <span>📍 Lat: <b>13.0827</b>, Lng: <b>80.2707</b></span>
+          <span class="badge badge-amber text-[10px]">30-Meter Radius Geofence Active</span>
         </div>
 
         <input type="hidden" id="od-lat" value="13.0827">
         <input type="hidden" id="od-lng" value="80.2707">
-        <input type="hidden" id="od-location-name" value="Campus Event Venue">
       </div>
     </div>
-  `, `
-    <button onclick="submitODWithMap()" class="btn-primary text-xs py-2.5 px-6 rounded-xl uppercase tracking-wider flex items-center gap-2">
+  `;
+
+  const footerHtml = `
+    <button onclick="closeModal()" class="btn-secondary text-xs py-2 px-4 rounded-xl">Cancel</button>
+    <button onclick="submitODWithMap()" class="btn-primary text-xs py-2.5 px-6 rounded-xl uppercase tracking-wider flex items-center gap-2 bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] shadow-md font-medium">
       <i data-lucide="send" class="w-4 h-4"></i>
       <span>Submit OD Application</span>
     </button>
-  `);
+  `;
+
+  openModal(title, bodyHtml, footerHtml);
   lucide.createIcons();
 
   setTimeout(() => {
@@ -10592,57 +10438,235 @@ function initODMap(lat, lng) {
     odMapInstance = null;
   }
 
-  odMapInstance = L.map('od-leaflet-map').setView([lat, lng], 14);
+  odMapInstance = L.map('od-leaflet-map', {
+    scrollWheelZoom: true,
+    touchZoom: true,
+    dragging: true,
+    doubleClickZoom: true,
+    boxZoom: true
+  }).setView([lat, lng], 15);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  window._odStreetTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
     attribution: '© OpenStreetMap contributors'
   }).addTo(odMapInstance);
 
+  odCurrentTileLayer = 'street';
+
+  // Draggable Marker
   odMarkerInstance = L.marker([lat, lng], { draggable: true }).addTo(odMapInstance);
+  odMarkerInstance.bindPopup('<b>📍 Selected OD Venue</b><br>Drag marker or click map to move').openPopup();
+
+  // 30m Geofence Circle
+  odCircleInstance = L.circle([lat, lng], {
+    radius: 30,
+    color: '#e0231c',
+    fillColor: '#ff5a3c',
+    fillOpacity: 0.25,
+    weight: 2
+  }).addTo(odMapInstance);
+
+  odMarkerInstance.on('drag', function (e) {
+    const pos = e.target.getLatLng();
+    if (odCircleInstance) odCircleInstance.setLatLng(pos);
+    updateODMarkerPosition(pos.lat, pos.lng, false);
+  });
 
   odMarkerInstance.on('dragend', function (e) {
     const pos = e.target.getLatLng();
-    updateODMarkerPosition(pos.lat, pos.lng);
+    updateODMarkerPosition(pos.lat, pos.lng, true);
   });
 
   odMapInstance.on('click', function(e) {
-    updateODMarkerPosition(e.latlng.lat, e.latlng.lng);
+    updateODMarkerPosition(e.latlng.lat, e.latlng.lng, true);
   });
+
+  // Multiple invalidateSize calls to guarantee sharp rendering on modal reveal
+  setTimeout(() => { if (odMapInstance) odMapInstance.invalidateSize(); }, 150);
+  setTimeout(() => { if (odMapInstance) odMapInstance.invalidateSize(); }, 350);
+  setTimeout(() => { if (odMapInstance) odMapInstance.invalidateSize(); }, 600);
 }
 
-function updateODMarkerPosition(lat, lng) {
+function updateODMarkerPosition(lat, lng, shouldReverseGeocode = false) {
   if (odMarkerInstance) odMarkerInstance.setLatLng([lat, lng]);
-  document.getElementById('od-lat').value = lat.toFixed(6);
-  document.getElementById('od-lng').value = lng.toFixed(6);
-  document.getElementById('od-coords-display').innerText = `📍 Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
+  if (odCircleInstance) odCircleInstance.setLatLng([lat, lng]);
+
+  const latInput = document.getElementById('od-lat');
+  const lngInput = document.getElementById('od-lng');
+  const coordsDisplay = document.getElementById('od-coords-display');
+
+  if (latInput) latInput.value = lat.toFixed(6);
+  if (lngInput) lngInput.value = lng.toFixed(6);
+  if (coordsDisplay) {
+    coordsDisplay.innerHTML = `<span>📍 Lat: <b>${lat.toFixed(4)}</b>, Lng: <b>${lng.toFixed(4)}</b></span> <span class="badge badge-amber text-[10px]">30-Meter Radius Geofence Active</span>`;
+  }
+
+  if (shouldReverseGeocode) {
+    reverseGeocodeODPosition(lat, lng);
+  }
+}
+
+async function reverseGeocodeODPosition(lat, lng) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+    const data = await res.json();
+    if (data && data.display_name) {
+      const parts = data.display_name.split(',').map(s => s.trim());
+      const shortName = parts.slice(0, 3).join(', ');
+      const nameInput = document.getElementById('od-location-name');
+      if (nameInput && (!nameInput.dataset.userEdited || nameInput.value === 'Campus Event Venue' || nameInput.value === 'Pinned Venue')) {
+        nameInput.value = shortName;
+      }
+      const coordsDisplay = document.getElementById('od-coords-display');
+      if (coordsDisplay) {
+        coordsDisplay.innerHTML = `<span>📍 Lat: <b>${lat.toFixed(4)}</b>, Lng: <b>${lng.toFixed(4)}</b> · <span class="text-white">${shortName}</span></span> <span class="badge badge-amber text-[10px]">30m Geofence</span>`;
+      }
+    }
+  } catch(e) {}
+}
+
+function dropPinAtMapCenter() {
+  if (!odMapInstance) return;
+  const center = odMapInstance.getCenter();
+  updateODMarkerPosition(center.lat, center.lng, true);
+  toast('📍 Pin dropped at map center!', 'success');
+}
+
+function useCurrentGPSLocationForOD() {
+  if (!navigator.geolocation) return toast('Geolocation not supported by browser', 'error');
+  toast('Acquiring your live GPS position...', 'info');
+  navigator.geolocation.getCurrentPosition((pos) => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    if (odMapInstance) {
+      odMapInstance.setView([lat, lng], 17);
+      updateODMarkerPosition(lat, lng, true);
+    }
+    toast(`🎯 GPS Acquired! Accuracy: ±${Math.round(pos.coords.accuracy)}m`, 'success');
+  }, (err) => {
+    toast('Unable to get GPS location. Click directly on map to place pin.', 'warning');
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+function switchODMapLayer(type) {
+  if (!odMapInstance) return;
+  if (window._odStreetTileLayer && odMapInstance.hasLayer(window._odStreetTileLayer)) {
+    odMapInstance.removeLayer(window._odStreetTileLayer);
+  }
+  if (window._odSatTileLayer && odMapInstance.hasLayer(window._odSatTileLayer)) {
+    odMapInstance.removeLayer(window._odSatTileLayer);
+  }
+
+  if (type === 'satellite') {
+    window._odSatTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: '© Esri World Imagery'
+    }).addTo(odMapInstance);
+    odCurrentTileLayer = 'satellite';
+    document.getElementById('btn-layer-sat')?.classList.add('bg-[#e0231c]', 'text-white');
+    document.getElementById('btn-layer-sat')?.classList.remove('bg-white/10', 'text-slate-300');
+    document.getElementById('btn-layer-street')?.classList.remove('bg-[#e0231c]', 'text-white');
+    document.getElementById('btn-layer-street')?.classList.add('bg-white/10', 'text-slate-300');
+  } else {
+    window._odStreetTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(odMapInstance);
+    odCurrentTileLayer = 'street';
+    document.getElementById('btn-layer-street')?.classList.add('bg-[#e0231c]', 'text-white');
+    document.getElementById('btn-layer-street')?.classList.remove('bg-white/10', 'text-slate-300');
+    document.getElementById('btn-layer-sat')?.classList.remove('bg-[#e0231c]', 'text-white');
+    document.getElementById('btn-layer-sat')?.classList.add('bg-white/10', 'text-slate-300');
+  }
 }
 
 async function searchODLocation() {
   const q = document.getElementById('od-map-search-input')?.value.trim();
-  if (!q) return toast('Please enter a location name to search', 'warning');
+  const suggestionsBox = document.getElementById('od-search-suggestions');
+  if (!q) {
+    if (suggestionsBox) suggestionsBox.classList.add('hidden');
+    return toast('Please enter a location or campus venue name', 'warning');
+  }
+
+  toast('Searching map database...', 'info');
 
   try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`);
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&addressdetails=1`);
     const results = await res.json();
+
     if (results && results.length > 0) {
-      const item = results[0];
-      const lat = parseFloat(item.lat);
-      const lng = parseFloat(item.lon);
-      if (odMapInstance && odMarkerInstance) {
-        odMapInstance.setView([lat, lng], 15);
-        odMarkerInstance.setLatLng([lat, lng]);
+      if (suggestionsBox) {
+        suggestionsBox.innerHTML = `
+          <div class="p-2 space-y-1 max-h-48 overflow-y-auto scrollbar-thin">
+            <div class="text-[10px] uppercase font-bold text-slate-400 px-2 py-1 flex items-center justify-between border-b border-white/10">
+              <span>Matching Locations (${results.length})</span>
+              <button onclick="document.getElementById('od-search-suggestions').classList.add('hidden')" class="text-slate-400 hover:text-white">&times;</button>
+            </div>
+            ${results.map((item, idx) => {
+              const lat = parseFloat(item.lat);
+              const lng = parseFloat(item.lon);
+              const name = item.display_name.split(',').slice(0, 3).join(', ');
+              const full = item.display_name;
+              return `
+                <div onclick="selectODSearchResult(${lat}, ${lng}, '${name.replace(/'/g, "\\'")}')" class="p-2 rounded-xl bg-white/5 hover:bg-[#e0231c]/20 border border-white/5 hover:border-[#e0231c]/30 cursor-pointer transition-colors text-left">
+                  <div class="text-xs font-semibold text-white flex items-center gap-1.5">
+                    <i data-lucide="map-pin" class="w-3 h-3 text-[#ff5a3c]"></i>
+                    <span>${name}</span>
+                  </div>
+                  <div class="text-[10px] text-slate-400 truncate mt-0.5">${full}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+        suggestionsBox.classList.remove('hidden');
+        lucide.createIcons();
       }
-      document.getElementById('od-lat').value = lat.toFixed(6);
-      document.getElementById('od-lng').value = lng.toFixed(6);
-      document.getElementById('od-location-name').value = item.display_name.split(',').slice(0, 3).join(',');
-      document.getElementById('od-coords-display').innerText = `📍 Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
-      toast(`Location Pinned: ${item.display_name.split(',').slice(0, 2).join(',')}`, 'success');
+      const first = results[0];
+      selectODSearchResult(parseFloat(first.lat), parseFloat(first.lon), first.display_name.split(',').slice(0, 3).join(', '));
+      toast(`Pinned: ${first.display_name.split(',').slice(0, 2).join(', ')}`, 'success');
     } else {
-      toast('Location not found. Click directly on the map to place pin.', 'info');
+      if (suggestionsBox) {
+        suggestionsBox.innerHTML = `
+          <div class="p-3 text-left space-y-2">
+            <div class="flex items-center gap-2 text-amber-300 text-xs font-medium">
+              <i data-lucide="help-circle" class="w-4 h-4 shrink-0"></i>
+              <span>"${q}" not listed in map search</span>
+            </div>
+            <p class="text-[11px] text-slate-300">
+              No problem! Scroll/pan freely across the map, switch to <b>Satellite view</b>, and <b>click directly anywhere on the map</b> to drop your pin.
+            </p>
+            <div class="flex items-center gap-2 pt-1">
+              <button onclick="dropPinAtMapCenter(); document.getElementById('od-search-suggestions').classList.add('hidden');" class="btn-primary text-[11px] py-1 px-2.5 rounded-lg">
+                📍 Drop Pin at Map Center
+              </button>
+              <button onclick="document.getElementById('od-search-suggestions').classList.add('hidden')" class="btn-secondary text-[11px] py-1 px-2 rounded-lg">
+                Dismiss
+              </button>
+            </div>
+          </div>
+        `;
+        suggestionsBox.classList.remove('hidden');
+        lucide.createIcons();
+      }
+      toast('Place not in database. Scroll map and click anywhere to place your pin! 📍', 'info');
     }
   } catch (err) {
-    toast('Search service busy. You can click directly on the map.', 'info');
+    toast('Search service busy. You can scroll the map and click anywhere to pin.', 'info');
   }
+}
+
+function selectODSearchResult(lat, lng, name) {
+  if (odMapInstance) {
+    odMapInstance.setView([lat, lng], 16);
+    updateODMarkerPosition(lat, lng, false);
+  }
+  const nameInput = document.getElementById('od-location-name');
+  if (nameInput) {
+    nameInput.value = name;
+  }
+  const suggestionsBox = document.getElementById('od-search-suggestions');
+  if (suggestionsBox) suggestionsBox.classList.add('hidden');
 }
 
 function handleODEventChange(val) {
@@ -10653,14 +10677,11 @@ function handleODEventChange(val) {
     if (opt.dataset.lat && opt.dataset.lng) {
       const lat = parseFloat(opt.dataset.lat);
       const lng = parseFloat(opt.dataset.lng);
-      if (odMapInstance && odMarkerInstance) {
-        odMapInstance.setView([lat, lng], 15);
-        odMarkerInstance.setLatLng([lat, lng]);
+      if (odMapInstance) {
+        odMapInstance.setView([lat, lng], 16);
+        updateODMarkerPosition(lat, lng, false);
       }
-      document.getElementById('od-lat').value = lat.toFixed(6);
-      document.getElementById('od-lng').value = lng.toFixed(6);
       document.getElementById('od-location-name').value = opt.dataset.venue || opt.dataset.name;
-      document.getElementById('od-coords-display').innerText = `📍 Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
     }
   }
 }
@@ -10727,6 +10748,489 @@ async function triggerStrictGeoCheckin(odId, targetLat, targetLng) {
   }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
 }
 
+
+// ── 6b. FACULTY / ADMIN: ON-DUTY (OD) VERIFICATION ENGINE & MAP INSPECT ───
+async function renderODRequests(container) {
+  try {
+    const odList = await api('GET', '/od');
+    currentODRequestsCache = odList || [];
+
+    const totalCount = currentODRequestsCache.length;
+    const pendingCount = currentODRequestsCache.filter(o => o.status === 'pending').length;
+    const completedCount = currentODRequestsCache.filter(o => o.status === 'completed' || o.status === 'geo_submitted').length;
+    const rejectedCount = currentODRequestsCache.filter(o => o.status === 'rejected' || o.status === 'geo_rejected').length;
+
+    container.innerHTML = `
+      <div class="space-y-6 animate-fade-in">
+        <!-- Header Banner -->
+        <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-[#e0231c] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="badge badge-vermilion text-[10px] uppercase tracking-[0.2em]">OD GOVERNANCE ENGINE</span>
+              <span class="text-xs text-[#ff5a3c] font-mono">30-Meter Radius & Interactive Map Inspection</span>
+            </div>
+            <h3 class="text-2xl font-normal text-white tracking-wide mt-1">On-Duty (OD) Verification & Attendance Geotag</h3>
+            <p class="text-xs text-slate-300">Inspect student event locations on interactive satellite maps, verify geofence check-ins, and approve/reject OD permissions.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="badge badge-amber font-mono text-xs px-3 py-1.5">${pendingCount} Pending Review</span>
+          </div>
+        </div>
+
+        <!-- Quick Summary Stats Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="glass-card p-4 rounded-2xl border border-white/10 space-y-1">
+            <div class="text-[10px] uppercase font-bold text-slate-400">Total Requests</div>
+            <div class="text-2xl font-light text-white font-mono">${totalCount}</div>
+          </div>
+          <div class="glass-card p-4 rounded-2xl border border-amber-500/30 bg-amber-950/10 space-y-1">
+            <div class="text-[10px] uppercase font-bold text-amber-400">Pending Approval</div>
+            <div class="text-2xl font-light text-amber-300 font-mono">${pendingCount}</div>
+          </div>
+          <div class="glass-card p-4 rounded-2xl border border-emerald-500/30 bg-emerald-950/10 space-y-1">
+            <div class="text-[10px] uppercase font-bold text-emerald-400">Geo-Verified (Present)</div>
+            <div class="text-2xl font-light text-emerald-300 font-mono">${completedCount}</div>
+          </div>
+          <div class="glass-card p-4 rounded-2xl border border-rose-500/30 bg-rose-950/10 space-y-1">
+            <div class="text-[10px] uppercase font-bold text-rose-400">Rejected / Expired</div>
+            <div class="text-2xl font-light text-rose-300 font-mono">${rejectedCount}</div>
+          </div>
+        </div>
+
+        <!-- Filter and Search Toolbar -->
+        <div class="glass-panel p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+            <button onclick="setODFilterTab('ALL')" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedODTab === 'ALL' ? 'bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
+              All (${totalCount})
+            </button>
+            <button onclick="setODFilterTab('pending')" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedODTab === 'pending' ? 'bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
+              Pending (${pendingCount})
+            </button>
+            <button onclick="setODFilterTab('completed')" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedODTab === 'completed' ? 'bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
+              Verified (${completedCount})
+            </button>
+            <button onclick="setODFilterTab('rejected')" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedODTab === 'rejected' ? 'bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] text-white shadow-md' : 'bg-white/5 text-slate-400 hover:text-white'}">
+              Rejected (${rejectedCount})
+            </button>
+          </div>
+
+          <div class="relative flex-1 max-w-xs">
+            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
+            <input type="text" id="od-filter-search" oninput="handleODSearchFilter(this.value)" placeholder="Search student, reg no, or event..." class="w-full pl-9 pr-3 py-1.5 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-[#e0231c] focus:outline-none" />
+          </div>
+        </div>
+
+        <!-- Requests List Container -->
+        <div id="od-requests-table-container">
+          ${renderODRequestsListHtml(currentODRequestsCache)}
+        </div>
+      </div>
+    `;
+    lucide.createIcons();
+  } catch (err) {
+    console.error('Failed to render OD requests:', err);
+    container.innerHTML = `<div class="glass-panel p-8 rounded-2xl text-center text-rose-400">Failed to load OD requests: ${err.message || 'Server error'}</div>`;
+  }
+}
+
+function renderODRequestsListHtml(list) {
+  let filtered = list;
+  if (selectedODTab !== 'ALL') {
+    if (selectedODTab === 'pending') filtered = filtered.filter(o => o.status === 'pending');
+    else if (selectedODTab === 'completed') filtered = filtered.filter(o => o.status === 'completed' || o.status === 'geo_submitted');
+    else if (selectedODTab === 'rejected') filtered = filtered.filter(o => o.status === 'rejected' || o.status === 'geo_rejected');
+  }
+
+  if (odFilterSearchTerm) {
+    const q = odFilterSearchTerm.toLowerCase().trim();
+    filtered = filtered.filter(o => 
+      (o.student_name || '').toLowerCase().includes(q) ||
+      (o.reg_no || '').toLowerCase().includes(q) ||
+      (o.event_name || '').toLowerCase().includes(q) ||
+      (o.location_name || '').toLowerCase().includes(q)
+    );
+  }
+
+  if (filtered.length === 0) {
+    return `
+      <div class="glass-panel p-12 rounded-3xl text-center text-slate-400 space-y-3">
+        <i data-lucide="clipboard-x" class="w-12 h-12 mx-auto text-slate-500"></i>
+        <h4 class="text-base font-normal text-white">No Matching OD Requests</h4>
+        <p class="text-xs text-slate-400">No OD submissions match the selected filter criteria.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="glass-panel rounded-3xl border border-white/10 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-black/50 text-[10px] uppercase text-slate-400 tracking-wider font-mono border-b border-white/10">
+            <tr>
+              <th class="p-3.5">Student Info</th>
+              <th class="p-3.5">Slot & Date</th>
+              <th class="p-3.5">Event & Pinned Venue</th>
+              <th class="p-3.5 text-center">Status</th>
+              <th class="p-3.5 text-center">30m Geotag Distance</th>
+              <th class="p-3.5 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5">
+            ${filtered.map(o => {
+              const slot = (o.slot || 'ALL').toUpperCase();
+              const isCompleted = o.status === 'completed' || o.status === 'geo_submitted';
+              const isRejected = o.status === 'rejected' || o.status === 'geo_rejected';
+              const isPending = o.status === 'pending';
+
+              return `
+                <tr class="hover:bg-white/[0.02] transition-colors" id="od-row-${o.id}">
+                  <td class="p-3.5">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-[#e0231c]/30 to-[#ff5a3c]/10 border border-[#e0231c]/30 flex items-center justify-center font-bold text-white text-xs shrink-0">
+                        ${(o.student_name || 'S')[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <div class="font-medium text-white">${o.student_name}</div>
+                        <div class="font-mono text-[10px] text-slate-400">${o.reg_no || 'REG---'} · <span class="text-[#ff5a3c]">${o.student_dept || 'Engineering'}</span></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="p-3.5">
+                    <div class="flex items-center gap-1.5">
+                      <span class="badge badge-purple font-mono font-bold text-[10px]">SLOT ${slot}</span>
+                      <span class="text-slate-400 font-mono text-[11px]">${o.date ? new Date(o.date).toLocaleDateString() : 'Today'}</span>
+                    </div>
+                  </td>
+                  <td class="p-3.5 max-w-xs">
+                    <div class="font-medium text-white truncate">${o.event_name || 'Academic OD'}</div>
+                    <div class="text-[11px] text-slate-400 flex items-center gap-1 truncate">
+                      <i data-lucide="map-pin" class="w-3 h-3 text-[#ff5a3c] shrink-0"></i>
+                      <span>${o.location_name || (o.lat ? `Lat ${parseFloat(o.lat).toFixed(3)}, Lng ${parseFloat(o.lng).toFixed(3)}` : 'Campus Venue')}</span>
+                    </div>
+                  </td>
+                  <td class="p-3.5 text-center">
+                    <span class="badge ${isCompleted ? 'badge-emerald' : isPending ? 'badge-amber' : isRejected ? 'badge-rose' : 'badge-blue'} text-[10px] font-mono uppercase">
+                      ${isCompleted ? '✅ VERIFIED' : isPending ? '⏳ PENDING' : isRejected ? '❌ REJECTED' : o.status.toUpperCase()}
+                    </span>
+                  </td>
+                  <td class="p-3.5 text-center font-mono">
+                    ${o.distance_meters != null ? `
+                      <span class="badge ${o.distance_meters <= 30 ? 'badge-emerald' : 'badge-vermilion'} text-[11px] font-bold">
+                        ${o.distance_meters}m ${o.distance_meters <= 30 ? '✓' : '⚠️'}
+                      </span>
+                    ` : isCompleted ? `
+                      <span class="text-emerald-400 font-bold text-xs">≤30m Verified</span>
+                    ` : `
+                      <span class="text-slate-500 text-[11px] italic">Awaiting Check-in</span>
+                    `}
+                  </td>
+                  <td class="p-3.5 text-right whitespace-nowrap">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button onclick="openInspectODModal(${o.id})" class="btn-primary text-[11px] py-1.5 px-3 rounded-lg flex items-center gap-1.5 shadow-sm bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] hover:brightness-110 font-medium">
+                        <i data-lucide="map" class="w-3.5 h-3.5"></i>
+                        <span>Inspect on Map</span>
+                      </button>
+                      ${isPending ? `
+                        <button onclick="approveOD(${o.id})" class="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 transition-all" title="Approve OD">
+                          <i data-lucide="check" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="rejectODPrompt(${o.id})" class="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white border border-rose-500/20 transition-all" title="Reject OD">
+                          <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                      ` : ''}
+                    </div>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function setODFilterTab(tab) {
+  selectedODTab = tab;
+  renderODRequests(document.getElementById('main-content'));
+}
+
+function handleODSearchFilter(val) {
+  odFilterSearchTerm = val;
+  const container = document.getElementById('od-requests-table-container');
+  if (container) {
+    container.innerHTML = renderODRequestsListHtml(currentODRequestsCache);
+    lucide.createIcons();
+  }
+}
+
+// ── FACULTY / ADMIN: MAP INSPECTION & VERIFICATION MODAL ──────────────────
+async function openInspectODModal(odId) {
+  const od = currentODRequestsCache.find(o => o.id === odId);
+  if (!od) return toast('OD request not found', 'error');
+  currentInspectedOD = od;
+
+  const targetLat = parseFloat(od.lat || od.event_lat || 13.0827);
+  const targetLng = parseFloat(od.lng || od.event_lng || 80.2707);
+  const hasStudentGeo = od.geo_lat != null && od.geo_lng != null;
+  const studentLat = hasStudentGeo ? parseFloat(od.geo_lat) : null;
+  const studentLng = hasStudentGeo ? parseFloat(od.geo_lng) : null;
+  const slot = (od.slot || 'ALL').toUpperCase();
+  const isCompleted = od.status === 'completed' || od.status === 'geo_submitted';
+  const isPending = od.status === 'pending';
+
+  const title = `📍 OD Verification & Map Inspection · ${od.student_name}`;
+  const bodyHtml = `
+    <div class="space-y-4 animate-fade-in text-left">
+      <!-- Top Info Summary -->
+      <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="badge badge-purple font-mono text-xs font-bold">SLOT ${slot}</span>
+            <span class="badge ${isCompleted ? 'badge-emerald' : isPending ? 'badge-amber' : 'badge-rose'} text-xs font-mono uppercase">${od.status.toUpperCase()}</span>
+            <span class="font-mono text-xs text-slate-400">${od.date ? new Date(od.date).toLocaleDateString() : 'Today'}</span>
+          </div>
+          <h4 class="text-base font-medium text-white mt-1">${od.event_name || 'Academic Event'}</h4>
+          <p class="text-xs text-slate-400">Student: <b class="text-white">${od.student_name}</b> (${od.reg_no || 'REG---'}) · ${od.student_dept || 'Engineering'}</p>
+        </div>
+        <div class="text-right font-mono">
+          <div class="text-xs text-slate-400">Target Venue</div>
+          <div class="text-sm font-semibold text-[#ff5a3c]">${od.location_name || 'Selected Venue'}</div>
+          <div class="text-[10px] text-slate-500">Lat ${targetLat.toFixed(4)}, Lng ${targetLng.toFixed(4)}</div>
+        </div>
+      </div>
+
+      <!-- Map Toolbar: Layer Switcher & Distance Readout -->
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <button type="button" id="btn-inspect-street" onclick="switchInspectODMapLayer('street')" class="px-3 py-1 rounded-lg text-xs font-medium bg-[#e0231c] text-white shadow-sm flex items-center gap-1 transition-all">
+            <i data-lucide="map" class="w-3.5 h-3.5"></i>
+            <span>Street Map</span>
+          </button>
+          <button type="button" id="btn-inspect-sat" onclick="switchInspectODMapLayer('satellite')" class="px-3 py-1 rounded-lg text-xs font-medium bg-white/10 text-slate-300 hover:text-white flex items-center gap-1 transition-all">
+            <i data-lucide="globe" class="w-3.5 h-3.5"></i>
+            <span>🛰️ Satellite</span>
+          </button>
+        </div>
+
+        <div class="text-xs font-mono">
+          ${hasStudentGeo ? `
+            <span class="badge ${(od.distance_meters <= 30) ? 'badge-emerald' : 'badge-vermilion'}">
+              📏 Distance: ${od.distance_meters != null ? `${od.distance_meters}m` : 'Checked in'} ${(od.distance_meters <= 30) ? '(Within 30m ✓)' : '(Exceeded 30m ⚠️)'}
+            </span>
+          ` : `
+            <span class="text-amber-400 text-[11px]">🔴 Target Venue (30m Circle)</span>
+          `}
+        </div>
+      </div>
+
+      <!-- Interactive Leaflet Inspection Map -->
+      <div class="relative">
+        <div id="od-inspect-leaflet-map" class="w-full h-64 rounded-2xl border border-white/10 overflow-hidden relative z-0"></div>
+        <div class="absolute bottom-2 left-2 z-[400] bg-black/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-[11px] text-slate-300 flex items-center gap-3 shadow-lg">
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#e0231c] inline-block shadow-sm"></span> Target Venue (30m Circle)</span>
+          ${hasStudentGeo ? `<span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block shadow-sm"></span> Student Check-In (${od.distance_meters || 0}m away)</span>` : ''}
+        </div>
+      </div>
+
+      <!-- Proof Letter / Document Attachment -->
+      ${od.letter_b64 ? `
+        <div class="space-y-1.5 pt-2 border-t border-white/10">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">OD Permission Proof / Uploaded Document</label>
+          <div class="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <i data-lucide="file-text" class="w-4 h-4 text-[#ff5a3c]"></i>
+              <span class="text-xs text-white">Proof Letter Attachment</span>
+            </div>
+            ${od.letter_b64.startsWith('data:image') ? `
+              <a href="${od.letter_b64}" target="_blank" class="btn-secondary text-[11px] py-1 px-3 rounded-lg flex items-center gap-1">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                <span>View Full Image</span>
+              </a>
+            ` : od.letter_b64.startsWith('data:application/pdf') ? `
+              <a href="${od.letter_b64}" target="_blank" download="OD_Proof_${od.id}.pdf" class="btn-secondary text-[11px] py-1 px-3 rounded-lg flex items-center gap-1">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Download PDF</span>
+              </a>
+            ` : `
+              <span class="text-[11px] text-slate-400 italic">Digital Undertaking Registered</span>
+            `}
+          </div>
+          ${od.letter_b64.startsWith('data:image') ? `
+            <div class="max-h-48 overflow-hidden rounded-xl border border-white/10 bg-black/40 flex items-center justify-center p-2">
+              <img src="${od.letter_b64}" class="max-h-44 object-contain rounded-lg shadow-md" alt="OD Proof" />
+            </div>
+          ` : ''}
+        </div>
+      ` : ''}
+    </div>
+  `;
+
+  const footerHtml = `
+    <div class="flex items-center justify-between w-full">
+      <button onclick="closeModal()" class="btn-secondary text-xs py-2 px-4 rounded-xl">Close</button>
+      <div class="flex items-center gap-2">
+        ${isPending ? `
+          <button onclick="approveOD(${od.id}); closeModal();" class="btn-primary bg-emerald-600 hover:bg-emerald-500 text-xs py-2 px-4 rounded-xl flex items-center gap-1.5 font-medium shadow-md">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+            <span>Approve OD Request</span>
+          </button>
+          <button onclick="rejectODPrompt(${od.id});" class="btn-danger text-xs py-2 px-4 rounded-xl flex items-center gap-1.5 font-medium shadow-md bg-rose-600/20 text-rose-300 hover:bg-rose-600 hover:text-white border border-rose-500/30">
+            <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+            <span>Reject Request</span>
+          </button>
+        ` : od.status === 'geo_submitted' ? `
+          <button onclick="verifyGeo(${od.id}, 'accept'); closeModal();" class="btn-primary bg-emerald-600 hover:bg-emerald-500 text-xs py-2 px-4 rounded-xl flex items-center gap-1.5 font-medium shadow-md">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+            <span>Accept Geo-Location</span>
+          </button>
+          <button onclick="verifyGeo(${od.id}, 'reject'); closeModal();" class="btn-danger text-xs py-2 px-4 rounded-xl flex items-center gap-1.5 font-medium shadow-md bg-rose-600/20 text-rose-300 hover:bg-rose-600 hover:text-white border border-rose-500/30">
+            <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+            <span>Reject Geo-Location</span>
+          </button>
+        ` : `
+          <span class="text-xs text-slate-400 italic">Status: ${od.status.toUpperCase()}</span>
+        `}
+      </div>
+    </div>
+  `;
+
+  openModal(title, bodyHtml, footerHtml);
+  lucide.createIcons();
+
+  setTimeout(() => {
+    initInspectODMap(targetLat, targetLng, studentLat, studentLng, od.location_name || od.event_name);
+  }, 250);
+}
+
+function initInspectODMap(targetLat, targetLng, studentLat, studentLng, venueName) {
+  const mapContainer = document.getElementById('od-inspect-leaflet-map');
+  if (!mapContainer || typeof L === 'undefined') return;
+
+  if (inspectODMapInstance) {
+    inspectODMapInstance.remove();
+    inspectODMapInstance = null;
+  }
+
+  inspectODMapInstance = L.map('od-inspect-leaflet-map', {
+    scrollWheelZoom: true,
+    touchZoom: true,
+    dragging: true,
+    doubleClickZoom: true,
+    boxZoom: true
+  }).setView([targetLat, targetLng], 16);
+
+  window._inspectStreetTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(inspectODMapInstance);
+
+  // Target Venue Pin (Red)
+  const targetMarker = L.marker([targetLat, targetLng]).addTo(inspectODMapInstance);
+  targetMarker.bindPopup(`<b>📍 Target Venue</b><br>${venueName || 'Pinned Venue'}<br><span style="font-size:10px;color:#888;">Lat ${targetLat.toFixed(4)}, Lng ${targetLng.toFixed(4)}</span>`).openPopup();
+
+  // 30m Red Geofence Circle
+  L.circle([targetLat, targetLng], {
+    radius: 30,
+    color: '#e0231c',
+    fillColor: '#ff5a3c',
+    fillOpacity: 0.25,
+    weight: 2
+  }).addTo(inspectODMapInstance);
+
+  // If student checked in (Green Marker & Connecting Line)
+  if (studentLat != null && studentLng != null) {
+    const studentMarker = L.marker([studentLat, studentLng]).addTo(inspectODMapInstance);
+    studentMarker.bindPopup(`<b>🎯 Student Check-In</b><br><span style="font-size:10px;color:#888;">Lat ${studentLat.toFixed(4)}, Lng ${studentLng.toFixed(4)}</span>`);
+
+    // Connect line
+    L.polyline([[targetLat, targetLng], [studentLat, studentLng]], {
+      color: '#34d399',
+      weight: 3,
+      dashArray: '5, 10'
+    }).addTo(inspectODMapInstance);
+
+    // Fit map bounds to show both
+    inspectODMapInstance.fitBounds(L.latLngBounds([
+      [targetLat, targetLng],
+      [studentLat, studentLng]
+    ]), { padding: [40, 40] });
+  }
+
+  setTimeout(() => {
+    if (inspectODMapInstance) inspectODMapInstance.invalidateSize();
+  }, 200);
+  setTimeout(() => {
+    if (inspectODMapInstance) inspectODMapInstance.invalidateSize();
+  }, 450);
+}
+
+function switchInspectODMapLayer(type) {
+  if (!inspectODMapInstance) return;
+  if (window._inspectStreetTileLayer && inspectODMapInstance.hasLayer(window._inspectStreetTileLayer)) {
+    inspectODMapInstance.removeLayer(window._inspectStreetTileLayer);
+  }
+  if (window._inspectSatTileLayer && inspectODMapInstance.hasLayer(window._inspectSatTileLayer)) {
+    inspectODMapInstance.removeLayer(window._inspectSatTileLayer);
+  }
+
+  if (type === 'satellite') {
+    window._inspectSatTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: '© Esri World Imagery'
+    }).addTo(inspectODMapInstance);
+    document.getElementById('btn-inspect-sat')?.classList.add('bg-[#e0231c]', 'text-white');
+    document.getElementById('btn-inspect-sat')?.classList.remove('bg-white/10', 'text-slate-300');
+    document.getElementById('btn-inspect-street')?.classList.remove('bg-[#e0231c]', 'text-white');
+    document.getElementById('btn-inspect-street')?.classList.add('bg-white/10', 'text-slate-300');
+  } else {
+    window._inspectStreetTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(inspectODMapInstance);
+    document.getElementById('btn-inspect-street')?.classList.add('bg-[#e0231c]', 'text-white');
+    document.getElementById('btn-inspect-street')?.classList.remove('bg-white/10', 'text-slate-300');
+    document.getElementById('btn-inspect-sat')?.classList.remove('bg-[#e0231c]', 'text-white');
+    document.getElementById('btn-inspect-sat')?.classList.add('bg-white/10', 'text-slate-300');
+  }
+}
+
+async function approveOD(id) {
+  try {
+    await api('PUT', `/od/${id}/approve`);
+    toast('OD Request Approved ✅', 'success');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to approve OD', 'error');
+  }
+}
+
+async function rejectOD(id, reason) {
+  try {
+    await api('PUT', `/od/${id}/reject`, { reason: reason || 'Faculty Rejected' });
+    toast('OD Request Rejected', 'info');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to reject OD', 'error');
+  }
+}
+
+async function rejectODPrompt(id) {
+  const reason = prompt('Please enter the reason for rejecting this OD request:', 'Location or details not approved by faculty');
+  if (reason === null) return;
+  await rejectOD(id, reason || 'Faculty Rejected');
+  closeModal();
+}
+
+async function verifyGeo(id, action) {
+  try {
+    await api('PUT', `/od/${id}/verify-geo`, { action });
+    toast(`Geo Status Updated (${action}) ✅`, 'success');
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to update geo status', 'error');
+  }
+}
 
 // ── 7. GRADEBOOK: INDIVIDUAL & BATCH MARKS SUBMISSION ─────────────────────
 function switchGbTab(tab) {
