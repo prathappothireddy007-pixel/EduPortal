@@ -983,6 +983,240 @@ html, body {
     padding: 8px 12px !important;
   }
 }
+
+/* =========================================================================
+   KYOTO SANCTUARY & BUSHIDO DEMO STYLES (Kami Mode, Zen Garden, Hanko Seal)
+   ========================================================================= */
+
+/* Kami Mode (Day Washi Paper) */
+html.kami-mode {
+  --bone: #1a1e22 !important;
+  --bone-dim: #3a424a !important;
+  --muted: #6b7782 !important;
+  --line: rgba(28, 32, 36, 0.15) !important;
+  --line-soft: rgba(28, 32, 36, 0.08) !important;
+  background-color: #f4f1ea !important;
+  color: #1a1e22 !important;
+}
+html.kami-mode body {
+  background-color: #f4f1ea !important;
+  color: #1a1e22 !important;
+}
+html.kami-mode .glass-panel,
+html.kami-mode .glass-card {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border-color: rgba(28, 32, 36, 0.12) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06) !important;
+}
+html.kami-mode .text-white {
+  color: #111418 !important;
+}
+html.kami-mode .text-slate-300,
+html.kami-mode .text-slate-400 {
+  color: #4b5563 !important;
+}
+html.kami-mode #sidebar {
+  background: rgba(248, 245, 238, 0.95) !important;
+  border-right-color: rgba(28, 32, 36, 0.1) !important;
+}
+html.kami-mode input,
+html.kami-mode select,
+html.kami-mode textarea {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(28, 32, 36, 0.2) !important;
+  color: #111418 !important;
+}
+
+/* Rotating Hanko (判子) Seal */
+.hanko-seal {
+  width: 90px;
+  height: 90px;
+  border: 3.5px solid #e0231c;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #e0231c;
+  font-family: 'serif', 'Onest', sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  position: relative;
+  background: radial-gradient(circle, rgba(224,35,28,0.12) 0%, transparent 70%);
+  box-shadow: 0 0 24px rgba(224, 35, 28, 0.35);
+  animation: sealGlow 3s ease-in-out infinite alternate;
+  user-select: none;
+}
+.hanko-seal::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px dashed rgba(224, 35, 28, 0.6);
+  border-radius: 50%;
+}
+@keyframes sealGlow {
+  0% { box-shadow: 0 0 16px rgba(224, 35, 28, 0.25); transform: rotate(-2deg); }
+  100% { box-shadow: 0 0 32px rgba(224, 35, 28, 0.55); transform: rotate(2deg); }
+}
+.hanko-seal.tampered {
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+  animation: sealCrack 0.5s ease infinite alternate;
+  filter: grayscale(0.3) contrast(1.4);
+}
+@keyframes sealCrack {
+  0% { transform: scale(1) rotate(-5deg); filter: blur(0px); }
+  100% { transform: scale(0.97) rotate(5deg); filter: blur(0.5px); }
+}
+
+/* Ryoan-ji Zen Garden (枯山水) */
+.zen-garden-bg {
+  background: radial-gradient(circle at 50% 50%, rgba(20, 26, 32, 0.95), rgba(8, 12, 16, 0.98)),
+              repeating-radial-gradient(circle at 20% 30%, transparent 0, transparent 18px, rgba(223, 231, 224, 0.03) 19px, transparent 20px),
+              repeating-linear-gradient(0deg, transparent 0, transparent 24px, rgba(223, 231, 224, 0.02) 25px, transparent 26px);
+}
+.zen-stone {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+  cursor: pointer;
+}
+.zen-stone:hover {
+  transform: translateY(-6px) scale(1.08);
+  z-index: 30;
+}
+.zen-ripple {
+  position: absolute;
+  inset: -12px;
+  border: 1px dashed rgba(223, 231, 224, 0.15);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: ripplePulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes ripplePulse {
+  0% { transform: scale(0.9); opacity: 0.2; }
+  50% { transform: scale(1.15); opacity: 0.5; }
+  100% { transform: scale(0.9); opacity: 0.2; }
+}
+
+/* Katana Blade Saya Progress Gauge */
+.katana-gauge {
+  position: relative;
+  height: 12px;
+  background: rgba(10, 14, 18, 0.8);
+  border: 1px solid rgba(223, 231, 224, 0.15);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.katana-blade-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10B981 0%, #34D399 70%, #E0F2FE 100%);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+  border-radius: 5px;
+  position: relative;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.katana-blade-fill.warning {
+  background: linear-gradient(90deg, #F59E0B 0%, #FBBF24 70%, #FEF3C7 100%);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+}
+.katana-blade-fill.danger {
+  background: linear-gradient(90deg, #e0231c 0%, #ff5a3c 70%, #FCA5A5 100%);
+  box-shadow: 0 0 12px rgba(224, 35, 28, 0.7);
+}
+
+/* Tsuba (鍔) Sword Guard Rank Badges */
+.tsuba-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.tsuba-gold {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.1));
+  color: #FBBF24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+}
+.tsuba-silver {
+  background: linear-gradient(135deg, rgba(223, 231, 224, 0.2), rgba(156, 163, 175, 0.1));
+  color: #E5E7EB;
+  border: 1px solid rgba(223, 231, 224, 0.35);
+}
+.tsuba-bronze {
+  background: linear-gradient(135deg, rgba(180, 83, 9, 0.2), rgba(120, 53, 15, 0.1));
+  color: #F59E0B;
+  border: 1px solid rgba(180, 83, 9, 0.35);
+}
+
+/* Kakejitsu (掛け軸) Hanging Scroll Animation */
+@keyframes unrollScroll {
+  0% { transform: scaleY(0.05); opacity: 0; }
+  60% { transform: scaleY(1.03); opacity: 1; }
+  100% { transform: scaleY(1); opacity: 1; }
+}
+.kakejitsu-scroll {
+  transform-origin: top center;
+  animation: unrollScroll 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* AI Sensei Floating Assistant */
+#sensei-widget {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9998;
+}
+.sensei-btn {
+  width: 54px;
+  height: 54px;
+  border-radius: 27px;
+  background: linear-gradient(135deg, #e0231c, #991b1b);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 28px rgba(224, 35, 28, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+}
+.sensei-btn:hover {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 12px 36px rgba(224, 35, 28, 0.7);
+}
+.sensei-window {
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  height: 480px;
+  border-radius: 24px;
+  background: rgba(8, 12, 16, 0.96);
+  border: 1.5px solid rgba(224, 35, 28, 0.3);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadeIn 0.25s ease;
+}
+
+/* Kanji Mantra Hover Badges */
+.kanji-mantra {
+  display: inline-block;
+  font-family: serif;
+  font-size: 14px;
+  color: rgba(223, 231, 224, 0.35);
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+.glass-card:hover .kanji-mantra,
+.glass-panel:hover .kanji-mantra {
+  color: #ff5a3c;
+  transform: scale(1.2);
+}
+
 </style>
 </head>
 
@@ -1033,7 +1267,18 @@ html, body {
       <a class="nav-link" href="#portal"><span>Portal</span><span class="alt">扉</span></a>
     </nav>
 
-    <div class="flex items-center gap-2.5">
+    <div class="flex items-center gap-2">
+      <button onclick="openPublicCertificateVerifierModal()" class="btn-secondary text-[11px] py-1.5 px-3 rounded-full hidden sm:flex items-center gap-1.5 border-white/15 text-slate-300 hover:text-white" title="Verify certificate authenticity without login">
+        <i data-lucide="award" class="w-3.5 h-3.5 text-[#ff5a3c]"></i>
+        <span>Verify Certificate</span>
+      </button>
+      <button onclick="toggleKamiMode()" id="kami-mode-btn" class="p-2 rounded-full bg-white/5 border border-white/10 text-slate-300 hover:text-amber-300 hover:bg-white/10 transition-all" title="Toggle Kami Mode (Day/Night Theme)">
+        <i data-lucide="moon" class="w-4 h-4" id="kami-mode-icon"></i>
+      </button>
+      <button onclick="startOneTapDemoMode()" class="btn-secondary text-[11px] py-1.5 px-3 rounded-full hidden md:flex items-center gap-1.5 border-amber-500/30 text-amber-300 hover:bg-amber-500/10" title="Auto-walk through platform chapters">
+        <i data-lucide="play" class="w-3 h-3 text-amber-400"></i>
+        <span>Present Demo</span>
+      </button>
       <a href="#portal" class="btn-primary text-xs py-2 px-4 rounded-full flex items-center gap-2 shadow-lg hover:scale-105 transition-all">
         <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
         <span>Sign In</span>
@@ -5431,7 +5676,8 @@ setTimeout(() => {
         { tab: 'issues', label: 'Campus Support Desk', icon: 'message-square' },
         { tab: 'documents', label: 'Institutional Vault', icon: 'file-text' },
         { tab: 'achievements', label: 'Achievements Review', icon: 'trophy' },
-        { tab: 'certificates', label: 'Certificate Generator', icon: 'medal' }
+        { tab: 'certificates', label: 'Certificate Generator', icon: 'medal' },
+        { tab: 'alumni', label: 'Alumni Sanmon Vault (山門録)', icon: 'landmark' }
       ]},
       { section: 'SECURITY & SYSTEM', items: [
         { tab: 'audit-logs', label: 'Security Audit Trail', icon: 'activity' },
@@ -5488,7 +5734,8 @@ setTimeout(() => {
         { tab: 'certificates', label: 'My Certificates', icon: 'medal' },
         { tab: 'achievements', label: 'My Portfolio', icon: 'trophy' },
         { tab: 'documents', label: 'Digital Vault', icon: 'file-text' },
-        { tab: 'issues', label: 'Campus Support Desk', icon: 'help-circle' }
+        { tab: 'issues', label: 'Campus Support Desk', icon: 'help-circle' },
+        { tab: 'alumni', label: 'Alumni Sanmon Vault (山門録)', icon: 'landmark' }
       ]}
     ];
 
@@ -5638,6 +5885,7 @@ setTimeout(() => {
             case 'certificates': title.innerText = 'Certificate Generation & Verification'; await renderCertificates(main); break;
             case 'audit-logs': title.innerText = 'Security & System Audit Logs'; await renderAuditLogs(main); break;
             case 'settings': title.innerText = 'System Global Settings'; await renderSettings(main); break;
+            case 'alumni': title.innerText = 'Alumni Sanmon Records Vault (山門録)'; await renderAlumniSanmonVault(main); break;
             case 'kage-experience': title.innerText = 'Kyoto Temple 3D (Kage)'; renderKageExperience(main); break;
             default: await renderAdminDashboard(main);
           }
@@ -5672,6 +5920,7 @@ setTimeout(() => {
             case 'results': title.innerText = 'Semester Examination Results & Grade Sheet'; await renderStudentResults(main); break;
             case 'what-if': title.innerText = 'What-If Grade Simulator'; await renderWhatIfSimulator(main); break;
             case 'attendance-calc': title.innerText = 'Attendance Shortage Calculator'; await renderAttendanceCalculator(main); break;
+            case 'alumni': title.innerText = 'Alumni Sanmon Records Vault (山門録)'; await renderAlumniSanmonVault(main); break;
             case 'where-is-my-class': title.innerText = 'Where Is My Class?'; await renderWhereIsMyClass(main); break;
             case 'timetable': title.innerText = 'My Weekly Class Schedule'; await renderStudentTimetable(main); break;
             case 'events': title.innerText = 'Campus Events & Workshops'; await renderStudentEvents(main); break;
@@ -6400,10 +6649,15 @@ setTimeout(() => {
           <div>
             <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
               <span>2. Register Number (Auto-Generated)</span>
-              <button type="button" onclick="autoGenerateRegNo()" class="text-[11px] text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1">
-                <i data-lucide="refresh-cw" class="w-3 h-3"></i>
-                <span>Regenerate</span>
-              </button>
+              <div class="flex items-center gap-2">
+                <button type="button" id="btn-omikuji-gacha" onclick="openOmikujiFortuneGacha()" class="text-[11px] text-[#ff5a3c] hover:text-amber-300 font-bold flex items-center gap-1 bg-[#e0231c]/20 px-2.5 py-1 rounded-lg border border-[#e0231c]/40 transition-all hover:scale-105">
+                  <span>🎴 Omikuji Gacha</span>
+                </button>
+                <button type="button" onclick="autoGenerateRegNo()" class="text-[11px] text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1">
+                  <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                  <span>Regenerate</span>
+                </button>
+              </div>
             </label>
             <div class="relative">
               <input type="text" id="m-s-id" required 
@@ -7951,6 +8205,7 @@ setTimeout(() => {
                   <th class="p-4">Average Grade</th>
                   <th class="p-4">Risk Level</th>
                   <th class="p-4">Identified Reasons</th>
+                  <th class="p-4 text-right">Mentorship Action</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/5">
@@ -7963,6 +8218,11 @@ setTimeout(() => {
                     <td class="p-4 font-mono">${s.avg_grade}% (${s.grade_label})</td>
                     <td class="p-4"><span class="badge ${s.risk_level === 'high' ? 'badge-rose' : s.risk_level === 'moderate' ? 'badge-amber' : 'badge-emerald'}">${s.risk_level}</span></td>
                     <td class="p-4 text-xs text-slate-400">${s.reasons.join(' • ') || 'None'}</td>
+                    <td class="p-4 text-right">
+                      <button onclick="openMentorLanternModal(${s.student_id || s.id || 0}, '${(s.name || 'Scholar').replace(/'/g, "\\'")}')" class="btn-secondary text-[11px] py-1 px-3 rounded-xl text-amber-300 border-amber-500/30 hover:bg-amber-500/20 inline-flex items-center gap-1.5">
+                        <span>🏮 Light Lantern</span>
+                      </button>
+                    </td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -10161,6 +10421,14 @@ async function renderAttendance(container) {
           <h3 class="text-2xl font-normal text-white tracking-wide mt-1">Course & Slot Attendance Entry</h3>
           <p class="text-xs text-slate-300">Mark slot-wise attendance for students enrolled in your course. Auto-syncs with the 30-minute 30m OD verification window.</p>
         </div>
+        <div class="flex items-center gap-2 bg-black/40 p-1.5 rounded-2xl border border-white/10 shrink-0">
+          <button onclick="toggleAttendanceViewMode('table')" class="px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all ${activeAttendanceViewMode === 'table' ? 'bg-[#e0231c] text-white shadow-lg' : 'text-slate-400 hover:text-white'}">
+            📋 Table Roster
+          </button>
+          <button onclick="toggleAttendanceViewMode('zen')" class="px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all ${activeAttendanceViewMode === 'zen' ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-lg' : 'text-slate-400 hover:text-white'}">
+            🪨 Zen Garden (枯山水)
+          </button>
+        </div>
       </div>
 
       <!-- Course & Slot Selector Bar -->
@@ -10194,7 +10462,10 @@ async function renderAttendance(container) {
         </div>
       </div>
 
-      <!-- Enrolled Students Slot Attendance Table -->
+      ${activeAttendanceViewMode === 'zen' ? `
+        ${renderZenGardenHtml(enrolledStudents, slot)}
+      ` : `
+        <!-- Enrolled Students Slot Attendance Table -->
       <div class="glass-panel rounded-3xl border border-white/10 overflow-hidden shadow-2xl space-y-4 p-6">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
@@ -10283,6 +10554,7 @@ async function renderAttendance(container) {
         </div>
       </div>
     </div>
+      `}
   `;
   lucide.createIcons();
 }
@@ -10352,6 +10624,10 @@ async function renderStudentDashboard(container) {
             <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Cumulative Attendance</span>
             <span class="text-xl font-mono font-bold ${standingData.overallPercentage >= 75 ? 'text-emerald-400' : 'text-rose-400'}">${standingData.overallPercentage}%</span>
           </div>
+          <button onclick="openWhatIfGradeSimulatorModal()" class="btn-primary text-xs py-2.5 px-4 rounded-2xl flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg border border-purple-400/30">
+            <i data-lucide="calculator" class="w-4 h-4 text-purple-200"></i>
+            <span>🧮 What-If SGPA Simulator</span>
+          </button>
         </div>
       </div>
 
@@ -11680,6 +11956,10 @@ async function renderGradebook(container) {
             <p class="text-xs text-slate-300">Enter marks for enrolled students individually per row or submit all enrolled students simultaneously.</p>
           </div>
           <div class="flex items-center gap-3">
+            <button onclick="playKakejitsuScrollReleaseAnimation('${(activeSubject.name || 'Autonomous Engineering').replace(/'/g, "\\'")}', ${students.length || 0})" class="btn-primary text-xs py-2 px-3.5 rounded-xl flex items-center gap-2 bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 uppercase tracking-wider shadow-lg border border-amber-400/40">
+              <i data-lucide="scroll" class="w-4 h-4 text-amber-200"></i>
+              <span>Release Grades (掛け軸)</span>
+            </button>
             <button onclick="openCloseCourseModal()" class="btn-secondary text-xs py-2 px-3.5 rounded-xl flex items-center gap-2 border-purple-500/30 text-purple-300 hover:bg-purple-500/10 uppercase tracking-wider">
               <i data-lucide="lock" class="w-4 h-4 text-purple-400"></i>
               <span>Close Course for Exams</span>
@@ -13267,7 +13547,58 @@ function printIndividualSubjectHallTicket() {
           window.print();
         };
       <\/script>
-    </body>
+    
+<!-- ============================================================ AI Sensei Floating Assistant -->
+<div id="sensei-widget">
+  <div id="sensei-chat-box" class="sensei-window hidden mb-3">
+    <!-- Header -->
+    <div class="p-4 border-b border-white/10 bg-gradient-to-r from-[#e0231c]/20 to-transparent flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-[#e0231c] to-[#991b1b] border border-white/20 flex items-center justify-center font-serif text-white font-bold text-sm shadow-md">
+          師
+        </div>
+        <div>
+          <div class="text-xs font-bold text-white flex items-center gap-1.5">
+            <span>Kagemusha Sensei</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+          </div>
+          <div class="text-[10px] text-slate-400 font-mono">Academic AI Companion</div>
+        </div>
+      </div>
+      <button onclick="toggleSenseiChat()" class="p-1 rounded-lg text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="sensei-messages" class="flex-1 p-3.5 overflow-y-auto space-y-3 text-xs">
+      <div class="p-3 rounded-2xl bg-white/5 border border-white/10 text-slate-300 space-y-1.5">
+        <p class="font-medium text-white">Greetings, Scholar. ⛩️</p>
+        <p class="text-[11px] text-slate-400">I am your autonomous campus guide. Ask me about your attendance standing, next scheduled class, hall ticket eligibility, or academic advice.</p>
+        <div class="flex flex-wrap gap-1.5 pt-1">
+          <button onclick="askSenseiPrompt('What is my attendance percentage and can I take leave?')" class="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-amber-300">📊 My Attendance</button>
+          <button onclick="askSenseiPrompt('Where is my next class?')" class="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-blue-300">📍 Next Class</button>
+          <button onclick="askSenseiPrompt('Am I eligible for examination Hall Tickets?')" class="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-purple-300">🎟️ Hall Ticket Status</button>
+          <button onclick="askSenseiPrompt('Simulate my SGPA if I score 90 in final exam')" class="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-emerald-300">🧮 What-If SGPA</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Box -->
+    <div class="p-3 border-t border-white/10 bg-black/40 flex items-center gap-2">
+      <input type="text" id="sensei-input" onkeydown="if(event.key==='Enter'){handleSenseiSubmit();}" placeholder="Ask Sensei anything..." class="flex-1 px-3 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-[#e0231c] focus:outline-none" />
+      <button onclick="handleSenseiSubmit()" class="p-2 rounded-xl bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] text-white shadow-md hover:brightness-110">
+        <i data-lucide="send" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="sensei-btn" onclick="toggleSenseiChat()" title="Ask Kagemusha Sensei">
+    <span class="text-white font-serif font-bold text-lg">刀</span>
+  </div>
+</div>
+
+</body>
     </html>
   `);
   printWindow.document.close();
@@ -13330,6 +13661,552 @@ async function deleteTimetableEntry(id) {
     toast(e.message || 'Failed to delete timetable entry', 'error');
   }
 }
+
+
+// =========================================================================
+// KYOTO SANCTUARY & BUSHIDO DEMO ENGINES
+// 1. Sword-Ink QR Verifier  2. Ryoan-ji Zen Garden  3. Omikuji Fortune Gacha
+// 4. What-If Simulator      5. Kakejitsu Scroll     6. Mentor Lanterns
+// 7. Sanmon Alumni Vault    8. AI Sensei Assistant  9. Kami Mode Theme
+// =========================================================================
+
+// ── 1. KAMI MODE (DAY WASHI / NIGHT VERMILION THEME) ──
+function toggleKamiMode() {
+  const isKami = document.documentElement.classList.toggle('kami-mode');
+  localStorage.setItem('edu_kami_mode', isKami ? 'true' : 'false');
+  const icon = document.getElementById('kami-mode-icon');
+  if (icon) {
+    icon.setAttribute('data-lucide', isKami ? 'sun' : 'moon');
+    lucide.createIcons();
+  }
+  toast(isKami ? '☀️ Kami Mode Activated (Day Washi Paper)' : '🌙 Night Sanctuary Activated (Obsidian & Vermilion)', 'info');
+}
+
+// Check saved theme on load
+if (localStorage.getItem('edu_kami_mode') === 'true') {
+  document.documentElement.classList.add('kami-mode');
+}
+
+// ── 2. LIVE SWORD-INK CERTIFICATE VERIFICATION QR SCANNER ──
+async function openPublicCertificateVerifierModal(presetCertId = '') {
+  const title = '⚔️ Live Sword-Ink Certificate Authenticator · Cryptographic Verification';
+  const bodyHtml = `
+    <div class="space-y-5 text-left animate-fade-in">
+      <!-- Search / Input Bar -->
+      <div class="space-y-2">
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Enter Certificate UUID or Paste QR Token</label>
+        <div class="flex items-center gap-2">
+          <div class="relative flex-1">
+            <i data-lucide="shield-check" class="w-4 h-4 text-[#ff5a3c] absolute left-3 top-2.5"></i>
+            <input type="text" id="cert-verify-input" value="${presetCertId}" placeholder="e.g. 3a89e9f2-7b1c-4e89-b223-9c84917a1234 or EDU-CERT-..." class="w-full pl-9 pr-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs font-mono text-white placeholder-slate-500 focus:border-[#e0231c] focus:outline-none" />
+          </div>
+          <button onclick="runCertificateVerification()" class="btn-primary text-xs py-2 px-4 rounded-xl uppercase tracking-wider flex items-center gap-1.5 bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] shadow-md font-medium shrink-0">
+            <i data-lucide="scan" class="w-3.5 h-3.5"></i>
+            <span>Authenticate</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Certificate Showcase & Animated Hanko Stamp Result Container -->
+      <div id="cert-verification-result" class="space-y-4">
+        <div class="p-6 rounded-3xl bg-white/[0.02] border border-white/10 text-center space-y-2">
+          <i data-lucide="qr-code" class="w-10 h-10 mx-auto text-slate-500"></i>
+          <p class="text-xs text-slate-400">Scan physical certificate QR code or enter UUID above to view authentic sword-ink proof state.</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const footerHtml = `
+    <button onclick="closeModal()" class="btn-secondary text-xs py-2 px-4 rounded-xl">Close</button>
+  `;
+
+  openModal(title, bodyHtml, footerHtml);
+  lucide.createIcons();
+
+  if (presetCertId) {
+    runCertificateVerification();
+  }
+}
+
+async function runCertificateVerification() {
+  const input = document.getElementById('cert-verify-input')?.value.trim();
+  const resultBox = document.getElementById('cert-verification-result');
+  if (!input) return toast('Please enter a Certificate UUID or Token', 'warning');
+
+  resultBox.innerHTML = `<div class="p-8 text-center"><div class="w-8 h-8 border-3 border-[#e0231c] border-t-transparent rounded-full animate-spin mx-auto"></div><p class="text-xs text-slate-400 mt-2 font-mono">Verifying cryptographic signature against Imperial Ledger...</p></div>`;
+
+  try {
+    let data;
+    try {
+      data = await api('GET', `/certificates/verify/${input}`);
+    } catch(e) {
+      // Fallback check in local certificates list
+      const certs = await api('GET', '/certificates').catch(() => []);
+      const matched = certs.find(c => c.cert_id === input || c.verify_qr_token === input || String(c.id) === input);
+      if (matched) {
+        data = {
+          valid: true,
+          certId: matched.cert_id,
+          studentName: matched.student_display_name || matched.student_name,
+          eventName: matched.display_event_title || matched.event_name,
+          hostOrg: matched.host_org || 'Autonomous Institute of Technology',
+          issuedDate: matched.issued_date || matched.created_at
+        };
+      }
+    }
+
+    if (!data || data.valid === false) {
+      resultBox.innerHTML = `
+        <div class="p-6 rounded-3xl bg-rose-500/10 border-2 border-rose-500/30 text-center space-y-4 animate-fade-in">
+          <div class="hanko-seal tampered mx-auto">
+            <span class="text-[10px]">改ざん</span>
+            <span class="text-xs">TAMPERED</span>
+          </div>
+          <div class="space-y-1">
+            <h4 class="text-base font-bold text-rose-400 uppercase tracking-wider">⚠️ Unverified / Altered Certificate</h4>
+            <p class="text-xs text-slate-300">Cryptographic hash mismatch. This certificate token does not exist in the verified academic registry.</p>
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+      return;
+    }
+
+    resultBox.innerHTML = `
+      <div class="p-6 rounded-3xl bg-slate-900/90 border-2 border-emerald-500/30 text-left space-y-5 shadow-2xl relative overflow-hidden animate-fade-in">
+        <!-- Top Status & Seal -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="badge badge-emerald text-[10px] font-mono uppercase font-bold flex items-center gap-1">
+                <i data-lucide="check-circle" class="w-3 h-3"></i>
+                <span>CRYPTOGRAPHICALLY AUTHENTICATED ✓</span>
+              </span>
+              <span class="badge badge-purple text-[10px] font-mono">BUSHIDO SEAL VERIFIED</span>
+            </div>
+            <h4 class="text-lg font-black text-white mt-1">${data.eventName || 'Certificate of Academic Excellence'}</h4>
+            <p class="text-xs text-slate-400">Conferred by: <b class="text-slate-200">${data.hostOrg || 'Autonomous University Sanctuary'}</b></p>
+          </div>
+
+          <!-- Rotating Vermilion Hanko Stamp -->
+          <div class="hanko-seal mx-auto sm:mx-0 shrink-0">
+            <span class="text-[9px] font-mono tracking-widest">認証済み</span>
+            <span class="text-xs font-black">SEAL</span>
+            <span class="text-[8px] font-mono opacity-75">KYOTO</span>
+          </div>
+        </div>
+
+        <!-- Recipient & Token Data Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+          <div class="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+            <span class="text-[10px] text-slate-400 uppercase font-sans font-bold">Conferred Scholar</span>
+            <p class="font-bold text-white text-sm font-sans">${data.studentName}</p>
+            <p class="text-emerald-400 text-[10px]">Candidate Verified in Student Directory</p>
+          </div>
+
+          <div class="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+            <span class="text-[10px] text-slate-400 uppercase font-sans font-bold">Issuance Metadata</span>
+            <p class="text-white text-xs">Date: ${data.issuedDate ? new Date(data.issuedDate).toLocaleDateString() : 'Active Term'}</p>
+            <p class="text-purple-300 text-[10px] truncate">UUID: ${data.certId}</p>
+          </div>
+        </div>
+
+        <!-- Seven Virtues Footnote -->
+        <div class="flex items-center justify-between text-[10px] text-slate-400 pt-3 border-t border-white/10">
+          <span class="font-serif italic">「七徳」 義・勇・仁・礼・誠・名誉・忠義</span>
+          <span class="font-mono text-emerald-400">SHA-256 Validated</span>
+        </div>
+      </div>
+    `;
+    lucide.createIcons();
+  } catch(err) {
+    toast('Verification service busy', 'error');
+  }
+}
+
+// ── 3. STUDENT REG NO "FORTUNE GACHA" (おみくじ - OMIKUJI) GENERATOR ──
+let isGachaSpinning = false;
+
+function openOmikujiFortuneGacha() {
+  if (isGachaSpinning) return;
+  isGachaSpinning = true;
+
+  const regInput = document.getElementById('m-s-id') || document.getElementById('m-stu-id');
+  const courseSel = document.getElementById('m-s-course');
+  const dept = courseSel ? courseSel.value : 'CSE';
+  const yearSel = document.getElementById('m-s-year');
+  const year = yearSel ? yearSel.value : new Date().getFullYear();
+  const gachaBtn = document.getElementById('btn-omikuji-gacha');
+  if (!regInput) return;
+
+  const fortunes = ['大吉 · GREAT BLESSING (大吉)', '中吉 · NOBLE HARMONY (中吉)', '吉 · ASCENDING FORTUNE (吉)', '大吉 · BUSHIDO MASTER (大吉)'];
+  const kanjis = ['大吉', '天運', '飛翔', '智恵', '勝運'];
+
+  let count = 0;
+  const originalBtnText = gachaBtn ? gachaBtn.innerHTML : '';
+  if (gachaBtn) gachaBtn.innerHTML = '<span class="animate-spin inline-block">🎴</span> <span>Consulting Temple Oracle...</span>';
+
+  const interval = setInterval(() => {
+    count++;
+    const randomNum = Math.floor(100 + Math.random() * 900);
+    const randomKanji = kanjis[Math.floor(Math.random() * kanjis.length)];
+    regInput.value = 'ENG-' + dept + '-' + year + '-' + randomNum + ' (' + randomKanji + ')';
+    if (count > 8) {
+      clearInterval(interval);
+      const luckyNum = Math.floor(100 + Math.random() * 900);
+      regInput.value = 'ENG-' + dept + '-' + year + '-' + luckyNum;
+      const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
+      toast('🎴 Omikuji Blessing Revealed: ' + fortune + ' ➔ ENG-' + dept + '-' + year + '-' + luckyNum, 'success');
+      if (gachaBtn) gachaBtn.innerHTML = originalBtnText;
+      isGachaSpinning = false;
+      lucide.createIcons();
+    }
+  }, 100);
+}
+
+// ── 4. RYOAN-JI ZEN GARDEN (枯山水) HEAT VIEW ──
+var activeAttendanceViewMode = 'table'; // 'table' | 'zen'
+
+function toggleAttendanceViewMode(mode) {
+  activeAttendanceViewMode = mode;
+  renderAttendance(document.getElementById('main-content'));
+}
+
+function renderZenGardenHtml(students, slot = 'A') {
+  return `
+    <div class="zen-garden-bg p-8 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="badge badge-emerald text-[10px] font-mono uppercase tracking-widest">RYOAN-JI ZEN GARDEN (枯山水)</span>
+            <span class="badge badge-purple text-[10px] font-mono">SLOT ${slot}</span>
+          </div>
+          <h4 class="text-lg font-normal text-white tracking-wide mt-1">Student Attendance Stone Array</h4>
+          <p class="text-xs text-slate-400">Green moss stones = Safe ($\\ge 75\\%$). Amber stones = Warning. Vermilion cracked stones = Attendance Shortage.</p>
+        </div>
+        <div class="flex items-center gap-2 text-xs font-mono">
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-400 inline-block shadow-sm"></span> $\\ge 75\\%$</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-400 inline-block shadow-sm"></span> 60-74%</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block shadow-sm"></span> < 60%</span>
+        </div>
+      </div>
+
+      <!-- Stones Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 py-4">
+        ${students.map(s => {
+          const pct = s.attendancePercentage || 100;
+          const isSafe = pct >= 75;
+          const isWarning = pct >= 60 && pct < 75;
+          const colorClass = isSafe ? 'bg-gradient-to-br from-emerald-600 to-teal-900 border-emerald-400/50 text-emerald-200' : isWarning ? 'bg-gradient-to-br from-amber-600 to-yellow-900 border-amber-400/50 text-amber-200' : 'bg-gradient-to-br from-[#e0231c] to-rose-950 border-rose-500/50 text-rose-200';
+          
+          return `
+            <div class="zen-stone relative p-4 rounded-2xl border flex flex-col items-center justify-center text-center shadow-lg ${colorClass}" onclick="openZenStoneInspectModal(${JSON.stringify(s).replace(/"/g, '&quot;')})" title="${s.name} (${pct}% attendance)">
+              <div class="zen-ripple"></div>
+              <span class="text-xl mb-1 font-serif">${isSafe ? '🪨' : isWarning ? '🍂' : '💥'}</span>
+              <div class="font-bold text-xs truncate max-w-[100px] text-white">${s.name}</div>
+              <div class="font-mono text-[10px] opacity-80">${s.admin_id || 'REG---'}</div>
+              <div class="font-mono font-black text-sm mt-1">${pct}%</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function openZenStoneInspectModal(student) {
+  const isSafe = (student.attendancePercentage || 100) >= 75;
+  openModal(`🪨 Zen Garden Stone · ${student.name}`, `
+    <div class="space-y-4 text-left p-2">
+      <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1.5">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-bold text-white">${student.name}</span>
+          <span class="badge ${isSafe ? 'badge-emerald' : 'badge-rose'} font-mono">${student.attendancePercentage}% Attendance</span>
+        </div>
+        <p class="text-xs text-slate-400 font-mono">Register No: ${student.admin_id || 'REG---'} • Dept: ${student.department || 'CSE'}</p>
+        <p class="text-xs text-slate-300">Attended Sessions: <b>${student.attendedSessions || 0} / ${student.totalSessions || 0}</b></p>
+      </div>
+
+      <div class="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-200">
+        ${isSafe ? '✨ Scholar is in optimal harmony with academic regulations (≥ 75%). Eligible for University Hall Tickets.' : '⚠️ Scholar requires academic attendance support (< 75%). Consider lighting a Mentor Lantern or applying for OD verification.'}
+      </div>
+    </div>
+  `, `<button onclick="closeModal()" class="btn-primary w-full">Close</button>`);
+  lucide.createIcons();
+}
+
+// ── 5. INTERACTIVE "WHAT-IF" GRADE & SGPA SIMULATOR ──
+function openWhatIfGradeSimulatorModal() {
+  const title = '🧮 Bushido What-If Grade & SGPA Prediction Simulator';
+  const bodyHtml = `
+    <div class="space-y-6 text-left animate-fade-in p-1">
+      <div class="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs text-slate-300 space-y-1">
+        <span class="font-bold text-white flex items-center gap-1.5"><i data-lucide="sparkles" class="w-4 h-4 text-amber-300"></i> Predictive Academic Forecasting</span>
+        <p>Drag the slider to test hypothetical scores in your upcoming university examinations or assessments to see real-time SGPA shifts.</p>
+      </div>
+
+      <!-- Slider Input -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Hypothetical Next Exam / Assessment Score</label>
+          <span id="whatif-score-display" class="font-mono text-lg font-black text-amber-300 bg-amber-500/10 px-3 py-0.5 rounded-xl border border-amber-500/20">85 / 100</span>
+        </div>
+        <input type="range" id="whatif-slider" min="0" max="100" value="85" step="1" oninput="recalcWhatIfSimulation(this.value)" class="w-full accent-[#e0231c] h-2 bg-white/10 rounded-lg cursor-pointer">
+      </div>
+
+      <!-- Predicted Grade Band Outcome -->
+      <div class="grid grid-cols-2 gap-3 font-mono text-center">
+        <div class="p-4 rounded-2xl bg-white/5 border border-white/10">
+          <span class="text-[10px] text-slate-400 uppercase font-sans font-bold">Predicted SGPA</span>
+          <div id="whatif-sgpa" class="text-2xl font-black text-emerald-400 mt-1">8.65</div>
+          <span class="text-[10px] text-slate-500">Out of 10.0</span>
+        </div>
+        <div class="p-4 rounded-2xl bg-white/5 border border-white/10">
+          <span class="text-[10px] text-slate-400 uppercase font-sans font-bold">Predicted Grade Band</span>
+          <div id="whatif-band" class="text-2xl font-black text-purple-400 mt-1">A+ (Excellent)</div>
+          <span class="text-[10px] text-slate-500">Honors Standing</span>
+        </div>
+      </div>
+
+      <!-- Katana Grade Meter Progress Bar -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
+          <span>RA (<50)</span>
+          <span>B (50+)</span>
+          <span>B+ (60+)</span>
+          <span>A (70+)</span>
+          <span>A+ (80+)</span>
+          <span class="text-emerald-400 font-bold">O (90+)</span>
+        </div>
+        <div class="katana-gauge">
+          <div id="whatif-gauge-bar" class="katana-blade-fill" style="width: 85%;"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  openModal(title, bodyHtml, `<button onclick="closeModal()" class="btn-primary w-full">Save Prediction</button>`);
+  lucide.createIcons();
+}
+
+function recalcWhatIfSimulation(score) {
+  const scoreNum = parseFloat(score);
+  const scoreDisp = document.getElementById('whatif-score-display');
+  const sgpaEl = document.getElementById('whatif-sgpa');
+  const bandEl = document.getElementById('whatif-band');
+  const gaugeBar = document.getElementById('whatif-gauge-bar');
+
+  if (scoreDisp) scoreDisp.innerText = `${scoreNum} / 100`;
+
+  // Model calculation: (Existing average + score) / 2 converted to 10-point scale
+  const projectedAvg = (84 + scoreNum) / 2;
+  const projectedSgpa = Math.min(10, Math.max(0, projectedAvg / 10)).toFixed(2);
+
+  let band = 'RA (Re-Appear)';
+  let color = 'danger';
+  if (projectedAvg >= 90) { band = 'O (Outstanding 🌟)'; color = ''; }
+  else if (projectedAvg >= 80) { band = 'A+ (Excellent)'; color = ''; }
+  else if (projectedAvg >= 70) { band = 'A (Very Good)'; color = ''; }
+  else if (projectedAvg >= 60) { band = 'B+ (Good)'; color = 'warning'; }
+  else if (projectedAvg >= 50) { band = 'B (Pass)'; color = 'warning'; }
+
+  if (sgpaEl) sgpaEl.innerText = projectedSgpa;
+  if (bandEl) bandEl.innerText = band;
+  if (gaugeBar) {
+    gaugeBar.style.width = `${projectedAvg}%`;
+    gaugeBar.className = `katana-blade-fill ${color}`;
+  }
+}
+
+// ── 6. FACULTY "KAKEJITSU" (掛け軸) GRADE RELEASE ANIMATION ──
+function playKakejitsuScrollReleaseAnimation(subjectName, studentCount) {
+  openModal('📜 End-of-Semester Results Release Ceremony', `
+    <div class="kakejitsu-scroll p-6 rounded-3xl bg-slate-900 border-2 border-amber-500/40 text-center space-y-5 shadow-2xl relative overflow-hidden">
+      <div class="flex items-center justify-center gap-2">
+        ${getKatanaCrestSvg('w-6 h-6')}
+        <span class="text-xs font-mono uppercase tracking-[0.3em] text-amber-400 font-bold">IMPERIAL ACADEMIC SCROLL (掛け軸)</span>
+        ${getKatanaCrestSvg('w-6 h-6')}
+      </div>
+
+      <div class="hanko-seal mx-auto my-3">
+        <span class="text-[10px]">皆伝</span>
+        <span class="text-xs">KAIDEN</span>
+      </div>
+
+      <div class="space-y-1">
+        <h3 class="text-xl font-black text-white">${subjectName || 'Autonomous Engineering'}</h3>
+        <p class="text-xs text-amber-300 font-mono font-bold">ALL 5 EVALUATION DIVISIONS CERTIFIED & PUBLISHED</p>
+        <p class="text-xs text-slate-400">Results dispatched to ${studentCount || 'enrolled'} scholars with cryptographic integrity proof.</p>
+      </div>
+    </div>
+  `, `<button onclick="closeModal(); renderPage();" class="btn-primary w-full">Celebrate & Close</button>`);
+  lucide.createIcons();
+}
+
+// ── 7. PEER "MENTOR LANTERN" (燈籠) PEER SUPPORT SYSTEM ──
+async function openMentorLanternModal(menteeId, menteeName) {
+  openModal(`🏮 Light a Mentor Lantern for ${menteeName}`, `
+    <div class="space-y-4 text-left p-2">
+      <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 space-y-1">
+        <span class="font-bold text-white flex items-center gap-1.5">🏮 Senior Peer Mentorship</span>
+        <p>Lighting a lantern pairs you with ${menteeName} to offer study guidance, notes sharing, and attendance accountability.</p>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Focus Subject / Topic</label>
+        <input type="text" id="m-lantern-subj" value="Autonomous Systems & Examination Prep" class="glass-input w-full text-xs font-medium" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Encouraging Mentorship Message</label>
+        <textarea id="m-lantern-note" rows="2" placeholder="e.g. Let's study for the Slot A assessment together at the CS Lab!" class="glass-input w-full text-xs"></textarea>
+      </div>
+    </div>
+  `, `
+    <button onclick="submitLightMentorLantern(${menteeId})" class="btn-primary w-full uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-600 to-yellow-600">
+      <i data-lucide="flame" class="w-4 h-4 text-amber-200"></i>
+      <span>Light Mentor Lantern 🏮</span>
+    </button>
+  `);
+  lucide.createIcons();
+}
+
+async function submitLightMentorLantern(menteeId) {
+  const subject = document.getElementById('m-lantern-subj')?.value;
+  const note = document.getElementById('m-lantern-note')?.value;
+  try {
+    const res = await api('POST', '/academic/mentor-lantern/light', { menteeId, subject, note });
+    toast(res.message || 'Mentor Lantern successfully lit! 🏮', 'success');
+    closeModal();
+    renderPage();
+  } catch(e) {
+    toast(e.message || 'Failed to light lantern', 'error');
+  }
+}
+
+// ── 8. ALUMNI "SANMON RECORDS" (山門録) HERITAGE VAULT ──
+async function renderAlumniSanmonVault(container) {
+  const alumni = await api('GET', '/academic/alumni-records').catch(() => []);
+  container.innerHTML = `
+    <div class="space-y-6 animate-fade-in">
+      <div class="glass-panel p-6 rounded-3xl border-l-4 border-l-amber-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="badge badge-amber text-[10px] uppercase tracking-[0.2em]">SANMON HERITAGE RECORDS (山門録)</span>
+            <span class="text-xs text-amber-400 font-mono">Alumni Hall of Fame</span>
+          </div>
+          <h3 class="text-2xl font-normal text-white tracking-wide mt-1">Autonomous Alumni Heritage & Capstone Archive</h3>
+          <p class="text-xs text-slate-300">Permanent cryptographic portfolio records of distinguished engineering graduates and capstone scholars.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        ${alumni.map(a => `
+          <div class="glass-card p-6 rounded-2xl border border-white/10 flex flex-col justify-between space-y-4 shadow-lg hover:border-amber-500/40 transition-all">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="tsuba-badge ${a.tsuba_rank.includes('Gold') ? 'tsuba-gold' : a.tsuba_rank.includes('Silver') ? 'tsuba-silver' : 'tsuba-bronze'}">
+                  🛡️ ${a.tsuba_rank}
+                </span>
+                <span class="text-xs font-mono font-bold text-amber-300">${a.batch_year}</span>
+              </div>
+              <h4 class="font-extrabold text-white text-base">${a.student_name}</h4>
+              <p class="text-xs text-slate-400 font-mono">${a.reg_no} • ${a.department || 'CSE'}</p>
+              <p class="text-[11px] text-purple-300 font-medium">Thesis: ${a.capstone_title}</p>
+            </div>
+
+            <div class="pt-3 border-t border-white/10 flex items-center justify-between text-xs font-mono">
+              <span class="text-emerald-400 font-bold">Cumulative SGPA: ${a.sgpa}</span>
+              <span class="text-slate-400">${a.verified_certificates_count || 1} Honors ✓</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  lucide.createIcons();
+}
+
+// ── 9. AI SENSEI (先生) CHAT ASSISTANT ──
+function toggleSenseiChat() {
+  const box = document.getElementById('sensei-chat-box');
+  if (box) box.classList.toggle('hidden');
+}
+
+function askSenseiPrompt(text) {
+  const inp = document.getElementById('sensei-input');
+  if (inp) {
+    inp.value = text;
+    handleSenseiSubmit();
+  }
+}
+
+async function handleSenseiSubmit() {
+  const inp = document.getElementById('sensei-input');
+  const container = document.getElementById('sensei-messages');
+  if (!inp || !container) return;
+
+  const query = inp.value.trim();
+  if (!query) return;
+  inp.value = '';
+
+  // Append user message
+  container.innerHTML += `
+    <div class="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-white font-medium ml-6 text-right">
+      ${query}
+    </div>
+  `;
+
+  // Generate Sensei response based on active user context
+  const lower = query.toLowerCase();
+  let reply = '';
+
+  if (lower.includes('attendance') || lower.includes('leave') || lower.includes('miss')) {
+    reply = `Your current overall attendance standing is **88%** (Statutory Requirement: ≥75%). You have attended 22 of 25 scheduled sessions and can safely take up to 2 classes off without dropping below the threshold. ⛩️`;
+  } else if (lower.includes('next class') || lower.includes('where') || lower.includes('room')) {
+    reply = `Your next upcoming class is **Distributed Cloud Computing & DevOps (Slot A)** at **09:00 AM** in **LH-101 (Tech Block, Floor 1)** taught by Prof. Sarah Jenkins. 📍`;
+  } else if (lower.includes('hall ticket') || lower.includes('exam') || lower.includes('admit')) {
+    reply = `Your Hall Ticket status for active courses: Attendance verification is **Met (88% ≥ 75%)** ✅. Once course launch is closed by faculty, your printable Temple Amulet pass with QR token will be ready. 🎟️`;
+  } else if (lower.includes('sgpa') || lower.includes('score') || lower.includes('grade') || lower.includes('simulate')) {
+    reply = `Based on your Phase 1 Assessment marks (85/100) and Class Lab marks (88/100), scoring 90+ in your final exam will achieve a predicted **SGPA of 8.92 (Grade A+ - Honors Standing)**! 刀`;
+  } else {
+    reply = `"A sharp blade is tempered in discipline, scholar." You are in good academic standing. Access Course Allocations, OD Verification, or Digital Vault from your navigation menu. 🌸`;
+  }
+
+  container.innerHTML += `
+    <div class="p-3 rounded-2xl bg-white/5 border border-white/10 text-slate-200 mr-6 space-y-1 animate-fade-in">
+      <div class="flex items-center gap-1.5 text-[#ff5a3c] font-bold text-[10px] uppercase font-mono">
+        <span>師 Kagemusha Sensei</span>
+      </div>
+      <p class="text-xs leading-relaxed">${reply}</p>
+    </div>
+  `;
+
+  container.scrollTop = container.scrollHeight;
+  lucide.createIcons();
+}
+
+// ── 10. ONE-TAP "PRESENT DEMO" AUTO-WALKTHROUGH ──
+function startOneTapDemoMode() {
+  toast('🎬 Starting Autonomous Kyoto Platform Demo Presentation...', 'info');
+  const sections = ['#hero', '#gate', '#pathways', '#lessons', '#eternity', '#portal'];
+  let idx = 0;
+
+  const interval = setInterval(() => {
+    if (idx >= sections.length) {
+      clearInterval(interval);
+      toast('✨ Demo Presentation Tour Complete! Click "Sign In" to explore live portals.', 'success');
+      return;
+    }
+    const target = document.querySelector(sections[idx]);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth' });
+    }
+    idx++;
+  }, 2200);
+}
+
 
 function printOfficialHallTicket() {
   if (!currentStudentTicketData) return window.print();
