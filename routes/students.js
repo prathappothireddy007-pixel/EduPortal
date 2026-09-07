@@ -85,12 +85,15 @@ router.get('/faculty-list', authenticate, async (req, res) => {
 // GET all users/students (faculty/admin) or own profile (student)
 router.get('/', authenticate, async (req, res) => {
   try {
-    if (req.user.role === 'faculty' || req.user.role === 'admin') {
+    const isAdmin = req.user.role === 'admin';
+    const isFaculty = req.user.role === 'faculty';
+
+    if (isFaculty || isAdmin) {
       const { role } = req.query;
       let query = `
         SELECT u.id, u.name, u.email, u.admin_id, u.parent_email, u.parent_phone,
                u.dob, u.class_id, u.role, u.department, u.designation, u.created_at,
-               COALESCE(u.plain_pass, 'Faculty@123') as plain_pass,
+               ${isAdmin ? "COALESCE(u.plain_pass, 'Faculty@123') as plain_pass," : ""}
                c.name as class_name
         FROM users u
         LEFT JOIN classes c ON u.class_id = c.id
@@ -213,47 +216,101 @@ router.post('/faculty', authenticate, requireFaculty, async (req, res) => {
   }
 });
 
-// PUT update student or faculty
+// PUT update student or faculty profile & credentials
 router.put('/:id', authenticate, async (req, res) => {
   const targetId = req.params.id;
-  if (req.user.role === 'student' && String(req.user.id) !== String(targetId)) {
-    return res.status(403).json({ error: 'Not authorized' });
+  const isAdmin = req.user.role === 'admin';
+  const isSelf = String(req.user.id) === String(targetId);
+
+  // Non-admin can only update their own profile
+  if (!isAdmin && !isSelf) {
+    return res.status(403).json({ error: 'Access denied: Only administrators can modify other users.' });
   }
-  const { name, email, parentEmail, parentPhone, dob, aadhar, classId, password, adminId, department, designation } = req.body;
+
+  const { name, email, parentEmail, parentPhone, dob, aadhar, classId, password, currentPassword, oldPassword, adminId, department, designation } = req.body;
+
   try {
+    const userCheck = await pool.query('SELECT * FROM users WHERE id=$1 AND deleted_at IS NULL', [targetId]);
+    if (!userCheck.rows[0]) return res.status(404).json({ error: 'User not found' });
+    const targetUser = userCheck.rows[0];
+
+    // Password Update & Verification Logic
+    let newHash = null;
+    let newPlainPass = null;
+    if (password && String(password).trim()) {
+      const pwd = String(password).trim();
+      if (pwd.length < 4) {
+        return res.status(400).json({ error: 'New password must be at least 4 characters long.' });
+      }
+
+      // If student or faculty updating own password, they MUST verify current password
+      if (!isAdmin) {
+        const verifyPass = currentPassword || oldPassword;
+        if (!verifyPass) {
+          return res.status(400).json({ error: 'Current password verification is required to change your password.' });
+        }
+        let valid = false;
+        if (targetUser.password_hash) {
+          valid = await bcrypt.compare(verifyPass, targetUser.password_hash);
+        }
+        if (!valid && targetUser.plain_pass) {
+          valid = (targetUser.plain_pass === verifyPass);
+        }
+        if (!valid) {
+          return res.status(400).json({ error: 'Current password verification failed. Incorrect existing password.' });
+        }
+      }
+
+      newHash = await bcrypt.hash(pwd, 10);
+      newPlainPass = pwd;
+    }
+
+    // Role-based field restrictions: Only admin can change admin_id, department, designation, classId
+    const finalAdminId = isAdmin ? (adminId || targetUser.admin_id) : targetUser.admin_id;
+    const finalDept = isAdmin ? (department || targetUser.department) : targetUser.department;
+    const finalDesig = isAdmin ? (designation || targetUser.designation) : targetUser.designation;
+    const finalClassId = isAdmin ? (classId ? parseInt(classId, 10) : targetUser.class_id) : targetUser.class_id;
+
     let updateQuery;
     let values;
-    if (password) {
-      const hash = await bcrypt.hash(password, 10);
+    if (newHash) {
       updateQuery = `UPDATE users SET
-        name=COALESCE($1,name), email=COALESCE($2,email),
-        parent_email=COALESCE($3,parent_email), parent_phone=COALESCE($4,parent_phone),
-        dob=COALESCE($5,dob), aadhar=COALESCE($6,aadhar),
-        class_id=COALESCE($7::integer,class_id),
-        admin_id=COALESCE($8,admin_id),
-        department=COALESCE($9,department),
-        designation=COALESCE($10,designation),
+        name=COALESCE($1, name), email=COALESCE($2, email),
+        parent_email=COALESCE($3, parent_email), parent_phone=COALESCE($4, parent_phone),
+        dob=COALESCE($5, dob), aadhar=COALESCE($6, aadhar),
+        class_id=$7,
+        admin_id=$8,
+        department=$9,
+        designation=$10,
         password_hash=$11,
         plain_pass=$12
        WHERE id=$13 AND deleted_at IS NULL RETURNING id,name,email,class_id,admin_id,role,department,designation,plain_pass`;
-      values = [name, email, parentEmail, parentPhone, dob, aadhar, classId || null, adminId || null, department || null, designation || null, hash, password, targetId];
+      values = [name || targetUser.name, email || targetUser.email, parentEmail || targetUser.parent_email, parentPhone || targetUser.parent_phone, dob || targetUser.dob, aadhar || targetUser.aadhar, finalClassId, finalAdminId, finalDept, finalDesig, newHash, newPlainPass, targetId];
     } else {
       updateQuery = `UPDATE users SET
-        name=COALESCE($1,name), email=COALESCE($2,email),
-        parent_email=COALESCE($3,parent_email), parent_phone=COALESCE($4,parent_phone),
-        dob=COALESCE($5,dob), aadhar=COALESCE($6,aadhar),
-        class_id=COALESCE($7::integer,class_id),
-        admin_id=COALESCE($8,admin_id),
-        department=COALESCE($9,department),
-        designation=COALESCE($10,designation)
+        name=COALESCE($1, name), email=COALESCE($2, email),
+        parent_email=COALESCE($3, parent_email), parent_phone=COALESCE($4, parent_phone),
+        dob=COALESCE($5, dob), aadhar=COALESCE($6, aadhar),
+        class_id=$7,
+        admin_id=$8,
+        department=$9,
+        designation=$10
        WHERE id=$11 AND deleted_at IS NULL RETURNING id,name,email,class_id,admin_id,role,department,designation,plain_pass`;
-      values = [name, email, parentEmail, parentPhone, dob, aadhar, classId || null, adminId || null, department || null, designation || null, targetId];
+      values = [name || targetUser.name, email || targetUser.email, parentEmail || targetUser.parent_email, parentPhone || targetUser.parent_phone, dob || targetUser.dob, aadhar || targetUser.aadhar, finalClassId, finalAdminId, finalDept, finalDesig, targetId];
     }
+
     const r = await pool.query(updateQuery, values);
-    if (!r.rows[0]) return res.status(404).json({ error: 'User not found' });
     await logAction(req.user.id, req.user.name, req.user.role, 'update_user', 'users', targetId);
-    res.json(r.rows[0]);
-  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+
+    const resultUser = { ...r.rows[0] };
+    if (!isAdmin) {
+      delete resultUser.plain_pass;
+    }
+    res.json(resultUser);
+  } catch (err) {
+    console.error('[Update User] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 // DELETE student or faculty
