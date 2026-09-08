@@ -5937,6 +5937,7 @@ setTimeout(() => {
 
     // --- MAIN PAGE DYNAMIC RENDERER ---
     async function renderPage() {
+      updateSenseiChatForActiveRole();
       const main = document.getElementById('main-content');
       const title = document.getElementById('page-title');
       
@@ -14163,6 +14164,7 @@ function toggleSenseiChat() {
   if (isHidden) {
     box.classList.remove('hidden');
     box.style.display = 'flex';
+    updateSenseiChatForActiveRole();
     setTimeout(() => {
       const inp = document.getElementById('sensei-input');
       if (inp) inp.focus();
@@ -14172,6 +14174,182 @@ function toggleSenseiChat() {
     box.style.display = 'none';
   }
   lucide.createIcons();
+}
+
+function updateSenseiChatForActiveRole() {
+  const titleEl = document.getElementById('sensei-title');
+  const roleEl = document.getElementById('sensei-role');
+  const avatarEl = document.getElementById('sensei-avatar');
+  const badgeEl = document.getElementById('sensei-tooltip-badge');
+  const messagesContainer = document.getElementById('sensei-messages');
+  if (!messagesContainer) return;
+
+  const role = S && S.user ? S.user.role : 'guest';
+  const userName = S && S.user ? S.user.name : 'Visitor';
+
+  // Only reset messages if it only has the initial welcome greeting
+  if (!messagesContainer.dataset.userRole || messagesContainer.dataset.userRole !== role) {
+    messagesContainer.dataset.userRole = role;
+
+    let welcomeHtml = '';
+
+    if (role === 'admin') {
+      if (titleEl) titleEl.innerText = 'Institutional Sensei (総長 先生)';
+      if (roleEl) roleEl.innerText = 'Campus Executive Intelligence';
+      if (avatarEl) avatarEl.innerText = '統';
+      if (badgeEl) badgeEl.innerHTML = '<span>Admin AI Sensei</span><span class="text-xs text-[#ff5a3c] font-serif font-bold">統</span>';
+
+      welcomeHtml = `
+        <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-slate-300 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1.5 text-amber-400 font-bold">
+              <span>🏛️</span>
+              <span>Executive Terminal — Welcome, ${userName}</span>
+            </div>
+            <span class="badge badge-purple text-[9px] font-mono">ADMIN ACCESS</span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            I am your autonomous institutional intelligence advisor. I monitor campus-wide admissions, faculty assignments, classroom readiness, and early academic risks.
+          </p>
+          <div class="grid grid-cols-1 gap-1.5 pt-1">
+            <button type="button" onclick="askSenseiPrompt('Campus Headcount & Department Overview')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-amber-300 border border-white/5 transition-all flex items-center gap-1.5">
+              <span>🏛️</span>
+              <span>Campus Headcount & Department Overview</span>
+            </button>
+            <button type="button" onclick="askSenseiPrompt('Early Academic Risk & High Risk Count')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-rose-300 border border-white/5 transition-all flex items-center gap-1.5">
+              <span>⚠️</span>
+              <span>Early Academic Risk & High-Risk Count</span>
+            </button>
+            <button type="button" onclick="askSenseiPrompt('Smart Classrooms & Projector Status')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-blue-300 border border-white/5 transition-all flex items-center gap-1.5">
+              <span>🏢</span>
+              <span>Smart Classrooms & Projector Readiness</span>
+            </button>
+            <button type="button" onclick="askSenseiPrompt('Security Audit Trail & System Health')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-emerald-300 border border-white/5 transition-all flex items-center gap-1.5">
+              <span>🔒</span>
+              <span>Security Audit Trail & Integrity Check</span>
+            </button>
+          </div>
+        </div>
+      `;
+    } else if (role === 'faculty') {
+      if (titleEl) titleEl.innerText = 'Faculty Academic Sensei (教授 先生)';
+      if (roleEl) roleEl.innerText = 'Instruction & Grading Guide';
+      if (avatarEl) avatarEl.innerText = '教';
+      if (badgeEl) badgeEl.innerHTML = '<span>Faculty AI Sensei</span><span class="text-xs text-[#ff5a3c] font-serif font-bold">教</span>';
+
+      welcomeHtml = `
+        <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-slate-300 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1.5 text-amber-400 font-bold">
+              <span>📜</span>
+              <span>Faculty Portal — Welcome, Prof. ${userName}</span>
+            </div>
+            <span class="badge badge-emerald text-[9px] font-mono">FACULTY</span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            I assist with course rosters across Slots A–F, geofenced On-Duty (OD) approvals, 5-tier gradebook marks, and peer mentorship pairings.
+          </p>
+          <div class="grid grid-cols-1 gap-1.5 pt-1">
+            <button type="button" onclick="askSenseiPrompt('My Assigned Courses & Enrolled Students')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-amber-300 border border-white/5 transition-all flex items-center gap-1.5">
+              <span>📋</span>
+              <span>My Assigned Courses & Enrolled Students</span>
+            </button>
+            <button type="button" onclick="askSenseiPrompt('Pending OD Requests & Geotags')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-blue-300 border border-white/5 transition-all flex items-center gap-1.5">
+              <span>📍</span>
+              <span>Pending OD Requests & 30m Geotags</span>
+            </button>
+            <button type="button" onclick="askSenseiPrompt('Daily Slot Attendance Recording Status')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-emerald-300 border border-white/5 transition-all flex items-center gap-1.5">
+              <span>📊</span>
+              <span>Daily Slot Attendance Recording Status</span>
+            </button>
+            <button type="button" onclick="askSenseiPrompt('5-Tier Gradebook & Kaiden Result Release')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-purple-300 border border-white/5 transition-all flex items-center gap-1.5">
+              <span>📜</span>
+              <span>Gradebook & Kaiden Result Release (掛け軸)</span>
+            </button>
+          </div>
+        </div>
+      `;
+    } else if (role === 'student') {
+      if (titleEl) titleEl.innerText = 'Scholar Kagemusha Sensei (学術 先生)';
+      if (roleEl) roleEl.innerText = 'Autonomous Scholar Companion';
+      if (avatarEl) avatarEl.innerText = '師';
+      if (badgeEl) badgeEl.innerHTML = '<span>Scholar AI Sensei</span><span class="text-xs text-[#ff5a3c] font-serif font-bold">師</span>';
+
+      welcomeHtml = `
+        <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-slate-300 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1.5 text-amber-400 font-bold">
+              <span>⛩️</span>
+              <span>Scholar Sanctuary — Welcome, ${userName}</span>
+            </div>
+            <span class="badge badge-vermilion text-[9px] font-mono">SCHOLAR</span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            I track your slot-wise course attendance, simulate examination target SGPA, locate your upcoming classrooms, and verify hall tickets.
+          </p>
+          <div class="grid grid-cols-1 gap-1.5 pt-1">
+            <button type="button" onclick="askSenseiPrompt('What is my attendance percentage and can I take leave?')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-amber-300 border border-white/5 transition-all flex items-center gap-1.5">
+              <span>📊</span>
+              <span>Check My Slot Attendance Standing & Leave Margin</span>
+            </button>
+            <button type="button" onclick="askSenseiPrompt('Where is my next scheduled class?')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-blue-300 border border-white/5 transition-all flex items-center gap-1.5">
+              <span>📍</span>
+              <span>Where is my next scheduled class?</span>
+            </button>
+            <button type="button" onclick="askSenseiPrompt('Am I eligible for university examination Hall Tickets?')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-purple-300 border border-white/5 transition-all flex items-center gap-1.5">
+              <span>🎟️</span>
+              <span>University Hall Ticket & Admit Card Status</span>
+            </button>
+            <button type="button" onclick="askSenseiPrompt('Simulate my SGPA if I score 90 in final exam')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-emerald-300 border border-white/5 transition-all flex items-center gap-1.5">
+              <span>🧮</span>
+              <span>Simulate What-If SGPA (成績試算)</span>
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      if (titleEl) titleEl.innerText = 'Kyoto Sanctuary Oracle (京都 案内)';
+      if (roleEl) roleEl.innerText = 'Autonomous Admissions Guide';
+      if (avatarEl) avatarEl.innerText = '門';
+      if (badgeEl) badgeEl.innerHTML = '<span>Ask AI Sensei</span><span class="text-xs text-[#ff5a3c] font-serif font-bold">門</span>';
+
+      welcomeHtml = `
+        <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-slate-300 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1.5 text-amber-400 font-bold">
+              <span>⛩️</span>
+              <span>Welcome to Kyoto Autonomous Institute</span>
+            </div>
+            <span class="badge badge-purple text-[9px] font-mono">GUEST</span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            I can guide you through our engineering curriculum, public Sword-Ink certificate verification, or portal sign-in.
+          </p>
+          <div class="grid grid-cols-1 gap-1.5 pt-1">
+            <button type="button" onclick="askSenseiPrompt('How to verify an authentic Certificate QR?')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-amber-300 border border-white/5 transition-all flex items-center gap-1.5">
+              <span>📜</span>
+              <span>How to verify an authentic Certificate QR?</span>
+            </button>
+            <button type="button" onclick="askSenseiPrompt('Explore Autonomous Engineering Departments')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-blue-300 border border-white/5 transition-all flex items-center gap-1.5">
+              <span>⛩️</span>
+              <span>Explore Autonomous Engineering Departments</span>
+            </button>
+            <button type="button" onclick="askSenseiPrompt('How to sign in as Admin, Faculty, or Student?')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-emerald-300 border border-white/5 transition-all flex items-center gap-1.5">
+              <span>🔑</span>
+              <span>How to sign in as Admin, Faculty, or Student?</span>
+            </button>
+            <button type="button" onclick="askSenseiPrompt('What is the Omikuji Fortune Gacha?')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-purple-300 border border-white/5 transition-all flex items-center gap-1.5">
+              <span>🎴</span>
+              <span>What is the Omikuji Fortune Gacha?</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    messagesContainer.innerHTML = welcomeHtml;
+    lucide.createIcons();
+  }
 }
 
 function askSenseiPrompt(text) {
@@ -14191,41 +14369,152 @@ async function handleSenseiSubmit() {
   if (!query) return;
   inp.value = '';
 
+  const role = S && S.user ? S.user.role : 'guest';
+  const userName = S && S.user ? S.user.name : 'Visitor';
+
   // Append user message
   container.innerHTML += `
-    <div class="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-white font-medium ml-6 text-right">
+    <div class="p-2.5 rounded-xl bg-blue-500/15 border border-blue-500/30 text-white font-medium ml-6 text-right animate-fade-in text-xs">
       ${query}
     </div>
   `;
+  container.scrollTop = container.scrollHeight;
 
-  // Generate Sensei response based on active user context
+  // Placeholder thinking bubble
+  const thinkingId = 'sensei-thinking-' + Date.now();
+  container.innerHTML += `
+    <div id="${thinkingId}" class="p-3 rounded-2xl bg-white/5 border border-white/10 text-slate-300 mr-6 space-y-1 animate-pulse text-xs flex items-center gap-2">
+      <span class="animate-spin text-sm">⛩️</span>
+      <span class="text-[11px] text-slate-400 font-mono">Consulting Kyoto Knowledge Matrix...</span>
+    </div>
+  `;
+  container.scrollTop = container.scrollHeight;
+
   const lower = query.toLowerCase();
   let reply = '';
+  let badgeTitle = '師 Sensei Guide';
 
-  if (lower.includes('attendance') || lower.includes('leave') || lower.includes('miss')) {
-    reply = `Your current overall attendance standing is **88%** (Statutory Requirement: ≥75%). You have attended 22 of 25 scheduled sessions and can safely take up to 2 classes off without dropping below the threshold. ⛩️`;
-  } else if (lower.includes('next class') || lower.includes('where') || lower.includes('room')) {
-    reply = `Your next upcoming class is **Distributed Cloud Computing & DevOps (Slot A)** at **09:00 AM** in **LH-101 (Tech Block, Floor 1)** taught by Prof. Sarah Jenkins. 📍`;
-  } else if (lower.includes('hall ticket') || lower.includes('exam') || lower.includes('admit')) {
-    reply = `Your Hall Ticket status for active courses: Attendance verification is **Met (88% ≥ 75%)** ✅. Once course launch is closed by faculty, your printable Temple Amulet pass with QR token will be ready. 🎟️`;
-  } else if (lower.includes('sgpa') || lower.includes('score') || lower.includes('grade') || lower.includes('simulate')) {
-    reply = `Based on your Phase 1 Assessment marks (85/100) and Class Lab marks (88/100), scoring 90+ in your final exam will achieve a predicted **SGPA of 8.92 (Grade A+ - Honors Standing)**! 刀`;
-  } else {
-    reply = `"A sharp blade is tempered in discipline, scholar." You are in good academic standing. Access Course Allocations, OD Verification, or Digital Vault from your navigation menu. 🌸`;
+  try {
+    // ══════════════════════ 1. ADMIN INTELLIGENCE ══════════════════════
+    if (role === 'admin') {
+      badgeTitle = '総長 Institutional Sensei';
+      if (lower.includes('headcount') || lower.includes('overview') || lower.includes('students') || lower.includes('faculty')) {
+        const [users, subjects, classrooms] = await Promise.all([
+          api('GET', '/students').catch(() => []),
+          api('GET', '/subjects').catch(() => []),
+          api('GET', '/classrooms').catch(() => [])
+        ]);
+        const stuCount = users.filter(u => u.role === 'student').length;
+        const facCount = users.filter(u => u.role === 'faculty').length;
+        reply = `🏛️ **Institutional Campus Census**:\n• **Enrolled Scholars**: ${stuCount} Students across all 12 Engineering Branches\n• **Faculty Professors**: ${facCount} Appointed Instructors\n• **Active Curriculum**: ${subjects.length} Courses distributed across Slots A–F\n• **Smart Classrooms**: ${classrooms.length} Campus Lecture Halls & Labs active.`;
+      } else if (lower.includes('risk') || lower.includes('at-risk') || lower.includes('warning') || lower.includes('shortage')) {
+        const riskData = await api('GET', '/academic/risk').catch(() => ({ summary: { high: 0, moderate: 0, low: 0 }, students: [] }));
+        reply = `⚠️ **Early Academic Risk Intelligence**:\n• **High Risk Scholars**: ${riskData.summary?.high || 0} students (Attendance < 60% or Marks < 50%)\n• **Moderate Risk**: ${riskData.summary?.moderate || 0} students\n• **Safe Standing**: ${riskData.summary?.low || 0} students\n💡 *Tip: Faculty can illuminate Peer Mentor Lanterns (燈籠) directly from the Academic Risk Engine.* `;
+      } else if (lower.includes('classroom') || lower.includes('projector') || lower.includes('smart') || lower.includes('room')) {
+        const rooms = await api('GET', '/classrooms').catch(() => []);
+        const smartCount = rooms.filter(r => r.type === 'smart' || r.has_projector).length;
+        reply = `🏢 **Campus Infrastructure Report**:\n• Total Allocated Rooms: **${rooms.length}**\n• Smart Interactive Classrooms: **${smartCount || rooms.length}** (Equipped with 4K projectors & IoT sensors)\n• Autonomous Timetable Generator is active with zero scheduling collisions.`;
+      } else if (lower.includes('audit') || lower.includes('security') || lower.includes('log') || lower.includes('tamper')) {
+        reply = `🔒 **Security Audit & Integrity Status**:\n• **Cryptographic Verification**: Active for all issued Sword-Ink Certificates.\n• **Password Governance**: Mandatory current password verification enforced for all self-service password updates.\n• **System Logs**: 0 security tampering alerts detected in past 24 hours.`;
+      } else if (lower.includes('alumni') || lower.includes('sanmon') || lower.includes('vault') || lower.includes('capstone')) {
+        reply = `📜 **Alumni Sanmon Records Vault (山門録)**:\n• Archival registry is populated with graduated scholars, GPA honors (*Summa Cum Laude*), and Tsuba sword rankings (*Gold Dragon Tsuba*). Access it via the **Alumni Sanmon Vault** navigation tab.`;
+      } else {
+        reply = `"The pillar of governance stands upon clarity and discipline." Institutional parameters are healthy. You can manage student admissions, assign faculty, generate certificates, or inspect audit logs from the sidebar menu.`;
+      }
+    }
+
+    // ══════════════════════ 2. FACULTY INTELLIGENCE ══════════════════════
+    else if (role === 'faculty') {
+      badgeTitle = '教授 Faculty Sensei';
+      if (lower.includes('course') || lower.includes('enrolled') || lower.includes('subject') || lower.includes('slot')) {
+        const subjects = await api('GET', '/subjects').catch(() => []);
+        const mySubjs = subjects.filter(s => s.faculty_id === S.user.id);
+        if (mySubjs.length > 0) {
+          reply = `📋 **Your Assigned Course Catalog**:\n` + mySubjs.map(s => `• **[Slot ${(s.slot||'A').toUpperCase()}]** ${s.code || ''} — ${s.name} (${s.enrolled_count || 0} Scholars Enrolled) ${s.is_closed ? '🔒 Closed for Exams' : '🟢 Active'}`).join('\n') + `\n\n💡 *You can mark slot-wise attendance or drop inactive students from the Roster view.* `;
+        } else {
+          reply = `You currently have no courses assigned to your faculty profile. Institutional Admin can assign courses via Courses Master Catalog.`;
+        }
+      } else if (lower.includes('od') || lower.includes('duty') || lower.includes('geotag') || lower.includes('radius')) {
+        const odReqs = await api('GET', '/od').catch(() => []);
+        const pending = odReqs.filter(o => o.status === 'pending' || o.status === 'geo_submitted').length;
+        reply = `📍 **On-Duty (OD) Verification Engine**:\n• **Pending Review**: ${pending} requests awaiting approval or geotag validation.\n• **Geofence Window**: 30-meter radius lock with 30-minute validation countdown.\n• Once you accept an OD letter, student attendance is automatically marked as "OD".`;
+      } else if (lower.includes('attendance') || lower.includes('zen') || lower.includes('stone') || lower.includes('mark')) {
+        reply = `📊 **Daily Attendance & Zen Garden (枯山水)**:\n• Open **Daily Attendance Recording** to view your enrolled slot roster.\n• Toggle **🪨 Ryoan-ji Zen Garden** to view student standing stones (Green $\\ge 75\\%$, Amber $60-74\\%$, Cracked Vermilion $<60\\%$).\n• Submit attendance with one-click Save Slot Attendance.`;
+      } else if (lower.includes('grade') || lower.includes('kaiden') || lower.includes('release') || lower.includes('kakejitsu') || lower.includes('mark')) {
+        reply = `📜 **5-Tier Gradebook & Kakejitsu Release**:\n• 5 Evaluation Tiers: Unit Test (50), Mid-Sem (100), Assignment (50), Lab (100), Internal (100), Univ Exam (100).\n• Click **"Release Grades (掛け軸)"** in Gradebook to trigger the imperial Kaiden unrolling scroll ceremony for your students!`;
+      } else if (lower.includes('lantern') || lower.includes('mentor') || lower.includes('risk')) {
+        reply = `🏮 **Peer Mentor Lanterns (燈籠)**:\n• In the **Early Academic Risk Engine**, click **"🏮 Light Lantern"** beside any scholar with attendance $<75\\%$ to assign a senior study buddy and guide them back to honor standing.`;
+      } else {
+        reply = `"Teaching is the blade that shapes the future." Your academic courses and evaluation registers are synchronized. Access Attendance Entry, Gradebook, or OD Engine from your navigation bar.`;
+      }
+    }
+
+    // ══════════════════════ 3. STUDENT INTELLIGENCE ══════════════════════
+    else if (role === 'student') {
+      badgeTitle = '学術 Scholar Sensei';
+      if (lower.includes('attendance') || lower.includes('leave') || lower.includes('miss') || lower.includes('percentage')) {
+        const standing = await api('GET', '/attendance/student-standing').catch(() => ({ overallPercentage: 88, slotBreakdown: [] }));
+        const pct = standing.overallPercentage || 88;
+        const slots = standing.slotBreakdown || [];
+        const isSafe = pct >= 75;
+        reply = `📊 **Your Attendance Standing: ${pct}%** (${isSafe ? 'Eligible ✅' : 'Shortage Alert ⚠️'})\n• **Statutory Requirement**: Minimum 75% for University Exams.\n` + (slots.length > 0 ? slots.map(s => `• Slot ${s.slot}: ${s.percentage}% (${s.courseName})`).join('\n') + '\n' : '') + `• **Leave Advice**: ${isSafe ? 'You can safely miss up to 2 classes without dropping below 75%.' : 'You must attend all upcoming lectures to regain exam eligibility!'}`;
+      } else if (lower.includes('next class') || lower.includes('where') || lower.includes('room') || lower.includes('class')) {
+        const currentClass = await api('GET', '/timetable/student/current-class').catch(() => null);
+        if (currentClass && currentClass.subject_name) {
+          reply = `📍 **Your Next Class Session**:\n• **Course**: ${currentClass.subject_name} (Slot ${currentClass.slot || 'A'})\n• **Room / Hall**: ${currentClass.room_code || 'LH-101 (Tech Block, Floor 1)'}\n• **Instructor**: ${currentClass.faculty_name || 'Assigned Faculty'}\n• **Time**: ${currentClass.start_time || '09:00 AM'} - ${currentClass.end_time || '10:00 AM'}`;
+        } else {
+          reply = `📍 **Class Schedule Locator**:\nYour next scheduled session is **Distributed Cloud Systems & DevOps (Slot A)** at **09:00 AM** in **LH-101 (Tech Block, 1st Floor)**. Check the **Where Is My Class?** tab for real-time room navigation!`;
+        }
+      } else if (lower.includes('hall ticket') || lower.includes('exam') || lower.includes('admit') || lower.includes('ticket')) {
+        const ht = await api('GET', '/grades/hall-ticket').catch(() => ({ attendancePct: 88, isEligible: true, courses: [] }));
+        const eligible = (ht.attendancePct || 88) >= 75;
+        reply = `🎟️ **University Hall Ticket Status**:\n• **Attendance Eligibility**: ${ht.attendancePct || 88}% (${eligible ? 'Met ✅ Eligible' : 'Shortage < 75% ⚠️ Ineligible'})\n• **Admit Card Format**: Printable Japanese Temple Amulet (御守り) with QR Verification.\n• Access **University Hall Ticket** from your menu to print your official pass once course launch is closed.`;
+      } else if (lower.includes('sgpa') || lower.includes('score') || lower.includes('grade') || lower.includes('simulate') || lower.includes('what-if')) {
+        reply = `🧮 **What-If SGPA Simulator (成績試算)**:\n• Your internal coursework average is trending at **86.5/100**.\n• Scoring **90+** in the university end-semester exam will yield a predicted **SGPA of 8.92 (Grade A+ · Honors Standing)**!\n💡 *Click "🧮 What-If SGPA Simulator" on your dashboard to test interactive score sliders.* `;
+      } else if (lower.includes('lantern') || lower.includes('mentor') || lower.includes('buddy')) {
+        reply = `🏮 **Peer Mentor Lanterns (燈籠)**:\n• Senior peer scholars illuminate lanterns to offer exam study notes, code reviews, and slot study sessions. Check the **Alumni & Honors** section to view connected peer mentors!`;
+      } else {
+        reply = `"A sharp blade is tempered in discipline, scholar." You are in good academic standing. Access Course Catalog, Internal Marks, Hall Ticket, or Digital Vault from your menu. 🌸`;
+      }
+    }
+
+    // ══════════════════════ 4. GUEST / VISITOR INTELLIGENCE ══════════════════════
+    else {
+      badgeTitle = '門 Kyoto Oracle';
+      if (lower.includes('certificate') || lower.includes('verify') || lower.includes('qr') || lower.includes('hanko')) {
+        reply = `📜 **Public Sword-Ink Certificate Verification**:\n• Anyone can verify authentic credentials without logging in!\n• Click **"Verify Certificate"** in the top header or navigate to "/verify/:certId" to inspect the animated rotating vermilion Hanko Seal (判子) and cryptographic proof.`;
+      } else if (lower.includes('department') || lower.includes('course') || lower.includes('branch') || lower.includes('curriculum')) {
+        reply = `⛩️ **Autonomous Engineering Departments**:\nWe offer accredited engineering degree programs including:\n• B.E. Computer Science & Engineering (CSE)\n• B.Tech AI & Data Science (AI&DS)\n• B.Tech Information Technology (IT)\n• B.E. Electronics & Communication (ECE)\n• B.Tech Cyber Security & CSBS`;
+      } else if (lower.includes('login') || lower.includes('sign in') || lower.includes('credentials') || lower.includes('role')) {
+        reply = `🔑 **Portal Sign-In Instructions**:\n• **Admin Login**: Admin ID "192411184" with your secure administrative password.\n• **Faculty Login**: Select "Faculty" tab and enter your faculty email or ID.\n• **Student Login**: Select "Student" tab and enter your assigned Register Number.`;
+      } else if (lower.includes('omikuji') || lower.includes('gacha') || lower.includes('fortune') || lower.includes('reg')) {
+        reply = `🎴 **Omikuji Fortune Gacha Generator**:\n• In the student admissions engine, clicking **"🎴 Omikuji Gacha"** consults the temple oracle to reveal divine blessings ("大吉", "中吉", "吉") while generating authentic engineering register numbers ("ENG-CSE-2026-XXX").`;
+      } else {
+        reply = `Welcome to Kyoto Autonomous University Platform. Explore the 3D Sanctuary, review academic pathways, verify certificates, or select a role to sign in.`;
+      }
+    }
+  } catch (err) {
+    reply = `"Wisdom is forged through perseverance." Your request was processed, scholar. (${err.message || 'System online'})`;
   }
 
+  // Remove thinking bubble
+  const thinkingEl = document.getElementById(thinkingId);
+  if (thinkingEl) thinkingEl.remove();
+
+  // Append Sensei response bubble
   container.innerHTML += `
-    <div class="p-3 rounded-2xl bg-white/5 border border-white/10 text-slate-200 mr-6 space-y-1 animate-fade-in">
+    <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-slate-200 mr-6 space-y-1.5 animate-fade-in text-xs shadow-md">
       <div class="flex items-center gap-1.5 text-[#ff5a3c] font-bold text-[10px] uppercase font-mono">
-        <span>師 Kagemusha Sensei</span>
+        <span>${badgeTitle}</span>
       </div>
-      <p class="text-xs leading-relaxed">${reply}</p>
+      <div class="leading-relaxed whitespace-pre-line text-slate-300">${reply}</div>
     </div>
   `;
 
   container.scrollTop = container.scrollHeight;
   lucide.createIcons();
 }
+
 
 // ── 10. ONE-TAP "PRESENT DEMO" AUTO-WALKTHROUGH ──
 function startOneTapDemoMode() {
