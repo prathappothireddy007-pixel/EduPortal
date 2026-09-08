@@ -13548,55 +13548,7 @@ function printIndividualSubjectHallTicket() {
         };
       <\/script>
     
-<!-- ============================================================ AI Sensei Floating Assistant -->
-<div id="sensei-widget">
-  <div id="sensei-chat-box" class="sensei-window hidden mb-3">
-    <!-- Header -->
-    <div class="p-4 border-b border-white/10 bg-gradient-to-r from-[#e0231c]/20 to-transparent flex items-center justify-between">
-      <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-[#e0231c] to-[#991b1b] border border-white/20 flex items-center justify-center font-serif text-white font-bold text-sm shadow-md">
-          師
-        </div>
-        <div>
-          <div class="text-xs font-bold text-white flex items-center gap-1.5">
-            <span>Kagemusha Sensei</span>
-            <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
-          </div>
-          <div class="text-[10px] text-slate-400 font-mono">Academic AI Companion</div>
-        </div>
-      </div>
-      <button onclick="toggleSenseiChat()" class="p-1 rounded-lg text-slate-400 hover:text-white">
-        <i data-lucide="x" class="w-4 h-4"></i>
-      </button>
-    </div>
 
-    <!-- Messages Container -->
-    <div id="sensei-messages" class="flex-1 p-3.5 overflow-y-auto space-y-3 text-xs">
-      <div class="p-3 rounded-2xl bg-white/5 border border-white/10 text-slate-300 space-y-1.5">
-        <p class="font-medium text-white">Greetings, Scholar. ⛩️</p>
-        <p class="text-[11px] text-slate-400">I am your autonomous campus guide. Ask me about your attendance standing, next scheduled class, hall ticket eligibility, or academic advice.</p>
-        <div class="flex flex-wrap gap-1.5 pt-1">
-          <button onclick="askSenseiPrompt('What is my attendance percentage and can I take leave?')" class="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-amber-300">📊 My Attendance</button>
-          <button onclick="askSenseiPrompt('Where is my next class?')" class="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-blue-300">📍 Next Class</button>
-          <button onclick="askSenseiPrompt('Am I eligible for examination Hall Tickets?')" class="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-purple-300">🎟️ Hall Ticket Status</button>
-          <button onclick="askSenseiPrompt('Simulate my SGPA if I score 90 in final exam')" class="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-emerald-300">🧮 What-If SGPA</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Input Box -->
-    <div class="p-3 border-t border-white/10 bg-black/40 flex items-center gap-2">
-      <input type="text" id="sensei-input" onkeydown="if(event.key==='Enter'){handleSenseiSubmit();}" placeholder="Ask Sensei anything..." class="flex-1 px-3 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:border-[#e0231c] focus:outline-none" />
-      <button onclick="handleSenseiSubmit()" class="p-2 rounded-xl bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] text-white shadow-md hover:brightness-110">
-        <i data-lucide="send" class="w-4 h-4"></i>
-      </button>
-    </div>
-  </div>
-
-  <div class="sensei-btn" onclick="toggleSenseiChat()" title="Ask Kagemusha Sensei">
-    <span class="text-white font-serif font-bold text-lg">刀</span>
-  </div>
-</div>
 
 </body>
     </html>
@@ -14372,5 +14324,80 @@ if (typeof window !== 'undefined' && !window.__katanaFxBound) {
 
 
 </script>
+
+<!-- ============================================================ AI Sensei Floating Assistant -->
+<div id="sensei-widget" style="position: fixed; bottom: 24px; right: 24px; z-index: 99999; display: flex; flex-direction: column; align-items: flex-end;">
+  <div id="sensei-chat-box" class="sensei-window hidden mb-3" style="width: 360px; max-width: calc(100vw - 32px); height: 490px; border-radius: 24px; background: rgba(8, 12, 16, 0.96); border: 1.5px solid rgba(224, 35, 28, 0.4); backdrop-filter: blur(24px); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; overflow: hidden;">
+    <!-- Header -->
+    <div class="p-4 border-b border-white/10 bg-gradient-to-r from-[#e0231c]/20 to-transparent flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-[#e0231c] to-[#991b1b] border border-white/20 flex items-center justify-center font-serif text-white font-bold text-sm shadow-md">
+          師
+        </div>
+        <div>
+          <div class="text-xs font-bold text-white flex items-center gap-1.5">
+            <span>Kagemusha Sensei (先生)</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+          </div>
+          <div class="text-[10px] text-slate-400 font-mono">Autonomous AI Academic Guide</div>
+        </div>
+      </div>
+      <button type="button" onclick="toggleSenseiChat()" class="p-1 rounded-lg text-slate-400 hover:text-white transition-colors">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="sensei-messages" class="flex-1 p-3.5 overflow-y-auto space-y-3 text-xs">
+      <div class="p-3 rounded-2xl bg-white/5 border border-white/10 text-slate-300 space-y-2">
+        <div class="flex items-center gap-1.5 text-amber-400 font-bold">
+          <span>⛩️</span>
+          <span>Greetings, Scholar.</span>
+        </div>
+        <p class="text-[11px] text-slate-400 leading-relaxed">
+          I am your autonomous campus guide. Ask me about your slot-wise attendance standing, next scheduled class, hall ticket eligibility, or exam SGPA simulation.
+        </p>
+        <div class="grid grid-cols-1 gap-1.5 pt-1">
+          <button type="button" onclick="askSenseiPrompt('What is my attendance percentage and can I take leave?')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-amber-300 border border-white/5 transition-all flex items-center gap-1.5">
+            <span>📊</span>
+            <span>Check My Slot Attendance Standing</span>
+          </button>
+          <button type="button" onclick="askSenseiPrompt('Where is my next class?')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-blue-300 border border-white/5 transition-all flex items-center gap-1.5">
+            <span>📍</span>
+            <span>Where is my next scheduled class?</span>
+          </button>
+          <button type="button" onclick="askSenseiPrompt('Am I eligible for university examination Hall Tickets?')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-purple-300 border border-white/5 transition-all flex items-center gap-1.5">
+            <span>🎟️</span>
+            <span>Hall Ticket & Admit Card Status</span>
+          </button>
+          <button type="button" onclick="askSenseiPrompt('Simulate my SGPA if I score 90 in final exam')" class="text-left px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-emerald-300 border border-white/5 transition-all flex items-center gap-1.5">
+            <span>🧮</span>
+            <span>Simulate What-If SGPA (成績試算)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Box -->
+    <div class="p-3 border-t border-white/10 bg-black/50 flex items-center gap-2">
+      <input type="text" id="sensei-input" onkeydown="if(event.key==='Enter'){handleSenseiSubmit();}" placeholder="Ask Sensei anything..." class="flex-1 px-3 py-2 bg-black/60 border border-white/15 rounded-xl text-xs text-white placeholder-slate-500 focus:border-[#e0231c] focus:outline-none" />
+      <button type="button" onclick="handleSenseiSubmit()" class="p-2 rounded-xl bg-gradient-to-r from-[#e0231c] to-[#ff5a3c] text-white shadow-md hover:brightness-110 shrink-0">
+        <i data-lucide="send" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Floating Launcher Button with Tooltip Badge -->
+  <div class="flex items-center gap-2.5">
+    <div id="sensei-tooltip-badge" class="px-3 py-1.5 rounded-xl bg-black/80 border border-[#e0231c]/50 text-[11px] font-medium text-amber-300 shadow-xl backdrop-blur animate-pulse hidden sm:flex items-center gap-1.5 cursor-pointer" onclick="toggleSenseiChat()">
+      <span>Ask AI Sensei</span>
+      <span class="text-xs text-[#ff5a3c] font-serif">師</span>
+    </div>
+    <div class="sensei-btn shadow-2xl" onclick="toggleSenseiChat()" title="Ask AI Sensei (先生)" style="width: 56px; height: 56px; border-radius: 28px; background: linear-gradient(135deg, #e0231c, #991b1b); border: 2px solid rgba(255, 255, 255, 0.4); box-shadow: 0 10px 30px rgba(224, 35, 28, 0.6); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;">
+      <span class="text-white font-serif font-bold text-xl drop-shadow-md">刀</span>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
